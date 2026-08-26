@@ -1,0 +1,14 @@
+/.cache/
+/.idea/
+/.vscode/
+/backend/.env
+/backend/vendor/
+/backend/storage/logs/*.log
+/backend/database/database.sqlite
+/merchant/node_modules/
+/merchant/dist/
+/public-web/node_modules/
+/public-web/dist/
+/premium-audit.json
+*.tmp
+*.log

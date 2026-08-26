@@ -1,0 +1,97 @@
+openapi: 3.1.0
+info:
+  title: GamoryID API
+  version: 1.0.0-alpha
+  description: REST API สำหรับ Merchant Backoffice; ใช้ Sanctum HttpOnly cookie และส่ง X-Shop-Id ทุกคำขอระดับร้าน
+servers:
+  - url: http://localhost:8000/api/v1
+paths:
+  /auth/register:
+    post:
+      summary: สมัครและสร้างร้านพร้อม trial 30 วัน
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Register'}}}}
+      responses: {'201': {description: Created}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /auth/login:
+    post:
+      summary: เข้าสู่ระบบ
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [email, password], properties: {email: {type: string, format: email}, password: {type: string, format: password}}}}}}
+      responses: {'200': {description: Signed in}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /auth/me:
+    get: {summary: ผู้ใช้และร้านปัจจุบัน, security: [{sanctum: []}], responses: {'200': {description: OK}, '401': {$ref: '#/components/responses/Unauthenticated'}}}
+  /dashboard:
+    get: {summary: KPI และกิจกรรมร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: OK}}}
+  /inventory:
+    get:
+      summary: ค้นหาและกรองสต็อก
+      security: [{sanctum: []}]
+      parameters:
+        - {$ref: '#/components/parameters/ShopId'}
+        - {name: q, in: query, schema: {type: string}, description: 'exact tag (#23DX5) หรือคำค้น'}
+        - {name: status, in: query, schema: {$ref: '#/components/schemas/InventoryStatus'}}
+        - {name: region, in: query, schema: {type: string}}
+        - {name: per_page, in: query, schema: {type: integer, enum: [25, 50, 100]}}
+      responses: {'200': {description: Paginated inventory}}
+    post:
+      summary: เพิ่มไอดีและสร้างแท็กอัตโนมัติ
+      security: [{sanctum: []}]
+      parameters: [{$ref: '#/components/parameters/ShopId'}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/InventoryInput'}}}}
+      responses: {'201': {description: Created}, '422': {$ref: '#/components/responses/ValidationError'}, '423': {$ref: '#/components/responses/ReadOnly'}}
+  /inventory/{inventory}:
+    parameters: [{$ref: '#/components/parameters/ShopId'}, {$ref: '#/components/parameters/InventoryId'}]
+    get: {summary: รายละเอียดไอดีโดยไม่รวม credentials, security: [{sanctum: []}], responses: {'200': {description: OK}, '404': {description: Not found in current tenant}}}
+    put: {summary: แก้ไขไอดี, security: [{sanctum: []}], requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/InventoryInput'}}}}, responses: {'200': {description: Updated}}}
+    delete: {summary: Archive โดยไม่ทำลายประวัติ, security: [{sanctum: []}], responses: {'200': {description: Archived}}}
+  /inventory/{inventory}/reserve:
+    parameters: [{$ref: '#/components/parameters/ShopId'}, {$ref: '#/components/parameters/InventoryId'}]
+    post: {summary: จองไอดี, security: [{sanctum: []}], responses: {'201': {description: Reserved}, '409': {description: State conflict}}}
+    delete: {summary: ยกเลิกจอง, security: [{sanctum: []}], responses: {'200': {description: Released}}}
+  /inventory/{inventory}/sell:
+    post:
+      summary: บันทึกขายแบบ transaction lock
+      security: [{sanctum: []}]
+      parameters: [{$ref: '#/components/parameters/ShopId'}, {$ref: '#/components/parameters/InventoryId'}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [sold_price], properties: {sold_price: {type: number}, customer_id: {type: integer}, customer: {type: object}, notes: {type: string}}}}}}
+      responses: {'201': {description: Sold}, '409': {description: Already sold}}
+  /inventory/{inventory}/credentials:
+    get:
+      summary: เปิด credentials หลัง permission + 2FA + recent re-auth
+      security: [{sanctum: []}]
+      parameters: [{$ref: '#/components/parameters/ShopId'}, {$ref: '#/components/parameters/InventoryId'}]
+      responses: {'200': {description: Revealed; value is never logged}, '403': {description: Forbidden}, '428': {description: 2FA or re-auth required}}
+  /imports/preview:
+    post: {summary: อัปโหลด CSV และอ่านตัวอย่าง, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'201': {description: Preview ready}}}
+  /imports/{import}/confirm:
+    post: {summary: ยืนยัน mapping และเข้าคิว, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'202': {description: Queued}}}
+  /payments:
+    post: {summary: อัปโหลดสลิปแบบ private และเข้าคิว SlipOK, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'202': {description: Pending verification}}}
+components:
+  securitySchemes:
+    sanctum: {type: apiKey, in: cookie, name: gamoryid_session}
+  parameters:
+    ShopId: {name: X-Shop-Id, in: header, required: true, schema: {type: integer}}
+    InventoryId: {name: inventory, in: path, required: true, schema: {type: integer}}
+  schemas:
+    Register:
+      type: object
+      required: [name, email, password, password_confirmation, shop_name]
+      properties: {name: {type: string}, email: {type: string, format: email}, password: {type: string, minLength: 8}, password_confirmation: {type: string}, shop_name: {type: string}}
+    InventoryStatus: {type: string, enum: [available, reserved, sold, archived]}
+    InventoryInput:
+      type: object
+      required: [title, cost, list_price]
+      properties:
+        title: {type: string}
+        region: {type: string}
+        rank: {type: string}
+        level: {type: integer}
+        skin_count: {type: integer}
+        description: {type: string}
+        cost: {type: number}
+        list_price: {type: number}
+        custom_values: {type: object, additionalProperties: true}
+        credentials: {type: object, description: encrypted server-side and omitted from normal responses}
+  responses:
+    ValidationError: {description: Validation failed}
+    Unauthenticated: {description: Unauthenticated}
+    ReadOnly: {description: Subscription is read-only}

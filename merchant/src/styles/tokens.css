@@ -1,0 +1,8 @@
+:root {
+  --ink: #071a33; --ink-soft: #17324f; --primary: #0b6bff; --signal: #00c2ff; --action: #ff7900;
+  --success: #16a765; --warning: #a96b00; --danger: #d93a45; --reserved: #7457eb;
+  --background: #f7faff; --surface: #fff; --border: #d8e3f0; --muted: #64758b;
+  --radius-sm: 8px; --radius: 12px; --radius-lg: 16px;
+  --font-thai: "Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif;
+  --font-data: Inter, "Noto Sans Thai", "Segoe UI", sans-serif;
+}
