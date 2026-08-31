@@ -45,12 +45,13 @@ export function DashboardPanel({
   const activityLabels: Record<string, string> = {
     "inventory.created": "เพิ่มไอดีในคลัง",
     "inventory.updated": "อัปเดตรายละเอียดไอดี",
+    "inventory.note_updated": "อัปเดตโน้ตช่วยจำของไอดี",
     "inventory.reserved": "จองไอดีให้ลูกค้า",
     "inventory.reservation_released": "ยกเลิกการจองไอดี",
     "inventory.sold": "บันทึกการขายไอดี",
     "inventory.archived": "เก็บไอดีถาวร",
     "inventory.exported": "ส่งออกข้อมูลคลัง",
-    "import.queued": "เริ่มนำเข้า CSV",
+    "import.queued": "เริ่มนำเข้าข้อมูล",
     "credit.top_up_submitted": "ส่งสลิปเติมเครดิต",
     "subscription.purchased_with_credits": "ใช้เครดิตซื้อแพ็กเกจ",
     "subscription.auto_renew_updated": "ปรับต่ออายุอัตโนมัติ",
@@ -91,8 +92,9 @@ export function DashboardPanel({
       : summary.available === 0
         ? {
             title: "ยังไม่มีไอดีพร้อมขาย",
-            detail: "นำเข้า CSV หรือเพิ่มไอดีใหม่เพื่อเริ่มขายจากหน้าร้าน",
-            label: "นำเข้า CSV",
+            detail:
+              "นำเข้า Excel/CSV หรือเพิ่มไอดีใหม่เพื่อเริ่มขายจากหน้าร้าน",
+            label: "นำเข้าข้อมูล",
             action: onOpenImport,
           }
         : {
@@ -317,7 +319,7 @@ export function DashboardPanel({
               <div className="dashboard-empty compact">
                 <PackagePlus size={22} />
                 <strong>ยังไม่มีการเคลื่อนไหว</strong>
-                <span>เริ่มจากเพิ่มไอดีหรือ import CSV</span>
+                <span>เริ่มจากเพิ่มไอดีหรือนำเข้า Excel/CSV</span>
               </div>
             )}
           </div>

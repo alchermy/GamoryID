@@ -7,6 +7,7 @@ use App\Models\ImportJob;
 use App\Models\InventoryCredential;
 use App\Models\InventoryItem;
 use App\Services\CredentialCipher;
+use App\Services\InventoryImportReader;
 use App\Services\TagGenerator;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -24,23 +25,17 @@ class ProcessInventoryImport implements ShouldQueue
 
     public function __construct(public int $importJobId) {}
 
-    public function handle(TagGenerator $tags, CredentialCipher $cipher): void
+    public function handle(TagGenerator $tags, CredentialCipher $cipher, InventoryImportReader $reader): void
     {
         $import = ImportJob::findOrFail($this->importJobId);
         $import->update(['status' => 'processing']);
-        $handle = fopen(Storage::disk($import->disk)->path($import->path), 'rb');
-        if ($handle === false) {
-            throw new \RuntimeException('ไม่สามารถอ่านไฟล์นำเข้าได้');
-        }
-
-        $headers = fgetcsv($handle) ?: [];
+        $sheet = $reader->read($import->disk, $import->path);
         $records = [];
         $errors = [];
         $usernames = [];
         $rowNumber = 1;
-        while (($row = fgetcsv($handle)) !== false) {
+        foreach ($sheet['rows'] as $data) {
             $rowNumber++;
-            $data = array_combine($headers, array_slice(array_pad($row, count($headers), null), 0, count($headers))) ?: [];
             $mapped = $this->mapped($import, $data);
             $message = $this->validationMessage($mapped);
             $username = mb_strtolower(trim((string) ($mapped['username'] ?? '')));
@@ -51,13 +46,16 @@ class ProcessInventoryImport implements ShouldQueue
                 $usernames[$username] = $rowNumber;
             }
             if ($message) {
-                $errors[] = ['row_number' => $rowNumber, 'message' => $message, 'row_data' => $data];
+                $errors[] = [
+                    'row_number' => $rowNumber,
+                    'message' => $message,
+                    'row_data' => $this->redactRowData($import, $data),
+                ];
 
                 continue;
             }
             $records[] = $mapped;
         }
-        fclose($handle);
 
         if ($errors !== []) {
             $now = now();
@@ -168,5 +166,17 @@ class ProcessInventoryImport implements ShouldQueue
     private function blankToNull(mixed $value): ?string
     {
         return filled($value) ? trim((string) $value) : null;
+    }
+
+    private function redactRowData(ImportJob $import, array $data): array
+    {
+        foreach (['password', 'recovery_email'] as $target) {
+            $source = $import->mapping[$target] ?? null;
+            if ($source && array_key_exists($source, $data)) {
+                $data[$source] = '[REDACTED]';
+            }
+        }
+
+        return $data;
     }
 }

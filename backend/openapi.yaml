@@ -64,6 +64,20 @@ paths:
                 role: {type: string, enum: [display, detail]}
                 image: {type: string, format: binary, description: 'JPEG, PNG หรือ WebP ไม่เกิน 5 MB'}
       responses: {'201': {description: Uploaded}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /inventory/{inventory}/note:
+    patch:
+      summary: บันทึกหรือล้างโน้ตช่วยจำภายในร้านของไอดี
+      security: [{sanctum: []}]
+      parameters: [{$ref: '#/components/parameters/ShopId'}, {$ref: '#/components/parameters/InventoryId'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes: {type: string, nullable: true, maxLength: 5000, description: 'โน้ตภายในร้าน ไม่รวมในข้อความที่คัดลอกให้ลูกค้า'}
+      responses: {'200': {description: Note updated}, '403': {description: Requires inventory manage or sell permission}, '404': {description: Not found in current tenant}, '422': {$ref: '#/components/responses/ValidationError'}, '423': {$ref: '#/components/responses/ReadOnly'} }
   /inventory/{inventory}/media/{media}:
     delete:
       summary: ลบรูปภาพออกจากไอดี
@@ -112,7 +126,34 @@ paths:
       parameters: [{$ref: '#/components/parameters/ShopId'}, {$ref: '#/components/parameters/InventoryId'}]
       responses: {'200': {description: Revealed; value is never logged}, '403': {description: Forbidden}, '428': {description: Recent re-auth required}}
   /imports/preview:
-    post: {summary: อัปโหลด CSV และอ่านตัวอย่าง, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'201': {description: Preview ready}}}
+    post:
+      summary: อัปโหลด Excel หรือ CSV และอ่านตัวอย่างสูงสุด 10 แถว
+      security: [{sanctum: []}]
+      parameters: [{$ref: '#/components/parameters/ShopId'}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: ไฟล์ .xlsx หรือ .csv ขนาดไม่เกิน 5 MB และไม่เกิน 10,000 แถว
+      responses: {'201': {description: Preview ready}, '422': {description: Invalid file or spreadsheet data}}
+  /imports/template:
+    get:
+      summary: ดาวน์โหลดไฟล์ Excel ตัวอย่างสำหรับนำเข้าคลังไอดี
+      security: [{sanctum: []}]
+      parameters: [{$ref: '#/components/parameters/ShopId'}]
+      responses:
+        '200':
+          description: Excel template
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: {type: string, format: binary}
   /imports/{import}/confirm:
     post: {summary: ยืนยัน mapping และเข้าคิว, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'202': {description: Queued}}}
   /credits:

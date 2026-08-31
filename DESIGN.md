@@ -61,7 +61,7 @@ GamoryID feels like the control panel embedded in Gammy's illuminated inventory 
 - **Audience and primary job:** Thai digital-inventory merchants importing, finding, reserving, and selling high volumes of inventory.
 - **Target market and evidence:** Thailand; the approved product plan uses Thai copy, THB, Asia/Bangkok, bank-slip billing, and desktop-plus-mobile use.
 - **Locale and language:** `th-TH` is the product locale. Use Gregorian dates, Thai labels, Arabic numerals, THB currency formatting, and `Asia/Bangkok` for operational timestamps.
-- **Usage scene:** Desktop for CSV and dense tables; mobile for exact-tag search, reservation, selling, and secure copy.
+- **Usage scene:** Desktop for Excel/CSV imports and dense tables; mobile for exact-tag search, reservation, selling, and secure copy.
 - **Register:** Hybrid. Public routes are friendly brand surfaces; authenticated routes are task-first product surfaces.
 - **Memorable signature:** A thin cyan signal rail links navigation selection, KPI context, search focus, and the active work region.
 - **Restraint:** Tables, forms, credentials, permissions, and billing remain quiet and familiar. Mascot art appears only in brand, guidance, or state illustration roles.
@@ -112,6 +112,10 @@ Inputs are 44px minimum height, use app-owned validation, and always have labels
 
 Inventory media uses one 4:3 Display image followed by up to four detail images. Upload controls explain JPEG/PNG/WebP, 5 MB per-file, and count limits before selection; each selected file has a real preview and an accessible remove action. Product detail reserves the main media geometry, uses `object-fit: contain` for inspection, and uses cropped thumbnails only for navigation.
 
+Inventory reminder notes are an internal team annotation: use `MessageSquareText`, a compact warm-tinted preview beneath the Riot ID, and one current note per item. Notes are editable from the list and detail view, never included in customer copy, and never written verbatim to audit metadata.
+
+Bulk inventory import uses one canonical Excel workbook with machine-readable English headers on the first sheet and Thai guidance on the second sheet. The importer also accepts CSV with the same headers. Preview masks password values, reports the total row count, and confirms column mapping before the whole batch enters the queue.
+
 ### Iconography
 
 Lucide is canonical at 18–20px with consistent rounded outline strokes. Text labels remain for non-universal operations. The Gammy mascot is a raster brand/state asset, never an icon substitute.
@@ -122,7 +126,7 @@ Use 140–180ms ease-out transitions for focus, selection, drawer, and toast fee
 
 ### Content and data visualization
 
-Copy is conversational, concise, and action-led. Use `เพิ่มไอดี`, `จองไอดี`, `บันทึกขาย`, and `นำเข้า CSV` consistently. Charts use primary, reserved, action, and success series with a textual summary and tooltip. Prices use `Intl.NumberFormat('th-TH', { currency: 'THB' })`.
+Copy is conversational, concise, and action-led. Use `เพิ่มไอดี`, `จองไอดี`, `บันทึกขาย`, and `นำเข้าข้อมูล` consistently. Charts use primary, reserved, action, and success series with a textual summary and tooltip. Prices use `Intl.NumberFormat('th-TH', { currency: 'THB' })`.
 
 ## Do's and Don'ts
 

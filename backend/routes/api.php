@@ -52,6 +52,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/shop', [ShopController::class, 'show']);
             Route::get('/inventory', [InventoryController::class, 'index']);
             Route::get('/inventory/{inventory}', [InventoryController::class, 'show']);
+            Route::patch('/inventory/{inventory}/note', [InventoryController::class, 'updateNote'])->middleware('shop.writable');
             Route::get('/inventory/{inventory}/timeline', InventoryTimelineController::class);
             Route::get('/inventory/{inventory}/media', [InventoryMediaController::class, 'index']);
             Route::get('/media/{media}', [InventoryMediaController::class, 'show'])->middleware('signed:relative')->name('api.media.show');
@@ -71,6 +72,7 @@ Route::prefix('v1')->group(function () {
                 Route::post('/imports/preview', [ImportController::class, 'preview']);
                 Route::post('/imports/{import}/confirm', [ImportController::class, 'confirm']);
             });
+            Route::get('/imports/template', [ImportController::class, 'template'])->middleware('shop.permission:inventory.manage');
             Route::get('/imports/{import}', [ImportController::class, 'show'])->middleware('shop.permission:inventory.manage');
 
             Route::middleware(['shop.writable', 'shop.permission:inventory.sell'])->group(function () {

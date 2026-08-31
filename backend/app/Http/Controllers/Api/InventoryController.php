@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\InventoryStatus;
+use App\Enums\ShopPermission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreInventoryRequest;
+use App\Http\Requests\UpdateInventoryNoteRequest;
 use App\Http\Resources\InventoryItemResource;
 use App\Models\InventoryCredential;
 use App\Models\InventoryItem;
@@ -105,6 +107,32 @@ class InventoryController extends Controller
             }
         });
         $audit->record($request, $shop, 'inventory.updated', $item, ['tag' => '#'.$item->tag]);
+
+        return new InventoryItemResource($item->fresh()->load(['shop', 'media']));
+    }
+
+    public function updateNote(UpdateInventoryNoteRequest $request, int $inventory, CurrentShop $currentShop, AuditLogger $audit): InventoryItemResource
+    {
+        $shop = $currentShop->from($request);
+        $canWriteNote = $request->user()->hasShopPermission($shop, ShopPermission::InventoryManage)
+            || $request->user()->hasShopPermission($shop, ShopPermission::InventorySell);
+        abort_unless($canWriteNote, 403, 'คุณไม่มีสิทธิ์บันทึกโน้ตของไอดี');
+
+        $note = trim((string) ($request->validated('notes') ?? ''));
+        $item = DB::transaction(function () use ($shop, $inventory, $note) {
+            $item = InventoryItem::forShop($shop)->lockForUpdate()->findOrFail($inventory);
+            $item->update([
+                'notes' => $note !== '' ? $note : null,
+                'lock_version' => $item->lock_version + 1,
+            ]);
+
+            return $item;
+        }, 3);
+
+        $audit->record($request, $shop, 'inventory.note_updated', $item, [
+            'tag' => '#'.$item->tag,
+            'has_note' => $note !== '',
+        ]);
 
         return new InventoryItemResource($item->fresh()->load(['shop', 'media']));
     }

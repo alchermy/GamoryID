@@ -31,7 +31,7 @@
 | Select/Listbox | `NativeSelect` | `premium-ui.json` ownership | platform-owned popup | keyboard + responsive |
 | Date | native date/datetime input | `premium-ui.json` ownership | platform-owned popup | locale + keyboard |
 | Form | shared `Field` + Tailwind form recipes | `merchant/src/App.tsx`, `merchant/src/styles/tailwind-system.css`, `backend/resources/css/app.css` | create/edit/admin | validation tests |
-| File Upload | `InventoryMediaFields` | `merchant/src/features/inventory/InventoryMediaFields.tsx` | display/detail inventory images | client + API tests |
+| File Upload | `InventoryMediaFields`, `ImportPanel` | inventory media source + `merchant/src/features/imports/ImportPanel.tsx` | inventory images; Excel/CSV inventory import | client + API tests |
 | Scrollbar | global Tailwind application stylesheets | `merchant/src/index.css`, `backend/resources/css/app.css` | stable-gutter surfaces | computed style |
 | Toast | app toast region | `merchant/src/App.tsx` | success/warning/info/error | live-region test |
 | Dialog | Merchant dialog + Admin confirmation dialog | `merchant/src/App.tsx`, `backend/resources/views/admin/console.blade.php` | confirm/form/detail | keyboard + focus tests |
@@ -56,8 +56,9 @@
 | Search | Inline spinner without layout shift | Replace rows and range | Keep prior rows with retry banner |
 | Reserve | Pessimistic transaction | Status/timeline update and toast | Restore action and explain conflict |
 | Change inventory status | Click the current status control; available↔reserved uses the reservation transaction, selecting sold opens the sale form | Refresh inventory/dashboard and announce the committed status | Keep the prior status selected and explain the conflict |
+| Update inventory reminder note | Open from the row or item detail and save pessimistically | Refresh the row/detail note and record a content-free audit event | Keep the dialog text and show the server error for retry |
 | Sell | Pessimistic locked transaction with customer, contact, price, optional warranty date, and notes | Sold status, sale/customer record, dashboard invalidation | Preserve dialog data; show validation or already-sold conflict inline |
-| CSV upload | Validating/uploading/queued progress | Summary with imported/errors and rollback action | Keep file and mapping for retry |
+| Excel/CSV upload | Download canonical template → validate/upload → map/preview → queued progress | Summary with imported/errors; commit only when every row is valid | Keep selected filename and mapping visible; explain the rows to fix before retry |
 | Credit top-up | Upload then queued verification | Move to Super Admin review; credit changes only after approval | Preserve `pending_review` status with review guidance |
 | Package purchase | Pessimistic, idempotency-key protected credit debit | Refresh balance and active subscription | Preserve credit balance; explain insufficient credit |
 | Auto-renew | Explicit confirmation before enabling | Switch reflects the saved preference | Keep current preference and show failure toast |

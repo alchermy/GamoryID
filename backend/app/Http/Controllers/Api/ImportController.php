@@ -8,31 +8,66 @@ use App\Models\ImportError;
 use App\Models\ImportJob;
 use App\Services\AuditLogger;
 use App\Services\CurrentShop;
+use App\Services\InventoryImportReader;
 use App\Services\PlanGate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Throwable;
 
 class ImportController extends Controller
 {
     private const MAPPABLE_FIELDS = [
         'title', 'riot_id', 'username', 'rank', 'level', 'skin_count', 'cost', 'list_price',
-        'description', 'notes', 'username', 'password', 'recovery_email',
+        'description', 'notes', 'password', 'recovery_email',
     ];
 
-    public function preview(Request $request, CurrentShop $currentShop)
+    public function template(): BinaryFileResponse
+    {
+        $path = resource_path('templates/gamoryid-inventory-import-template.xlsx');
+        abort_unless(is_file($path), 404, 'ไม่พบไฟล์ Excel ตัวอย่าง');
+
+        return response()->download($path, 'GamoryID-inventory-import-template.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'private, max-age=3600',
+        ]);
+    }
+
+    public function preview(Request $request, CurrentShop $currentShop, InventoryImportReader $reader)
     {
         $shop = $currentShop->from($request);
-        $request->validate(['file' => ['required', 'file', 'mimes:csv,txt', 'max:5120']]);
-        $path = $request->file('file')->store("imports/{$shop->id}", 'private');
-        $handle = fopen(Storage::disk('private')->path($path), 'rb');
-        $headers = fgetcsv($handle) ?: [];
-        $rows = [];
-        while (count($rows) < 10 && ($row = fgetcsv($handle)) !== false) {
-            $normalized = array_slice(array_pad($row, count($headers), null), 0, count($headers));
-            $rows[] = array_combine($headers, $normalized);
+        $request->validate([
+            'file' => [
+                'required',
+                'file',
+                'max:5120',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $extension = strtolower($value->getClientOriginalExtension());
+                    if (! in_array($extension, ['csv', 'xlsx'], true)) {
+                        $fail('รองรับเฉพาะไฟล์ Excel (.xlsx) หรือ CSV (.csv)');
+                    }
+                },
+            ],
+        ]);
+        $file = $request->file('file');
+        $extension = strtolower($file->getClientOriginalExtension());
+        $path = $file->storeAs("imports/{$shop->id}", Str::uuid().'.'.$extension, 'private');
+        try {
+            $sheet = $reader->read('private', $path, 10);
+        } catch (Throwable $exception) {
+            Storage::disk('private')->delete($path);
+            throw ValidationException::withMessages(['file' => $exception->getMessage()]);
         }
-        fclose($handle);
-        $totalRows = max(0, count(file(Storage::disk('private')->path($path), FILE_SKIP_EMPTY_LINES)) - 1);
+        if ($sheet['total_rows'] === 0) {
+            Storage::disk('private')->delete($path);
+            throw ValidationException::withMessages(['file' => 'ไฟล์ต้องมีข้อมูลอย่างน้อย 1 แถว']);
+        }
+        if ($sheet['total_rows'] > 10000) {
+            Storage::disk('private')->delete($path);
+            throw ValidationException::withMessages(['file' => 'นำเข้าได้สูงสุด 10,000 แถวต่อไฟล์']);
+        }
         $import = ImportJob::create([
             'shop_id' => $shop->id,
             'user_id' => $request->user()->id,
@@ -40,23 +75,37 @@ class ImportController extends Controller
             'disk' => 'private',
             'path' => $path,
             'mapping' => [],
-            'total_rows' => $totalRows,
+            'total_rows' => $sheet['total_rows'],
         ]);
 
-        return response()->json(['data' => ['id' => $import->id, 'headers' => $headers, 'rows' => $rows, 'total_rows' => $totalRows]], 201);
+        return response()->json(['data' => [
+            'id' => $import->id,
+            'headers' => $sheet['headers'],
+            'rows' => $this->maskSensitivePreview($sheet['rows']),
+            'total_rows' => $sheet['total_rows'],
+        ]], 201);
     }
 
-    public function confirm(Request $request, int $import, CurrentShop $currentShop, AuditLogger $audit, PlanGate $planGate)
+    public function confirm(Request $request, int $import, CurrentShop $currentShop, AuditLogger $audit, PlanGate $planGate, InventoryImportReader $reader)
     {
         $shop = $currentShop->from($request);
         $data = $request->validate([
             'mapping' => ['required', 'array'],
             'mapping.title' => ['nullable', 'string', 'required_without:mapping.riot_id'],
             'mapping.riot_id' => ['nullable', 'string', 'required_without:mapping.title'],
+            'mapping.username' => ['nullable', 'string'],
+            'mapping.password' => ['nullable', 'string'],
+            'mapping.description' => ['nullable', 'string'],
+            'mapping.rank' => ['nullable', 'string'],
+            'mapping.level' => ['nullable', 'string'],
+            'mapping.skin_count' => ['nullable', 'string'],
+            'mapping.cost' => ['nullable', 'string'],
             'mapping.list_price' => ['required', 'string'],
+            'mapping.notes' => ['nullable', 'string'],
+            'mapping.recovery_email' => ['nullable', 'string'],
         ]);
         $job = ImportJob::where('shop_id', $shop->id)->where('status', 'preview')->findOrFail($import);
-        $headers = $this->headersFor($job);
+        $headers = $reader->read($job->disk, $job->path, 0)['headers'];
         foreach ($data['mapping'] as $target => $source) {
             if (! in_array($target, self::MAPPABLE_FIELDS, true) || ! in_array($source, $headers, true)) {
                 return response()->json(['message' => 'การจับคู่คอลัมน์ไม่ถูกต้อง'], 422);
@@ -78,16 +127,16 @@ class ImportController extends Controller
         return response()->json(['data' => $job, 'errors' => ImportError::where('import_job_id', $job->id)->limit(100)->get()]);
     }
 
-    /** @return array<int, string> */
-    private function headersFor(ImportJob $job): array
+    private function maskSensitivePreview(array $rows): array
     {
-        $handle = fopen(Storage::disk($job->disk)->path($job->path), 'rb');
-        if ($handle === false) {
-            return [];
-        }
-        $headers = fgetcsv($handle) ?: [];
-        fclose($handle);
+        return array_map(static function (array $row): array {
+            foreach ($row as $header => $value) {
+                if (preg_match('/password|passcode|รหัสผ่าน/i', (string) $header)) {
+                    $row[$header] = filled($value) ? '••••••••' : null;
+                }
+            }
 
-        return array_values(array_filter(array_map(static fn ($header) => trim((string) $header), $headers)));
+            return $row;
+        }, $rows);
     }
 }

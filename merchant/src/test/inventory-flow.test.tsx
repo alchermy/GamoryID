@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
@@ -14,11 +20,34 @@ import {
   type InventoryMediaDraft,
 } from "../features/inventory/inventory-media-model";
 import { TransactionsPanel } from "../features/transactions/TransactionsPanel";
+import { ImportPanel } from "../features/imports/ImportPanel";
 import { buildInventoryCopyText } from "../inventory-copy";
 
 afterEach(cleanup);
 
 describe("inventory flow", () => {
+  it("แสดงไฟล์ Excel ตัวอย่างและรับเฉพาะ Excel หรือ CSV", async () => {
+    render(<ImportPanel shopId={1} onComplete={() => undefined} />);
+
+    expect(
+      screen.getByRole("button", { name: "ดาวน์โหลด Excel ตัวอย่าง" }),
+    ).toBeInTheDocument();
+    const picker = screen.getByLabelText("เลือกไฟล์ Excel หรือ CSV");
+    expect(picker).toHaveAttribute("accept", expect.stringContaining(".xlsx"));
+    expect(picker).toHaveAttribute("accept", expect.stringContaining(".csv"));
+
+    fireEvent.change(picker, {
+      target: {
+        files: [
+          new File(["not-a-sheet"], "inventory.txt", { type: "text/plain" }),
+        ],
+      },
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "รองรับเฉพาะไฟล์ Excel (.xlsx) หรือ CSV (.csv)",
+    );
+  });
+
   it("ค้นหา exact tag และบันทึกขายได้", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -167,6 +196,44 @@ describe("inventory flow", () => {
     expect(screen.getAllByText("Immortal 2").length).toBeGreaterThan(0);
   });
 
+  it("เพิ่ม แก้ไข และล้างโน้ตช่วยจำภายในร้านได้", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", { name: "เพิ่มโน้ตช่วยจำ #23DX5" }),
+    );
+    const dialog = screen.getByRole("dialog", {
+      name: "โน้ตช่วยจำ #23DX5",
+    });
+    const noteInput = within(dialog).getByLabelText("โน้ตภายในร้าน");
+    await user.type(noteInput, "คุณเอกจองถึง 18:00 น. รอตัดสินใจ");
+    await user.click(
+      within(dialog).getByRole("button", { name: "บันทึกโน้ต" }),
+    );
+
+    expect(
+      await screen.findByText("บันทึกโน้ต #23DX5 แล้ว"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("คุณเอกจองถึง 18:00 น. รอตัดสินใจ").length,
+    ).toBeGreaterThan(0);
+
+    await user.click(
+      screen.getByRole("button", { name: "แก้ไขโน้ตช่วยจำ #23DX5" }),
+    );
+    const editDialog = screen.getByRole("dialog", {
+      name: "โน้ตช่วยจำ #23DX5",
+    });
+    await user.click(
+      within(editDialog).getByRole("button", { name: "ล้างโน้ต" }),
+    );
+    await user.click(
+      within(editDialog).getByRole("button", { name: "บันทึกโน้ต" }),
+    );
+    expect(await screen.findByText("ล้างโน้ต #23DX5 แล้ว")).toBeInTheDocument();
+  });
+
   it("จำกัดรูป Display 1 รูปและรูปภาพรายละเอียดสูงสุด 4 รูป", async () => {
     const user = userEvent.setup();
     Object.defineProperty(URL, "createObjectURL", {
@@ -268,6 +335,7 @@ describe("inventory flow", () => {
     expect(copied).toContain("สนใจรายละเอียดเพิ่มเติม");
     expect(copied).not.toContain("gammy.ops01");
     expect(copied).not.toContain("Password");
+    expect(copied).not.toContain("โน้ตช่วยจำ");
   });
 
   it("จัดรูปแบบข้อความคัดลอกตามแม่แบบร้าน", () => {

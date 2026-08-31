@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\InventoryItem;
 use App\Models\InventoryMedia;
@@ -97,6 +98,54 @@ class InventoryApiTest extends TestCase
             'username' => 'gammy.updated',
             'list_price' => 7900,
         ]);
+    }
+
+    public function test_inventory_note_is_tenant_scoped_permission_checked_and_audited_without_its_content(): void
+    {
+        [$owner, $shop] = $this->owner('note-owner@example.test', 'ร้านโน้ต');
+        $item = $this->item($shop, 'NOTE5');
+        $note = 'คุณเอกจองถึง 18:00 น. รอตัดสินใจ';
+
+        $this->actingAs($owner)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->patchJson("/api/v1/inventory/{$item->id}/note", ['notes' => $note])
+            ->assertOk()
+            ->assertJsonPath('data.notes', $note);
+
+        $this->assertDatabaseHas('inventory_items', ['id' => $item->id, 'notes' => $note]);
+        $log = ActivityLog::where('event', 'inventory.note_updated')->latest('id')->firstOrFail();
+        $this->assertSame(['tag' => '#NOTE5', 'has_note' => true], $log->metadata);
+        $this->assertStringNotContainsString($note, (string) $log->toJson());
+
+        $staff = User::create([
+            'name' => 'พนักงานขาย',
+            'email' => 'note-staff@example.test',
+            'password' => 'password',
+            'current_shop_id' => $shop->id,
+            'email_verified_at' => now(),
+        ]);
+        ShopMember::create([
+            'shop_id' => $shop->id,
+            'user_id' => $staff->id,
+            'role' => 'staff',
+            'permissions' => ['inventory.sell'],
+            'joined_at' => now(),
+        ]);
+
+        $this->actingAs($staff)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->patchJson("/api/v1/inventory/{$item->id}/note", ['notes' => 'รอปิดการขาย'])
+            ->assertOk()
+            ->assertJsonPath('data.notes', 'รอปิดการขาย');
+
+        $staff->shops()->updateExistingPivot($shop->id, ['permissions' => json_encode([])]);
+        $this->actingAs($staff)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->patchJson("/api/v1/inventory/{$item->id}/note", ['notes' => 'ไม่มีสิทธิ์'])
+            ->assertForbidden();
+
+        [, $otherShop] = $this->owner('note-other@example.test', 'ร้านอื่น');
+        $foreign = $this->item($otherShop, 'OTHER');
+        $this->actingAs($owner)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->patchJson("/api/v1/inventory/{$foreign->id}/note", ['notes' => 'ห้ามข้ามร้าน'])
+            ->assertNotFound();
     }
 
     public function test_inventory_supports_one_display_image_and_four_detail_images(): void

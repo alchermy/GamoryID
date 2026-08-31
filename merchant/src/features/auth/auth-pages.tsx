@@ -116,7 +116,7 @@ export function AuthScreen({ mode }: { mode: "login" | "register" }) {
             </li>
             <li>
               <Check />
-              นำเข้าหลายรายการด้วย CSV
+              นำเข้าหลายรายการด้วย Excel หรือ CSV
             </li>
             <li>
               <Check />

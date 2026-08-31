@@ -35,7 +35,7 @@ export const mainNavigation = [
   ["inventory", "คลังไอดี", ShoppingBag],
   ["sales", "รายการขาย", WalletCards],
   ["customers", "ลูกค้า", Users],
-  ["imports", "นำเข้า CSV", FileUp],
+  ["imports", "นำเข้าข้อมูล", FileUp],
 ] as const;
 
 export const managementNavigation = [

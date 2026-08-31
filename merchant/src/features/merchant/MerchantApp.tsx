@@ -72,6 +72,7 @@ import {
   ArchiveDialog,
   EditDialog,
   InventoryDetailPage,
+  InventoryNoteDialog,
   InventoryPanel,
   SellDialog,
 } from "../inventory/inventory-components";
@@ -87,8 +88,11 @@ export function MerchantApp() {
     [query, setQuery] = useState(""),
     [searchComposing, setSearchComposing] = useState(false),
     [status, setInventoryStatus] = useState<"all" | InventoryStatus>("all"),
-    [dialog, setDialog] = useState<"add" | "edit" | "sell" | null>(null),
+    [dialog, setDialog] = useState<"add" | "edit" | "note" | "sell" | null>(
+      null,
+    ),
     [selected, setSelected] = useState<InventoryItem | null>(null),
+    [noteCandidate, setNoteCandidate] = useState<InventoryItem | null>(null),
     [saleInventoryItem, setSaleInventoryItem] = useState<InventoryItem | null>(
       null,
     ),
@@ -471,6 +475,51 @@ export function MerchantApp() {
   };
   const reserve = async (i: InventoryItem) => {
     await changeInventoryStatus(i, "reserved");
+  };
+  const openInventoryNote = (item: InventoryItem) => {
+    setNoteCandidate(item);
+    setDialog("note");
+  };
+  const saveInventoryNote = async (notes: string): Promise<string | null> => {
+    if (!noteCandidate) return "ไม่พบไอดีที่ต้องการบันทึกโน้ต";
+    if (inventoryBusy) return "ระบบกำลังบันทึกรายการก่อนหน้า";
+    setInventoryBusy(true);
+    try {
+      let updated: InventoryItem;
+      if (shop) {
+        const result = await shopRequest<{
+          data: InventoryResponse["data"][number];
+        }>(`/inventory/${noteCandidate.id}/note`, shop.id, {
+          method: "PATCH",
+          body: JSON.stringify({ notes: notes || null }),
+        });
+        updated = mapInventoryItem(result.data);
+      } else {
+        updated = {
+          ...noteCandidate,
+          notes: notes || null,
+          updated: "เมื่อสักครู่",
+        };
+      }
+      setInventoryItems((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      setSelected((current) =>
+        current?.id === updated.id ? updated : current,
+      );
+      setNoteCandidate(null);
+      setDialog(null);
+      notify(
+        notes
+          ? `บันทึกโน้ต ${updated.tag} แล้ว`
+          : `ล้างโน้ต ${updated.tag} แล้ว`,
+      );
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : "ไม่สามารถบันทึกโน้ตได้";
+    } finally {
+      setInventoryBusy(false);
+    }
   };
   const sell = (i: InventoryItem) => {
     if (i.status === "sold" || i.status === "archived") return;
@@ -1083,7 +1132,7 @@ export function MerchantApp() {
             </button>
             <button className="button" onClick={() => go("imports")}>
               <FileUp size={17} />
-              นำเข้า CSV
+              นำเข้าข้อมูล
             </button>
             {hasShopPermission("inventory.manage") && (
               <button
@@ -1233,12 +1282,17 @@ export function MerchantApp() {
             item={selected}
             canManage={hasShopPermission("inventory.manage")}
             canSell={hasShopPermission("inventory.sell")}
+            canNote={
+              hasShopPermission("inventory.manage") ||
+              hasShopPermission("inventory.sell")
+            }
             onBack={() => setSelected(null)}
             onEdit={() => setDialog("edit")}
             onCopyDetails={() => void copyDetails(selected)}
             onReserve={() => void reserve(selected)}
             onSell={() => sell(selected)}
             onArchive={() => setArchiveCandidate(selected)}
+            onEditNote={() => openInventoryNote(selected)}
           />
         )}
         <section
@@ -1327,6 +1381,10 @@ export function MerchantApp() {
             status={status}
             setInventoryStatus={setInventoryStatus}
             canSell={hasShopPermission("inventory.sell")}
+            canNote={
+              hasShopPermission("inventory.manage") ||
+              hasShopPermission("inventory.sell")
+            }
             busy={inventoryBusy}
             onStatusChange={changeInventoryStatus}
             onSelect={openDetail}
@@ -1334,6 +1392,7 @@ export function MerchantApp() {
             onSell={sell}
             onCopyTag={copyTag}
             onCopyDetails={copyDetails}
+            onNote={openInventoryNote}
           />
           <aside className="side-column">
             <section className="panel">
@@ -1359,7 +1418,7 @@ export function MerchantApp() {
                 />
                 <Activity
                   icon={<FileUp size={14} />}
-                  text="นำเข้า CSV สำเร็จ 48 รายการ"
+                  text="นำเข้าข้อมูลสำเร็จ 48 รายการ"
                   time="เมื่อวาน 18:42"
                 />
               </div>
@@ -1436,6 +1495,17 @@ export function MerchantApp() {
           close={() => setDialog(null)}
           submit={editInventoryItem}
           busy={inventoryBusy}
+        />
+      )}{" "}
+      {dialog === "note" && noteCandidate && (
+        <InventoryNoteDialog
+          item={noteCandidate}
+          busy={inventoryBusy}
+          close={() => {
+            setNoteCandidate(null);
+            setDialog(null);
+          }}
+          submit={saveInventoryNote}
         />
       )}{" "}
       {dialog === "sell" && saleInventoryItem && (

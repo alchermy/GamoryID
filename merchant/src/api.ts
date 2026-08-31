@@ -87,3 +87,42 @@ export function shopRequest<T>(
     headers: { "X-Shop-Id": String(shopId), ...init.headers },
   });
 }
+
+export async function downloadShopFile(
+  path: string,
+  shopId: number,
+  filename: string,
+): Promise<void> {
+  const timeout = new AbortController();
+  const timeoutId = window.setTimeout(() => timeout.abort(), 15_000);
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      credentials: "include",
+      headers: {
+        Accept: "application/octet-stream",
+        "X-Shop-Id": String(shopId),
+      },
+      signal: timeout.signal,
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.message ?? "ไม่สามารถดาวน์โหลดไฟล์ได้");
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  } catch (error) {
+    if (timeout.signal.aborted) {
+      throw new Error("การดาวน์โหลดใช้เวลานานเกินไป กรุณาลองใหม่");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}

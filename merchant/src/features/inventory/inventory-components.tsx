@@ -10,6 +10,7 @@ import {
   Copy,
   Eye,
   Link2,
+  MessageSquareText,
   PackagePlus,
   Pencil,
   Phone,
@@ -83,6 +84,7 @@ export function InventoryPanel({
   status,
   setInventoryStatus,
   canSell,
+  canNote,
   busy,
   onStatusChange,
   onSelect,
@@ -90,12 +92,14 @@ export function InventoryPanel({
   onSell,
   onCopyTag,
   onCopyDetails,
+  onNote,
 }: {
   items: InventoryItem[];
   query: string;
   status: "all" | InventoryStatus;
   setInventoryStatus: (v: "all" | InventoryStatus) => void;
   canSell: boolean;
+  canNote: boolean;
   busy: boolean;
   onStatusChange: (item: InventoryItem, status: InventoryStatus) => void;
   onSelect: (v: InventoryItem) => void;
@@ -103,6 +107,7 @@ export function InventoryPanel({
   onSell: (v: InventoryItem) => void;
   onCopyTag: (v: InventoryItem) => void;
   onCopyDetails: (v: InventoryItem) => void;
+  onNote: (v: InventoryItem) => void;
 }) {
   return (
     <section className="panel inventory-list-panel">
@@ -161,7 +166,30 @@ export function InventoryPanel({
                       </button>
                     </td>
                     <td className="title-cell">{i.username}</td>
-                    <td className="title-cell">{i.riotId}</td>
+                    <td className="title-cell">
+                      <span>{i.riotId}</span>
+                      {i.notes && canNote && (
+                        <button
+                          type="button"
+                          className="inventory-note-preview"
+                          title={i.notes}
+                          aria-label={`เปิดโน้ตช่วยจำ ${i.tag}: ${i.notes}`}
+                          onClick={() => onNote(i)}
+                        >
+                          <MessageSquareText size={13} aria-hidden="true" />
+                          <span>{i.notes}</span>
+                        </button>
+                      )}
+                      {i.notes && !canNote && (
+                        <span
+                          className="inventory-note-preview is-readonly"
+                          title={i.notes}
+                        >
+                          <MessageSquareText size={13} aria-hidden="true" />
+                          <span>{i.notes}</span>
+                        </span>
+                      )}
+                    </td>
                     <td>{i.rank}</td>
                     <td>
                       <strong>{money.format(i.price)}</strong>
@@ -176,6 +204,18 @@ export function InventoryPanel({
                     </td>
                     <td>
                       <div className="row-actions">
+                        {canNote && (
+                          <button
+                            className={`icon-button note-action ${i.notes ? "has-note" : ""}`}
+                            aria-label={`${i.notes ? "แก้ไข" : "เพิ่ม"}โน้ตช่วยจำ ${i.tag}`}
+                            title={
+                              i.notes ? "แก้ไขโน้ตช่วยจำ" : "เพิ่มโน้ตช่วยจำ"
+                            }
+                            onClick={() => onNote(i)}
+                          >
+                            <MessageSquareText size={16} />
+                          </button>
+                        )}
                         <button
                           className="icon-button"
                           aria-label={`ดูรายละเอียด ${i.tag}`}
@@ -256,7 +296,30 @@ export function InventoryPanel({
                     </span>
                   </div>
                 </button>
+                {i.notes && canNote && (
+                  <button
+                    type="button"
+                    className="mobile-inventory-note"
+                    onClick={() => onNote(i)}
+                    aria-label={`เปิดโน้ตช่วยจำ ${i.tag}: ${i.notes}`}
+                  >
+                    <MessageSquareText size={15} aria-hidden="true" />
+                    <span>{i.notes}</span>
+                  </button>
+                )}
+                {i.notes && !canNote && (
+                  <div className="mobile-inventory-note is-readonly">
+                    <MessageSquareText size={15} aria-hidden="true" />
+                    <span>{i.notes}</span>
+                  </div>
+                )}
                 <div className="mobile-row-actions">
+                  {canNote && (
+                    <button className="button" onClick={() => onNote(i)}>
+                      <MessageSquareText size={16} />
+                      {i.notes ? "แก้ไขโน้ต" : "เพิ่มโน้ต"}
+                    </button>
+                  )}
                   <button
                     className="button"
                     onClick={() => void onCopyDetails(i)}
@@ -285,6 +348,105 @@ export function InventoryPanel({
     </section>
   );
 }
+
+export function InventoryNoteDialog({
+  item,
+  busy,
+  close,
+  submit,
+}: {
+  item: InventoryItem;
+  busy: boolean;
+  close: () => void;
+  submit: (notes: string) => Promise<string | null>;
+}) {
+  const [notes, setNotes] = useState(item.notes ?? ""),
+    [error, setError] = useState("");
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (busy) return;
+    setError("");
+    const result = await submit(notes.trim());
+    if (result) setError(result);
+  };
+
+  return (
+    <div
+      className="dialog-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) close();
+      }}
+    >
+      <form
+        className="dialog inventory-note-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="inventory-note-title"
+        onSubmit={handleSubmit}
+        noValidate
+      >
+        <DialogHead
+          id="inventory-note-title"
+          title={`โน้ตช่วยจำ ${item.tag}`}
+          subtitle="แปะสถานะการคุย ชื่อลูกค้า หรือสิ่งที่ทีมต้องติดตามไว้กับไอดีนี้"
+          close={close}
+        />
+        <div className="dialog-body inventory-note-dialog-body">
+          {error && (
+            <div className="auth-error" role="alert">
+              {error}
+            </div>
+          )}
+          <Field label="โน้ตภายในร้าน">
+            <textarea
+              className="resize-none inventory-note-input"
+              value={notes}
+              maxLength={5000}
+              autoFocus
+              data-dialog-initial-focus
+              placeholder="เช่น คุณเอกจองถึง 18:00 น. · คุยแล้ว รอตัดสินใจ · รอขายให้ลูกค้า LINE @example"
+              onChange={(event) => setNotes(event.target.value)}
+            />
+          </Field>
+          <div className="inventory-note-help">
+            <span>ใช้ภายในร้านเท่านั้น ไม่รวมในข้อความที่คัดลอกส่งลูกค้า</span>
+            <span>{notes.length.toLocaleString("th-TH")}/5,000</span>
+          </div>
+        </div>
+        <div className="dialog-actions inventory-note-actions">
+          <div>
+            {item.notes && (
+              <button
+                type="button"
+                className="button ghost"
+                disabled={busy || notes.length === 0}
+                onClick={() => setNotes("")}
+              >
+                ล้างโน้ต
+              </button>
+            )}
+          </div>
+          <div>
+            <button
+              type="button"
+              className="button"
+              onClick={close}
+              disabled={busy}
+            >
+              ยกเลิก
+            </button>
+            <button className="button blue" disabled={busy}>
+              <Save size={17} />
+              {busy ? "กำลังบันทึก…" : "บันทึกโน้ต"}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export function AddDialog({
   close,
   submit,
@@ -839,22 +1001,26 @@ export function InventoryDetailPage({
   item,
   canManage,
   canSell,
+  canNote,
   onBack,
   onEdit,
   onCopyDetails,
   onReserve,
   onSell,
   onArchive,
+  onEditNote,
 }: {
   item: InventoryItem;
   canManage: boolean;
   canSell: boolean;
+  canNote: boolean;
   onBack: () => void;
   onEdit: () => void;
   onCopyDetails: () => void;
   onReserve: () => void;
   onSell: () => void;
   onArchive: () => void;
+  onEditNote: () => void;
 }) {
   return (
     <section
@@ -916,10 +1082,24 @@ export function InventoryDetailPage({
                 {item.description?.trim() || item.title || "ยังไม่มีรายละเอียด"}
               </p>
             </div>
-            {item.notes && (
+            {(item.notes || canNote) && (
               <div className="inventory-description private-note">
-                <span>หมายเหตุภายใน</span>
-                <p>{item.notes}</p>
+                <div className="private-note-head">
+                  <span>
+                    <MessageSquareText size={15} aria-hidden="true" />
+                    โน้ตช่วยจำภายในร้าน
+                  </span>
+                  {canNote && (
+                    <button
+                      type="button"
+                      className="button ghost compact"
+                      onClick={onEditNote}
+                    >
+                      {item.notes ? "แก้ไขโน้ต" : "เพิ่มโน้ต"}
+                    </button>
+                  )}
+                </div>
+                <p>{item.notes || "ยังไม่มีโน้ตช่วยจำสำหรับไอดีนี้"}</p>
               </div>
             )}
           </section>
@@ -945,6 +1125,12 @@ export function InventoryDetailPage({
               <button className="button primary" onClick={onSell}>
                 <Tag size={17} />
                 ปิดการขาย
+              </button>
+            )}
+            {canNote && (
+              <button className="button" onClick={onEditNote}>
+                <MessageSquareText size={17} />
+                {item.notes ? "แก้ไขโน้ตช่วยจำ" : "เพิ่มโน้ตช่วยจำ"}
               </button>
             )}
             {canManage && item.status !== "archived" && (
