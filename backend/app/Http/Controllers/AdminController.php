@@ -2,14 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
+use App\Models\CreditTransaction;
 use App\Models\InventoryItem;
 use App\Models\PaymentSubmission;
 use App\Models\Shop;
+use App\Models\ShopMember;
+use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
-use App\Services\Totp;
+use App\Services\CreditWallet;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -18,12 +26,12 @@ class AdminController extends Controller
         return view('admin.login');
     }
 
-    public function login(Request $request, Totp $totp)
+    public function login(Request $request)
     {
-        $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required'], 'code' => ['required', 'digits:6']]);
+        $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required']]);
         $user = User::where('email', $data['email'])->where('is_super_admin', true)->first();
-        if (! $user || ! Hash::check($data['password'], $user->password) || ! $user->two_factor_confirmed_at || ! $totp->verify($user->two_factor_secret, $data['code'])) {
-            return back()->withErrors(['email' => 'ข้อมูลเข้าสู่ระบบหรือรหัส 2FA ไม่ถูกต้อง'])->onlyInput('email');
+        if (! $user || ! Hash::check($data['password'], $user->password)) {
+            return back()->withErrors(['email' => 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'])->onlyInput('email');
         }
         $request->session()->regenerate();
         $request->session()->put('admin_user_id', $user->id);
@@ -33,32 +41,253 @@ class AdminController extends Controller
 
     public function dashboard()
     {
-        return view('admin.dashboard', [
-            'shops' => Shop::withCount('inventoryItems')->latest()->limit(50)->get(),
-            'plans' => SubscriptionPlan::orderBy('price_thb')->get(),
-            'pendingPayments' => PaymentSubmission::where('status', 'pending_review')->with(['shop', 'plan'])->latest()->limit(20)->get(),
-            'totals' => ['shops' => Shop::count(), 'items' => InventoryItem::count(), 'users' => User::where('is_super_admin', false)->count()],
+        return $this->page('dashboard', 'Dashboard', [
+            'recentTopUps' => PaymentSubmission::whereNotNull('credit_amount')->with('shop')->latest()->limit(6)->get(),
+            'recentLogs' => ActivityLog::with(['shop', 'user'])->latest('created_at')->limit(8)->get(),
         ]);
+    }
+
+    public function shops(Request $request)
+    {
+        $query = trim((string) $request->query('q'));
+        $shops = Shop::withTrashed()
+            ->with(['latestSubscription.plan'])
+            ->withCount(['users as staff_count' => fn ($builder) => $builder->where('shop_members.role', 'staff')])
+            ->when($query !== '', fn ($builder) => $builder->where(fn ($nested) => $nested->where('name', 'like', "%{$query}%")->orWhere('slug', 'like', "%{$query}%")))
+            ->orderByRaw('deleted_at is not null')
+            ->latest()->paginate(25)->withQueryString();
+
+        return $this->page('shops', 'จัดการร้านค้า', compact('shops', 'query'));
+    }
+
+    public function createShop()
+    {
+        return $this->page('shop-create', 'เพิ่มร้านค้า');
+    }
+
+    public function storeShop(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'slug' => ['required', 'alpha_dash', 'max:120', 'unique:shops,slug'],
+            'owner_name' => ['required', 'string', 'max:120'],
+            'owner_email' => ['required', 'email', 'max:190', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:10', 'confirmed'],
+            'trial_days' => ['required', 'integer', 'min:1', 'max:365'],
+        ]);
+
+        $shop = DB::transaction(function () use ($data) {
+            $trialEndsAt = now()->addDays((int) $data['trial_days']);
+            $shop = Shop::create([
+                'name' => $data['name'],
+                'slug' => Str::lower($data['slug']),
+                'status' => 'trialing',
+                'trial_ends_at' => $trialEndsAt,
+                'grace_ends_at' => $trialEndsAt->copy()->addDays(14),
+            ]);
+            $owner = User::create([
+                'name' => $data['owner_name'],
+                'email' => Str::lower($data['owner_email']),
+                'password' => $data['password'],
+                'current_shop_id' => $shop->id,
+                'email_verified_at' => now(),
+            ]);
+            ShopMember::create([
+                'shop_id' => $shop->id,
+                'user_id' => $owner->id,
+                'role' => 'owner',
+                'permissions' => [],
+                'joined_at' => now(),
+            ]);
+            Subscription::create([
+                'shop_id' => $shop->id,
+                'status' => 'trialing',
+                'starts_at' => now(),
+                'ends_at' => $trialEndsAt,
+                'grace_ends_at' => $trialEndsAt->copy()->addDays(14),
+            ]);
+
+            return $shop;
+        });
+
+        $this->recordAdminLog($request, $shop, 'shop.created', $shop, ['slug' => $shop->slug]);
+
+        return redirect()->route('admin.shops.show', $shop)->with('message', 'สร้างร้านค้าและบัญชีเจ้าของร้านแล้ว');
+    }
+
+    public function showShop(Shop $shop)
+    {
+        $shop->load(['users' => fn ($builder) => $builder->orderBy('shop_members.role')->orderBy('users.name'), 'latestSubscription.plan']);
+        $subscriptions = $shop->subscriptions()->with('plan')->latest('created_at')->paginate(10, ['*'], 'subscriptions_page')->withQueryString();
+        $topUps = $shop->paymentSubmissions()->whereNotNull('credit_amount')->with('submittedBy')->latest()->paginate(10, ['*'], 'topups_page')->withQueryString();
+        $creditTransactions = $shop->creditTransactions()->with('plan')->latest()->limit(12)->get();
+
+        return $this->page('shop-show', $shop->name, compact('shop', 'subscriptions', 'topUps', 'creditTransactions'));
+    }
+
+    public function editShop(Shop $shop)
+    {
+        abort_if($shop->trashed(), 409, 'ร้านค้านี้ถูกเก็บถาวรแล้ว');
+
+        return $this->page('shop-edit', 'แก้ไข '.$shop->name, compact('shop'));
+    }
+
+    public function plans()
+    {
+        return $this->page('plans', 'จัดการแพ็กเกจ', ['plans' => SubscriptionPlan::orderBy('price_thb')->get()]);
+    }
+
+    public function createPlan()
+    {
+        return $this->page('plan-create', 'เพิ่มแพ็กเกจ');
+    }
+
+    public function editPlan(SubscriptionPlan $plan)
+    {
+        return $this->page('plan-edit', 'แก้ไขแพ็กเกจ '.$plan->name, compact('plan'));
+    }
+
+    public function topUps(Request $request)
+    {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'status' => ['nullable', Rule::in(['all', 'pending', 'pending_review', 'verified', 'rejected'])],
+        ]);
+        $query = trim((string) ($filters['q'] ?? ''));
+        $date = (string) ($filters['date'] ?? '');
+        $status = (string) ($filters['status'] ?? 'all');
+        $topUps = PaymentSubmission::whereNotNull('credit_amount')->with(['shop', 'submittedBy'])
+            ->when($query !== '', fn ($builder) => $builder->whereHas('shop', fn ($shop) => $shop->where('name', 'like', "%{$query}%")->orWhere('slug', 'like', "%{$query}%")))
+            ->when($date !== '', fn ($builder) => $builder->whereDate('created_at', $date))
+            ->when($status !== 'all', fn ($builder) => $builder->where('status', $status))
+            ->latest()->paginate(25)->withQueryString();
+
+        return $this->page('top-ups', 'รายการเติมเครดิต', compact('topUps', 'query', 'date', 'status'));
+    }
+
+    public function showTopUp(PaymentSubmission $payment)
+    {
+        abort_unless($payment->credit_amount, 404);
+        $payment->load(['shop', 'submittedBy', 'plan']);
+
+        return $this->page('top-up-show', 'รายละเอียดเติมเครดิต #'.$payment->id, compact('payment'));
+    }
+
+    public function logs(Request $request)
+    {
+        $query = trim((string) $request->query('q'));
+        $logs = ActivityLog::with(['shop', 'user'])
+            ->when($query !== '', fn ($builder) => $builder->where(fn ($nested) => $nested->where('event', 'like', "%{$query}%")->orWhereHas('shop', fn ($shop) => $shop->where('name', 'like', "%{$query}%"))))
+            ->latest('created_at')->paginate(50)->withQueryString();
+
+        return $this->page('logs', 'Log การทำรายการ', compact('logs', 'query'));
     }
 
     public function updateShop(Request $request, Shop $shop)
     {
-        $data = $request->validate(['status' => ['required', 'in:trialing,pending_payment,active,grace_read_only,suspended,cancelled']]);
+        abort_if($shop->trashed(), 409, 'ร้านค้านี้ถูกเก็บถาวรแล้ว');
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'slug' => ['required', 'alpha_dash', 'max:120', Rule::unique('shops', 'slug')->ignore($shop->id)],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'facebook_url' => ['nullable', 'url', 'max:255'],
+            'line_url' => ['nullable', 'url', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:32'],
+            'status' => ['required', Rule::in(['trialing', 'pending_payment', 'active', 'grace_read_only', 'suspended', 'cancelled'])],
+        ]);
+        $before = $shop->only(['name', 'slug', 'status']);
+        $data['slug'] = Str::lower($data['slug']);
         $shop->update($data);
+        $this->recordAdminLog($request, $shop, 'shop.updated', $shop, ['before' => $before, 'after' => $shop->only(['name', 'slug', 'status'])]);
 
-        return back()->with('message', 'อัปเดตร้านแล้ว');
+        return redirect()->route('admin.shops.show', $shop)->with('message', 'บันทึกข้อมูลร้านค้าแล้ว');
+    }
+
+    public function destroyShop(Request $request, Shop $shop)
+    {
+        DB::transaction(function () use ($request, $shop) {
+            $shop->update(['status' => 'suspended']);
+            $this->recordAdminLog($request, $shop, 'shop.archived', $shop, ['slug' => $shop->slug]);
+            $shop->delete();
+        });
+
+        return redirect()->route('admin.shops.index')->with('message', 'เก็บร้านค้าไว้ในรายการถาวรแล้ว ประวัติและข้อมูลทางการเงินยังคงอยู่');
+    }
+
+    public function restoreShop(Request $request, Shop $shop)
+    {
+        abort_unless($shop->trashed(), 404);
+        $shop->restore();
+        $this->recordAdminLog($request, $shop, 'shop.restored', $shop, ['status' => $shop->status]);
+
+        return redirect()->route('admin.shops.show', $shop)->with('message', 'กู้คืนร้านค้าแล้ว ร้านยังอยู่ในสถานะระงับจนกว่าจะเปิดใช้งาน');
+    }
+
+    public function updateAutoRenew(Request $request, Shop $shop)
+    {
+        abort_if($shop->trashed(), 409, 'ร้านค้านี้ถูกเก็บถาวรแล้ว');
+        $data = $request->validate(['auto_renew' => ['required', 'boolean']]);
+        $subscription = $shop->subscriptions()
+            ->whereIn('status', ['trialing', 'active', 'grace_read_only'])
+            ->latest('created_at')->first();
+        if (! $subscription) {
+            return back()->withErrors(['auto_renew' => 'ร้านค้านี้ยังไม่มีแพ็กเกจปัจจุบัน จึงตั้งค่าต่ออายุอัตโนมัติไม่ได้']);
+        }
+
+        $before = $subscription->auto_renew;
+        $subscription->update(['auto_renew' => (bool) $data['auto_renew']]);
+        $this->recordAdminLog($request, $shop, 'subscription.auto_renew_updated', $subscription, ['before' => $before, 'after' => $subscription->auto_renew]);
+
+        return back()->with('message', $subscription->auto_renew ? 'เปิดต่ออายุอัตโนมัติแล้ว' : 'ปิดต่ออายุอัตโนมัติแล้ว');
+    }
+
+    public function storePlan(Request $request)
+    {
+        $data = $this->validatePlan($request);
+        $plan = SubscriptionPlan::create($data);
+        $this->recordAdminLog($request, null, 'plan.created', $plan, ['code' => $plan->code]);
+
+        return redirect()->route('admin.plans.index')->with('message', 'สร้างแพ็กเกจแล้ว');
     }
 
     public function updatePlan(Request $request, SubscriptionPlan $plan)
     {
-        $plan->update($request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'active_inventory_limit' => ['required', 'integer', 'min:1'],
-            'member_limit' => ['required', 'integer', 'min:1'],
-            'price_thb' => ['required', 'numeric', 'min:0'],
-        ]));
+        $data = $this->validatePlan($request, $plan);
+        $plan->update($data);
+        $this->recordAdminLog($request, null, 'plan.updated', $plan, ['code' => $plan->code]);
 
-        return back()->with('message', 'อัปเดตแพ็กเกจแล้ว');
+        return redirect()->route('admin.plans.index')->with('message', 'อัปเดตแพ็กเกจแล้ว');
+    }
+
+    public function reviewTopUp(Request $request, PaymentSubmission $payment, CreditWallet $wallet)
+    {
+        $data = $request->validate([
+            'decision' => ['required', Rule::in(['approved', 'rejected'])],
+            'review_note' => ['nullable', 'required_if:decision,rejected', 'string', 'min:3', 'max:1000'],
+        ]);
+        abort_unless($payment->credit_amount, 404);
+        if (! in_array($payment->status, ['pending', 'pending_review'], true)) {
+            return back()->withErrors(['review_note' => 'รายการนี้ถูกตรวจสอบแล้ว กรุณาโหลดหน้าใหม่เพื่อดูสถานะล่าสุด']);
+        }
+        if ($data['decision'] === 'approved') {
+            $wallet->approveTopUp($payment);
+            $payment->update(['review_note' => ($data['review_note'] ?? null) ?: 'ตรวจสอบสลิปและยอดเงินถูกต้อง']);
+            $message = 'อนุมัติการเติมเครดิตแล้ว';
+        } else {
+            $payment->update(['status' => 'rejected', 'review_note' => $data['review_note']]);
+            $message = 'ไม่อนุมัติการเติมเครดิตแล้ว';
+        }
+        $this->recordAdminLog($request, $payment->shop, $data['decision'] === 'approved' ? 'credit.top_up_approved' : 'credit.top_up_rejected', $payment, ['credits' => $payment->credit_amount, 'note' => $payment->review_note]);
+
+        return redirect()->route('admin.top-ups.show', $payment)->with('message', $message);
+    }
+
+    public function slip(PaymentSubmission $payment)
+    {
+        abort_unless($payment->credit_amount && Storage::disk($payment->slip_disk)->exists($payment->slip_path), 404);
+
+        return Storage::disk($payment->slip_disk)->response($payment->slip_path);
     }
 
     public function logout(Request $request)
@@ -67,5 +296,53 @@ class AdminController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('admin.login');
+    }
+
+    private function page(string $page, string $title, array $data = [])
+    {
+        return view('admin.console', array_merge($this->sharedData(), compact('page', 'title'), $data));
+    }
+
+    private function sharedData(): array
+    {
+        return ['totals' => [
+            'shops' => Shop::count(),
+            'items' => InventoryItem::count(),
+            'users' => User::where('is_super_admin', false)->count(),
+            'credit_balance' => Shop::sum('credit_balance'),
+            'pending_top_ups' => PaymentSubmission::where('status', 'pending_review')->whereNotNull('credit_amount')->count(),
+            'credited_total' => CreditTransaction::where('type', 'credit_top_up')->sum('credits'),
+        ]];
+    }
+
+    private function validatePlan(Request $request, ?SubscriptionPlan $plan = null): array
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'code' => ['required', 'string', 'alpha_dash', 'max:40', Rule::unique('subscription_plans', 'code')->ignore($plan?->id)],
+            'active_inventory_limit' => ['required', 'integer', 'min:1'],
+            'member_limit' => ['required', 'integer', 'min:1'],
+            'price_thb' => ['required', 'integer', 'min:0'],
+            'duration_days' => ['required', 'integer', 'min:1', 'max:365'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+        $data['is_active'] = $request->boolean('is_active');
+
+        return $data;
+    }
+
+    private function recordAdminLog(Request $request, ?Shop $shop, string $event, $subject, array $metadata = []): void
+    {
+        ActivityLog::create([
+            'shop_id' => $shop?->id,
+            'user_id' => $request->session()->get('admin_user_id'),
+            'event' => $event,
+            'subject_type' => $subject?->getMorphClass(),
+            'subject_id' => $subject?->getKey(),
+            'metadata' => $metadata,
+            'ip_address' => $request->ip(),
+            'user_agent' => mb_substr((string) $request->userAgent(), 0, 500),
+            'created_at' => now(),
+        ]);
     }
 }

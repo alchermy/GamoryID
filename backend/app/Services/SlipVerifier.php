@@ -8,6 +8,16 @@ class SlipVerifier
 {
     public function verify(string $absolutePath): array
     {
+        if (config('services.slipok.test_bypass') && app()->environment(['local', 'testing'])) {
+            return [
+                'status' => 'verified',
+                'amount' => null,
+                'receiver_account' => null,
+                'transaction_reference' => 'test-'.hash_file('sha256', $absolutePath),
+                'transferred_at' => now()->toDateTimeString(),
+                'summary' => ['mode' => 'test_bypass'],
+            ];
+        }
         if (! config('services.slipok.api_key')) {
             return ['status' => 'pending_review', 'reason' => 'SlipOK ยังไม่ได้ตั้งค่า'];
         }

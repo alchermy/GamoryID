@@ -16,7 +16,7 @@ class InventoryItem extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'shop_id', 'created_by', 'tag', 'title', 'region', 'rank', 'level', 'skin_count',
+        'shop_id', 'created_by', 'tag', 'title', 'riot_id', 'username', 'region', 'rank', 'level', 'skin_count',
         'battlepass_level', 'description', 'notes', 'cost', 'list_price', 'status',
         'custom_values', 'lock_version', 'archived_at',
     ];
@@ -54,7 +54,9 @@ class InventoryItem extends Model
 
     public function media(): HasMany
     {
-        return $this->hasMany(InventoryMedia::class);
+        return $this->hasMany(InventoryMedia::class)
+            ->orderByRaw("case when role = 'display' then 0 else 1 end")
+            ->orderBy('sort_order');
     }
 
     public function scopeForShop(Builder $query, Shop|int $shop): Builder

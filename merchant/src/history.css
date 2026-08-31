@@ -1,0 +1,18 @@
+.field textarea {
+  resize: none;
+}
+
+.sales-page .kpis,
+.sales-page .work-grid,
+.customers-page .kpis,
+.customers-page .work-grid {
+  display: none;
+}
+
+.history-panel {
+  margin-bottom: 20px;
+}
+.history-panel small {
+  color: var(--muted);
+  font-size: 11px;
+}

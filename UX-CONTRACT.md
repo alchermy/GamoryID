@@ -30,10 +30,11 @@
 | Table Selection | `DataTable` + `useTableSelection` | `UX-CONTRACT.md` | page selection | component + E2E |
 | Select/Listbox | `NativeSelect` | `premium-ui.json` ownership | platform-owned popup | keyboard + responsive |
 | Date | native date/datetime input | `premium-ui.json` ownership | platform-owned popup | locale + keyboard |
-| Form | shared `Field` + validation adapter | `merchant/src/App.tsx` | create/edit | validation tests |
-| Scrollbar | global token stylesheet | `merchant/src/index.css` | stable-gutter surfaces | computed style |
+| Form | shared `Field` + Tailwind form recipes | `merchant/src/App.tsx`, `merchant/src/styles/tailwind-system.css`, `backend/resources/css/app.css` | create/edit/admin | validation tests |
+| File Upload | `InventoryMediaFields` | `merchant/src/features/inventory/InventoryMediaFields.tsx` | display/detail inventory images | client + API tests |
+| Scrollbar | global Tailwind application stylesheets | `merchant/src/index.css`, `backend/resources/css/app.css` | stable-gutter surfaces | computed style |
 | Toast | app toast region | `merchant/src/App.tsx` | success/warning/info/error | live-region test |
-| Dialog | app-owned dialog | `merchant/src/App.tsx` | confirm/form/detail | keyboard + focus tests |
+| Dialog | Merchant dialog + Admin confirmation dialog | `merchant/src/App.tsx`, `backend/resources/views/admin/console.blade.php` | confirm/form/detail | keyboard + focus tests |
 | CRUD | route + API service conventions | `backend/openapi.yaml` | return-to-list/stay-on-detail | full-flow E2E |
 
 ## Dataset navigation
@@ -50,19 +51,29 @@
 |---|---|---|---|
 | Create inventory | Disable stable-width submit | Return to inventory and toast | Preserve values, map server errors inline |
 | Edit inventory | Pessimistic save | Return to owning list state | Keep form open and retry |
+| Manage inventory images | Preview one Display image and up to four detail images before upload | Refresh the item detail gallery with private signed media URLs | Keep the saved inventory item, identify partial media failure, and allow retry from edit |
+| Copy inventory details | Compose tag, Riot ID, rank, level, public description, price, and shop footer locally | Copy once and show a generic success toast | Keep the record unchanged and offer retry |
 | Search | Inline spinner without layout shift | Replace rows and range | Keep prior rows with retry banner |
 | Reserve | Pessimistic transaction | Status/timeline update and toast | Restore action and explain conflict |
-| Sell | Pessimistic locked transaction | Sold status, sale record, dashboard invalidation | Preserve dialog data; show already-sold conflict |
+| Change inventory status | Click the current status control; available↔reserved uses the reservation transaction, selecting sold opens the sale form | Refresh inventory/dashboard and announce the committed status | Keep the prior status selected and explain the conflict |
+| Sell | Pessimistic locked transaction with customer, contact, price, optional warranty date, and notes | Sold status, sale/customer record, dashboard invalidation | Preserve dialog data; show validation or already-sold conflict inline |
 | CSV upload | Validating/uploading/queued progress | Summary with imported/errors and rollback action | Keep file and mapping for retry |
-| Slip upload | Upload then queued verification | Active subscription notification | `pending_review` with support guidance |
+| Credit top-up | Upload then queued verification | Move to Super Admin review; credit changes only after approval | Preserve `pending_review` status with review guidance |
+| Package purchase | Pessimistic, idempotency-key protected credit debit | Refresh balance and active subscription | Preserve credit balance; explain insufficient credit |
+| Auto-renew | Explicit confirmation before enabling | Switch reflects the saved preference | Keep current preference and show failure toast |
+| Merchant transaction history | Read-only fetch scoped by current shop and billing permission | Show service and credit top-up sections with Thai status labels | Keep prior data when available and provide retry |
 | Archive | Confirmation dialog | Remove from active list, offer filtered recovery | Keep row and announce failure |
+| Admin shop create/edit | Stable submit; server validation | Create returns to detail; edit returns to detail | Preserve values and show summary + field errors |
+| Admin shop archive/restore | App-owned confirmation for archive | Keep financial/package history; restored shop remains suspended | No hard delete; keep current page on failure |
+| Admin credit review | List filters by shop/date/status → dedicated slip detail; rejection reason required | Credit ledger changes only after confirmed approval | Keep pending/pending-review status and show validation reason |
 
 ## Navigation and responsive behavior
 
 - Document title: `{Page} — GamoryID`; never include secrets or customer PII.
 - Direct forbidden routes render a Thai 403 page; unknown routes render 404; server failures provide retry.
-- Desktop sidebar becomes bottom navigation below 768px; secondary routes move to `เพิ่มเติม`.
-- Tables become compact semantic record rows on mobile; details open in a right drawer/full-width sheet.
+- The authenticated root renders only a secure access gate until the session check completes; merchant/demo data must never mount before authentication succeeds.
+- Desktop sidebar becomes bottom navigation below 768px; secondary routes move to the horizontally scrollable management navigation reached from `เพิ่มเติม`.
+- Tables become compact semantic record rows on mobile; inventory details use a dedicated in-page view with a clear return action.
 - Sticky controls must not obscure focus; use safe-area padding and scroll-margin.
 
 ## Overlays and feedback
@@ -79,7 +90,7 @@
 - Every POST that can duplicate money/sale/import work uses an idempotency key.
 - Offline mode is read-stale/write-blocked with a persistent banner.
 - Session expiry preserves non-secret form state and routes to re-authentication.
-- Credentials are never persisted in browser storage; reveal requires server permission, 2FA, and recent re-authentication.
+- Credentials are never persisted in browser storage; reveal requires server permission and recent re-authentication. The current product decision removes the 2FA gate from both Merchant and Super Admin flows.
 - Superseded requests are aborted; server data is invalidated after mutations.
 
 ## Validation and permissions
@@ -88,6 +99,7 @@
 - Secret inputs are masked with accessible show/hide controls and `autocomplete` metadata.
 - Irrelevant routes are hidden; visible-but-read-only actions are disabled with an accessible explanation; direct access receives 403.
 - Clipboard copies never echo the copied value in a toast, log, URL, or analytics event.
+- Customer-facing inventory copy excludes Username, Password, internal notes, and cost. The reusable footer is owned by the shop settings screen.
 
 ## Verification
 

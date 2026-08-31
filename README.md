@@ -10,6 +10,10 @@ SaaS ภาษาไทยสำหรับจัดการสต็อกส
 - `backend/openapi.yaml` API contract
 - `DESIGN.md` และ `UX-CONTRACT.md` ข้อตกลงด้านภาพและพฤติกรรม
 
+Frontend ทั้งสองส่วนแยก application entry, routes, domain features, shared UI,
+utilities และ types ออกจากกันแล้ว ดูแนวทางเพิ่มฟีเจอร์ Merchant ได้ที่
+`merchant/README.md`
+
 ## เริ่มต้นบน XAMPP (Windows)
 
 1. เปิด Apache และ MySQL จาก XAMPP Control Panel
@@ -42,7 +46,7 @@ Merchant demo: `http://localhost:5173` · API: `http://localhost:8000` · Landin
 
 บัญชี seed สำหรับ API คือ `owner@gamoryid.local` / `password` ใช้เพื่อการพัฒนาเท่านั้น ข้อมูล credentials ใช้ AES-256-GCM ใน XAMPP; ก่อน production ต้องตั้ง `CREDENTIAL_ENCRYPTION_KEY_V1` เป็นคีย์สุ่ม 32 bytes แบบ base64 และห้ามเก็บร่วมฐานข้อมูล
 
-ก่อนเข้า Super Admin ครั้งแรก ให้ลงทะเบียน 2FA ของบัญชี dev ด้วย `php artisan gamoryid:admin-2fa admin@gamoryid.local` แล้วนำ URI ที่ได้ไปเพิ่มในแอป Authenticator
+Super Admin สำหรับการพัฒนาใช้บัญชี `admin@gamoryid.local` / `password`
 
 ## ตรวจสอบ
 

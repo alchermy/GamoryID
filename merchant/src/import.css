@@ -1,0 +1,54 @@
+.field textarea {
+  resize: none;
+}
+.import-panel {
+  margin-bottom: 20px;
+}
+.import-panel ~ .kpis,
+.import-panel ~ .work-grid {
+  display: none;
+}
+.csv-picker {
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px dashed #8ebae8;
+  border-radius: 12px;
+  background: #f8fbff;
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+.csv-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.import-mapping {
+  margin: 18px 0;
+}
+.import-status {
+  margin-top: 14px;
+}
+.import-failed {
+  border-color: #efb8bd;
+  background: #fff3f4;
+  color: var(--danger);
+}
+@media (max-width: 767px) {
+  .csv-picker {
+    min-height: 96px;
+  }
+  .import-mapping {
+    grid-template-columns: 1fr;
+  }
+  .import-panel .table-wrap {
+    display: block;
+  }
+  .import-panel table {
+    min-width: 640px;
+  }
+}

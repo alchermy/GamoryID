@@ -21,6 +21,8 @@ class SellInventoryRequest extends FormRequest
             'customer.line_id' => ['nullable', 'string', 'max:190'],
             'customer.facebook_url' => ['nullable', 'url', 'max:500'],
             'sold_price' => ['required', 'numeric', 'min:0'],
+            'has_warranty' => ['required', 'boolean'],
+            'warranty_ends_at' => ['nullable', 'required_if:has_warranty,true,1', 'date', 'after_or_equal:today'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }

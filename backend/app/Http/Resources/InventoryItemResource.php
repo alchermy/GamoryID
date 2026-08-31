@@ -13,7 +13,8 @@ class InventoryItemResource extends JsonResource
             'id' => $this->id,
             'tag' => '#'.$this->tag,
             'title' => $this->title,
-            'region' => $this->region,
+            'riot_id' => $this->riot_id,
+            'username' => $this->username,
             'rank' => $this->rank,
             'level' => $this->level,
             'skin_count' => $this->skin_count,
@@ -25,6 +26,7 @@ class InventoryItemResource extends JsonResource
             'status' => $this->status->value,
             'custom_values' => $this->custom_values ?? (object) [],
             'has_credentials' => $this->credentials_exists ?? $this->credentials()->exists(),
+            'media' => InventoryMediaResource::collection($this->whenLoaded('media')),
             'updated_at' => $this->updated_at,
         ];
     }

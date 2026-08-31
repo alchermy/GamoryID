@@ -1,6 +1,6 @@
 {
   "profile": "product-admin",
-  "sourceRoots": ["merchant/src", "public-web/src"],
+  "sourceRoots": ["merchant/src", "public-web/src", "backend/resources/css", "backend/resources/js", "backend/resources/views/admin"],
   "locale": "th-TH",
   "canonicalMap": "UX-CONTRACT.md",
   "requiredCapabilities": ["Table Selection", "Select/Listbox", "Date", "Form", "Scrollbar", "Toast", "CRUD"],
@@ -8,11 +8,12 @@
     "Select/Listbox": "native",
     "Date": "native"
   },
-  "requiredCommands": ["merchant-build", "merchant-unit", "public-build"],
+  "requiredCommands": ["merchant-build", "merchant-unit", "public-build", "admin-build"],
   "commands": {
     "merchant-build": "npm --prefix merchant run build",
     "merchant-unit": "npm --prefix merchant run test:unit",
-    "public-build": "npm --prefix public-web run build"
+    "public-build": "npm --prefix public-web run build",
+    "admin-build": "npm --prefix backend run build"
   },
   "evidence": {
     "crudFullFlow": "merchant/src/test/inventory-flow.test.tsx",

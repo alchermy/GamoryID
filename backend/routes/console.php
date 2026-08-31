@@ -1,8 +1,7 @@
 <?php
 
-use App\Enums\SubscriptionStatus;
-use App\Models\Shop;
 use App\Models\User;
+use App\Services\SubscriptionLifecycle;
 use App\Services\Totp;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -20,11 +19,5 @@ Artisan::command('gamoryid:admin-2fa {email}', function (Totp $totp) {
     $this->line($totp->uri($secret, $user->email));
 })->purpose('ตั้งค่า 2FA สำหรับบัญชี Super Admin ในเครื่องพัฒนา');
 
-Schedule::call(function () {
-    Shop::whereIn('status', [SubscriptionStatus::Trialing->value, SubscriptionStatus::Active->value])
-        ->whereNotNull('trial_ends_at')->where('trial_ends_at', '<', now())
-        ->update(['status' => SubscriptionStatus::GraceReadOnly->value]);
-    Shop::where('status', SubscriptionStatus::GraceReadOnly->value)
-        ->whereNotNull('grace_ends_at')->where('grace_ends_at', '<', now())
-        ->update(['status' => SubscriptionStatus::Suspended->value]);
-})->hourly()->name('subscriptions.lifecycle')->withoutOverlapping();
+Schedule::call(fn (SubscriptionLifecycle $lifecycle) => $lifecycle->run())
+    ->hourly()->name('subscriptions.lifecycle')->withoutOverlapping();

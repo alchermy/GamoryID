@@ -18,6 +18,9 @@ paths:
       responses: {'200': {description: Signed in}, '422': {$ref: '#/components/responses/ValidationError'}}
   /auth/me:
     get: {summary: ผู้ใช้และร้านปัจจุบัน, security: [{sanctum: []}], responses: {'200': {description: OK}, '401': {$ref: '#/components/responses/Unauthenticated'}}}
+  /shop:
+    get: {summary: รายละเอียดและช่องทางติดต่อร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Shop details}, '404': {description: Shop not found in current tenant}}}
+    put: {summary: แก้ไขข้อมูลร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ShopInput'}}}}, responses: {'200': {description: Updated}, '422': {$ref: '#/components/responses/ValidationError'}}}
   /dashboard:
     get: {summary: KPI และกิจกรรมร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: OK}}}
   /inventory:
@@ -28,7 +31,6 @@ paths:
         - {$ref: '#/components/parameters/ShopId'}
         - {name: q, in: query, schema: {type: string}, description: 'exact tag (#23DX5) หรือคำค้น'}
         - {name: status, in: query, schema: {$ref: '#/components/schemas/InventoryStatus'}}
-        - {name: region, in: query, schema: {type: string}}
         - {name: per_page, in: query, schema: {type: integer, enum: [25, 50, 100]}}
       responses: {'200': {description: Paginated inventory}}
     post:
@@ -42,6 +44,44 @@ paths:
     get: {summary: รายละเอียดไอดีโดยไม่รวม credentials, security: [{sanctum: []}], responses: {'200': {description: OK}, '404': {description: Not found in current tenant}}}
     put: {summary: แก้ไขไอดี, security: [{sanctum: []}], requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/InventoryInput'}}}}, responses: {'200': {description: Updated}}}
     delete: {summary: Archive โดยไม่ทำลายประวัติ, security: [{sanctum: []}], responses: {'200': {description: Archived}}}
+  /inventory/{inventory}/media:
+    parameters: [{$ref: '#/components/parameters/ShopId'}, {$ref: '#/components/parameters/InventoryId'}]
+    get:
+      summary: รูป Display และรูปภาพรายละเอียดของไอดี
+      security: [{sanctum: []}]
+      responses: {'200': {description: Private media metadata with temporary signed URLs}}
+    post:
+      summary: อัปโหลดรูปแบบ private (Display 1 รูป หรือรายละเอียดสูงสุด 4 รูป)
+      security: [{sanctum: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [role, image]
+              properties:
+                role: {type: string, enum: [display, detail]}
+                image: {type: string, format: binary, description: 'JPEG, PNG หรือ WebP ไม่เกิน 5 MB'}
+      responses: {'201': {description: Uploaded}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /inventory/{inventory}/media/{media}:
+    delete:
+      summary: ลบรูปภาพออกจากไอดี
+      security: [{sanctum: []}]
+      parameters:
+        - {$ref: '#/components/parameters/ShopId'}
+        - {$ref: '#/components/parameters/InventoryId'}
+        - {name: media, in: path, required: true, schema: {type: integer}}
+      responses: {'200': {description: Deleted}, '404': {description: Not found in current tenant}}
+  /media/{media}:
+    get:
+      summary: เปิดรูป private ด้วย signed URL และ session ของสมาชิกในร้าน
+      security: [{sanctum: []}]
+      parameters:
+        - {name: media, in: path, required: true, schema: {type: integer}}
+        - {name: expires, in: query, required: true, schema: {type: integer}}
+        - {name: signature, in: query, required: true, schema: {type: string}}
+      responses: {'200': {description: Image binary}, '403': {description: Invalid or expired signature}, '404': {description: Media not accessible to current user}}
   /inventory/{inventory}/reserve:
     parameters: [{$ref: '#/components/parameters/ShopId'}, {$ref: '#/components/parameters/InventoryId'}]
     post: {summary: จองไอดี, security: [{sanctum: []}], responses: {'201': {description: Reserved}, '409': {description: State conflict}}}
@@ -51,20 +91,56 @@ paths:
       summary: บันทึกขายแบบ transaction lock
       security: [{sanctum: []}]
       parameters: [{$ref: '#/components/parameters/ShopId'}, {$ref: '#/components/parameters/InventoryId'}]
-      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [sold_price], properties: {sold_price: {type: number}, customer_id: {type: integer}, customer: {type: object}, notes: {type: string}}}}}}
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [sold_price, has_warranty], properties: {sold_price: {type: number}, customer_id: {type: integer}, customer: {type: object, properties: {name: {type: string}, facebook_url: {type: string, format: uri}, line_id: {type: string}, phone: {type: string}}}, has_warranty: {type: boolean}, warranty_ends_at: {type: string, format: date, nullable: true}, notes: {type: string}}}}}}
       responses: {'201': {description: Sold}, '409': {description: Already sold}}
+  /customers:
+    get:
+      summary: รายชื่อลูกค้าภายในร้าน พร้อมจำนวนรายการขาย
+      security: [{sanctum: []}]
+      parameters: [{$ref: '#/components/parameters/ShopId'}, {name: q, in: query, schema: {type: string}}, {name: per_page, in: query, schema: {type: integer, enum: [25, 50, 100]}}]
+      responses: {'200': {description: Paginated customers}}
+  /sales:
+    get:
+      summary: ประวัติการขายภายในร้าน
+      security: [{sanctum: []}]
+      parameters: [{$ref: '#/components/parameters/ShopId'}, {name: q, in: query, schema: {type: string}}, {name: per_page, in: query, schema: {type: integer, enum: [25, 50, 100]}}]
+      responses: {'200': {description: Paginated sales}}
   /inventory/{inventory}/credentials:
     get:
-      summary: เปิด credentials หลัง permission + 2FA + recent re-auth
+      summary: เปิด credentials หลัง permission + recent re-auth
       security: [{sanctum: []}]
       parameters: [{$ref: '#/components/parameters/ShopId'}, {$ref: '#/components/parameters/InventoryId'}]
-      responses: {'200': {description: Revealed; value is never logged}, '403': {description: Forbidden}, '428': {description: 2FA or re-auth required}}
+      responses: {'200': {description: Revealed; value is never logged}, '403': {description: Forbidden}, '428': {description: Recent re-auth required}}
   /imports/preview:
     post: {summary: อัปโหลด CSV และอ่านตัวอย่าง, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'201': {description: Preview ready}}}
   /imports/{import}/confirm:
     post: {summary: ยืนยัน mapping และเข้าคิว, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'202': {description: Queued}}}
-  /payments:
-    post: {summary: อัปโหลดสลิปแบบ private และเข้าคิว SlipOK, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'202': {description: Pending verification}}}
+  /credits:
+    get: {summary: เครดิตคงเหลือและประวัติการเคลื่อนไหวของร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Credit wallet}}}
+  /billing/history:
+    get: {summary: ประวัติการสมัครบริการและการเติมเครดิตของร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Merchant transaction history}}}
+  /credits/top-ups:
+    post: {summary: อัปโหลดสลิปเติมเครดิตแบบ private และเข้าคิวตรวจสอบ, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'202': {description: Pending credit top-up verification}}}
+  /subscriptions/purchase:
+    post: {summary: ใช้เครดิตซื้อแพ็กเกจ, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Subscription purchased}}}
+  /subscriptions/auto-renew:
+    put: {summary: เปิดหรือปิดต่ออายุอัตโนมัติด้วยเครดิต, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Auto-renew updated}}}
+  /team:
+    get: {summary: สมาชิกและสิทธิ์ของร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Team members}}}
+    post: {summary: สร้างลิงก์คำเชิญพนักงานแบบใช้ครั้งเดียว, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'201': {description: Invitation created}}}
+  /team/invitations:
+    get: {summary: คำเชิญที่ยังใช้งานได้ของร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Active invitations}}}
+  /team/invitations/{invitation}:
+    delete: {summary: ยกเลิกคำเชิญพนักงาน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}, {name: invitation, in: path, required: true, schema: {type: integer}}], responses: {'200': {description: Revoked}}}
+  /team/{member}:
+    put: {summary: แก้ไขสิทธิ์สมาชิก, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}, {name: member, in: path, required: true, schema: {type: integer}}], responses: {'200': {description: Updated}}}
+    delete: {summary: นำพนักงานออกจากร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}, {name: member, in: path, required: true, schema: {type: integer}}], responses: {'200': {description: Removed}}}
+  /plans:
+    get: {summary: รายการแพ็กเกจที่เปิดขาย, security: [{sanctum: []}], responses: {'200': {description: Plans}}}
+  /team-invitations/{token}:
+    get: {summary: ตรวจสอบคำเชิญพนักงานแบบสาธารณะ, parameters: [{name: token, in: path, required: true, schema: {type: string}}], responses: {'200': {description: Invitation ready}, '404': {description: Invalid, expired, accepted, or revoked invitation}}}
+  /team-invitations/{token}/accept:
+    post: {summary: รับคำเชิญและเข้าร่วมร้าน, parameters: [{name: token, in: path, required: true, schema: {type: string}}], requestBody: {required: true, content: {application/json: {schema: {type: object, required: [name, password, password_confirmation], properties: {name: {type: string}, password: {type: string, format: password}, password_confirmation: {type: string, format: password}}}}}}, responses: {'200': {description: Joined shop}, '422': {$ref: '#/components/responses/ValidationError'}}
 components:
   securitySchemes:
     sanctum: {type: apiKey, in: cookie, name: gamoryid_session}
@@ -79,10 +155,10 @@ components:
     InventoryStatus: {type: string, enum: [available, reserved, sold, archived]}
     InventoryInput:
       type: object
-      required: [title, cost, list_price]
+      required: [riot_id, cost, list_price]
       properties:
-        title: {type: string}
-        region: {type: string}
+        riot_id: {type: string}
+        username: {type: string, description: 'ชื่อสำหรับเข้าสู่ระบบที่ผู้ใช้อนุญาตให้แสดงในตารางร้าน'}
         rank: {type: string}
         level: {type: integer}
         skin_count: {type: integer}
@@ -91,6 +167,17 @@ components:
         list_price: {type: number}
         custom_values: {type: object, additionalProperties: true}
         credentials: {type: object, description: encrypted server-side and omitted from normal responses}
+    ShopInput:
+      type: object
+      required: [name, slug]
+      properties:
+        name: {type: string, maxLength: 120}
+        slug: {type: string, pattern: '^[A-Za-z0-9_-]+$'}
+        description: {type: string, maxLength: 1000}
+        facebook_url: {type: string, format: uri}
+        line_url: {type: string, format: uri}
+        phone: {type: string, maxLength: 32}
+        inventory_copy_footer: {type: string, maxLength: 2000, description: 'ข้อความต่อท้ายเมื่อคัดลอกรายละเอียดไอดี'}
   responses:
     ValidationError: {description: Validation failed}
     Unauthenticated: {description: Unauthenticated}

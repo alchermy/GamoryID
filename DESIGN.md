@@ -66,7 +66,7 @@ GamoryID feels like the control panel embedded in Gammy's illuminated inventory 
 - **Memorable signature:** A thin cyan signal rail links navigation selection, KPI context, search focus, and the active work region.
 - **Restraint:** Tables, forms, credentials, permissions, and billing remain quiet and familiar. Mascot art appears only in brand, guidance, or state illustration roles.
 - **Anti-references:** No neon-dark cyberpunk UI, bento-card dashboard, Riot/VALORANT art, glassmorphism, excessive pills, or decorative gaming HUD chrome.
-- **Token ownership/runtime mapping:** This file is canonical. Runtime CSS variables in `merchant/src/styles/tokens.css` and `public-web/src/index.css` mirror these exact semantic values. Shared components consume variables, never raw palette values.
+- **Token ownership/runtime mapping:** This file is canonical. Tailwind v4 semantic adapters in `merchant/src/index.css` and `backend/resources/css/app.css` mirror these exact values; `merchant/src/styles/tokens.css` remains the Merchant primitive source and `public-web/src/index.css` mirrors the public surface. Shared component recipes consume semantic Tailwind/CSS variables, never screen-local palette values.
 
 Visual references: `docs/design/dashboard-desktop-concept.png` and `docs/design/inventory-mobile-concept.png`.
 
@@ -100,6 +100,8 @@ Hover darkens or lightly tints the current semantic color. Focus-visible uses a 
 
 Buttons combine emphasis (`solid`, `outline`, `ghost`) and intent (`brand`, `neutral`, `success`, `warning`, `danger`). Orange solid is restricted to high-value creation/upgrade. Destructive actions stay separated and use danger only at confirmation.
 
+Tailwind v4 is the runtime styling framework for Merchant and Super Admin. Merchant recipes live in `merchant/src/styles/tailwind-system.css`; Super Admin recipes live in `backend/resources/css/app.css`. These files are the canonical owners for control height, spacing, focus, hover, disabled, busy, table, dialog, alert, and responsive states.
+
 ### Navigation and data display
 
 Sidebar items show one icon and one Thai label. Admin tables use semantic `<table>`, server-shaped pagination, sortable button headers, stable loading geometry, and URL-owned filters. Mobile inventory uses compact rows rather than stacked marketing cards.
@@ -107,6 +109,8 @@ Sidebar items show one icon and one Thai label. Admin tables use semantic `<tabl
 ### Forms and overlays
 
 Inputs are 44px minimum height, use app-owned validation, and always have labels. Search includes an accessible clear control. Secrets remain masked. Dialogs and sheets trap focus only when modal and restore focus to their trigger. Toasts appear top-right on desktop and top-center on mobile.
+
+Inventory media uses one 4:3 Display image followed by up to four detail images. Upload controls explain JPEG/PNG/WebP, 5 MB per-file, and count limits before selection; each selected file has a real preview and an accessible remove action. Product detail reserves the main media geometry, uses `object-fit: contain` for inspection, and uses cropped thumbnails only for navigation.
 
 ### Iconography
 

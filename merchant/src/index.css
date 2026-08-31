@@ -1,2 +1,109 @@
-@import './styles/tokens.css';
-*{box-sizing:border-box}html{background:var(--background);color:var(--ink);font-family:var(--font-thai);font-synthesis:none;text-rendering:optimizeLegibility}body{margin:0;min-width:320px;min-height:100vh;scrollbar-color:#9bb0c6 #edf3f9;scrollbar-width:thin}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.55}:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px}::selection{background:#caedff;color:var(--ink)}*::-webkit-scrollbar{width:10px;height:10px}*::-webkit-scrollbar-track{background:#edf3f9}*::-webkit-scrollbar-thumb{background:#9bb0c6;border:2px solid #edf3f9;border-radius:10px}*::-webkit-scrollbar-thumb:hover{background:#718ba7}@media(forced-colors:active){*{scrollbar-color:auto}}@media(prefers-reduced-motion:reduce){/* Accessibility override: motion must be disabled. */*,*::before,*::after{transition:none!important;animation:none!important}}
+@import "tailwindcss";
+@import "./styles/tokens.css";
+@import "./App.css";
+@import "./auth.css";
+@import "./import.css";
+@import "./history.css";
+@import "./management.css";
+@import "./inventory-management.css";
+@import "./styles/tailwind-system.css";
+
+@source './**/*.{ts,tsx}';
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-brand: var(--primary);
+  --color-signal: var(--signal);
+  --color-action: var(--action);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-reserved: var(--reserved);
+  --color-canvas: var(--background);
+  --color-surface: var(--surface);
+  --color-line: var(--border);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-thai);
+  --font-data: Inter, "Noto Sans Thai", "Segoe UI", sans-serif;
+  --radius-control: var(--radius);
+  --radius-panel: var(--radius-lg);
+  --shadow-overlay: 0 24px 70px rgb(3 18 36 / 0.24);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    background: var(--background);
+    color: var(--ink);
+    font-family: var(--font-thai);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    scrollbar-color: #9bb0c6 #edf3f9;
+    scrollbar-width: thin;
+    scroll-padding-top: 5rem;
+  }
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+  :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--primary) 48%, transparent);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: #caedff;
+    color: var(--ink);
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: #edf3f9;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #9bb0c6;
+    border: 2px solid #edf3f9;
+    border-radius: 10px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #718ba7;
+  }
+  *::-webkit-scrollbar-thumb:active {
+    background: #58728e;
+  }
+}
+
+@media (forced-colors: active) {
+  * {
+    scrollbar-color: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Accessibility override: motion must be disabled. */
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

@@ -1,3 +1,38 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GamoryID Admin</title>
-<style>body{font-family:Tahoma,sans-serif;background:#07172e;color:#10233e;display:grid;place-items:center;min-height:100vh;margin:0}.box{background:white;width:min(380px,calc(100% - 40px));padding:32px;border-radius:16px;border-top:4px solid #35b7ff}.brand{font-size:24px;font-weight:800;color:#07172e}.brand span{color:#ff7a1a}label{display:block;font-size:13px;margin-top:18px}input{width:100%;box-sizing:border-box;padding:12px;margin-top:6px;border:1px solid #ccd7e4;border-radius:8px}button{width:100%;margin-top:22px;padding:13px;background:#ff7a1a;color:#fff;border:0;border-radius:8px;font-weight:700}.error{color:#b42318;font-size:13px}</style></head><body>
-<form class="box" method="post" action="{{ route('admin.login') }}">@csrf<div class="brand">Gamory<span>ID</span> / Admin</div><p>ระบบผู้พัฒนา · ต้องใช้ 2FA</p>@error('email')<p class="error">{{ $message }}</p>@enderror<label>อีเมล<input name="email" type="email" value="{{ old('email') }}" required></label><label>รหัสผ่าน<input name="password" type="password" required></label><label>รหัส 2FA<input name="code" inputmode="numeric" maxlength="6" required></label><button>เข้าสู่ระบบ</button></form></body></html>
+<!doctype html>
+<html lang="th">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>เข้าสู่ระบบ Super Admin — GamoryID</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body>
+<main class="admin-login-page">
+    <section class="admin-login-shell" aria-labelledby="login-title">
+        <form class="admin-login-form" method="post" action="{{ route('admin.login') }}" novalidate>
+            @csrf
+            <div class="admin-login-brand">Gamory<span>ID</span><small>SUPER ADMIN</small></div>
+            <h1 id="login-title">เข้าสู่ศูนย์ควบคุม</h1>
+            <p>จัดการร้านค้า แพ็กเกจ เครดิต และบันทึกระบบ</p>
+            @error('email')<div class="banner error" role="alert">{{ $message }}</div>@enderror
+            <label class="admin-field" for="admin-email">อีเมล
+                <input class="admin-input" id="admin-email" name="email" type="email" value="{{ old('email') }}" required autocomplete="username" autofocus>
+            </label>
+            <label class="admin-field" for="admin-password">รหัสผ่าน
+                <span class="admin-password">
+                    <input class="admin-input" id="admin-password" name="password" type="password" required autocomplete="current-password">
+                    <button class="password-toggle" type="button" data-password-toggle="admin-password" aria-label="แสดงรหัสผ่าน" aria-pressed="false">แสดง</button>
+                </span>
+            </label>
+            <button class="button admin-login-submit" type="submit">เข้าสู่ระบบ</button>
+        </form>
+        <aside class="admin-login-art" aria-label="ข้อมูลระบบ">
+            <div>
+                <strong>ทุกการตัดสินใจสำคัญ<br>อยู่ในที่เดียว</strong>
+                <p>ตรวจเครดิต ดูสุขภาพร้านค้า และติดตามเหตุการณ์ของระบบด้วยข้อมูลที่อ่านง่าย</p>
+            </div>
+        </aside>
+    </section>
+</main>
+</body>
+</html>

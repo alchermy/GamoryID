@@ -6,7 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class InventoryMedia extends Model
 {
-    protected $fillable = ['inventory_item_id', 'disk', 'path', 'mime_type', 'size_bytes', 'sort_order'];
+    public const DISPLAY = 'display';
+
+    public const DETAIL = 'detail';
+
+    protected $fillable = [
+        'inventory_item_id',
+        'role',
+        'disk',
+        'path',
+        'original_name',
+        'mime_type',
+        'size_bytes',
+        'sort_order',
+    ];
 
     public function inventoryItem()
     {

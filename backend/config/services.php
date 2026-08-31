@@ -7,6 +7,7 @@ return [
         'api_key' => env('SLIPOK_API_KEY'),
         'branch_id' => env('SLIPOK_BRANCH_ID'),
         'receiver_account' => env('SLIPOK_RECEIVER_ACCOUNT'),
+        'test_bypass' => env('SLIPOK_TEST_BYPASS', false),
     ],
 
     /*

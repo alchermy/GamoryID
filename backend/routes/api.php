@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CredentialController;
+use App\Http\Controllers\Api\CreditController;
+use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomFieldController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ExportController;
@@ -13,6 +15,8 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SensitiveAccessController;
+use App\Http\Controllers\Api\ShopController;
+use App\Http\Controllers\Api\ShopInvitationController;
 use App\Http\Controllers\Api\TeamController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
@@ -21,6 +25,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::get('/team-invitations/{token}', [ShopInvitationController::class, 'show'])->middleware('throttle:20,1');
+    Route::post('/team-invitations/{token}/accept', [ShopInvitationController::class, 'accept'])->middleware('throttle:6,1');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
@@ -43,19 +49,22 @@ Route::prefix('v1')->group(function () {
 
         Route::middleware('verified')->group(function () {
             Route::get('/dashboard', DashboardController::class);
+            Route::get('/shop', [ShopController::class, 'show']);
             Route::get('/inventory', [InventoryController::class, 'index']);
             Route::get('/inventory/{inventory}', [InventoryController::class, 'show']);
             Route::get('/inventory/{inventory}/timeline', InventoryTimelineController::class);
             Route::get('/inventory/{inventory}/media', [InventoryMediaController::class, 'index']);
-            Route::get('/media/{media}', [InventoryMediaController::class, 'show'])->middleware('signed')->name('api.media.show');
+            Route::get('/media/{media}', [InventoryMediaController::class, 'show'])->middleware('signed:relative')->name('api.media.show');
             Route::get('/custom-fields', [CustomFieldController::class, 'index']);
+            Route::get('/customers', [CustomerController::class, 'index'])->middleware('shop.permission:inventory.sell');
+            Route::get('/sales', [SaleController::class, 'index'])->middleware('shop.permission:inventory.sell');
 
             Route::middleware(['shop.writable', 'shop.permission:inventory.manage'])->group(function () {
                 Route::post('/inventory', [InventoryController::class, 'store']);
                 Route::put('/inventory/{inventory}', [InventoryController::class, 'update']);
                 Route::delete('/inventory/{inventory}', [InventoryController::class, 'destroy']);
                 Route::post('/inventory/{inventory}/media', [InventoryMediaController::class, 'store']);
-                Route::delete('/media/{media}', [InventoryMediaController::class, 'destroy']);
+                Route::delete('/inventory/{inventory}/media/{media}', [InventoryMediaController::class, 'destroy']);
                 Route::post('/custom-fields', [CustomFieldController::class, 'store']);
                 Route::put('/custom-fields/{field}', [CustomFieldController::class, 'update']);
                 Route::delete('/custom-fields/{field}', [CustomFieldController::class, 'destroy']);
@@ -74,13 +83,19 @@ Route::prefix('v1')->group(function () {
                 ->middleware(['shop.permission:credentials.reveal', 'sensitive', 'throttle:10,1']);
 
             Route::get('/team', [TeamController::class, 'index'])->middleware('shop.permission:team.manage');
+            Route::get('/team/invitations', [TeamController::class, 'invitations'])->middleware('shop.permission:team.manage');
             Route::post('/team', [TeamController::class, 'store'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::put('/team/{member}', [TeamController::class, 'update'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::delete('/team/{member}', [TeamController::class, 'destroy'])->middleware(['shop.writable', 'shop.permission:team.manage']);
+            Route::delete('/team/invitations/{invitation}', [TeamController::class, 'revokeInvitation'])->middleware(['shop.writable', 'shop.permission:team.manage']);
+            Route::put('/shop', [ShopController::class, 'update'])->middleware(['shop.writable', 'shop.permission:team.manage']);
 
             Route::get('/plans', [PaymentController::class, 'plans']);
-            Route::post('/payments', [PaymentController::class, 'store'])->middleware('shop.permission:billing.manage');
-            Route::get('/payments/{payment}', [PaymentController::class, 'show'])->middleware('shop.permission:billing.manage');
+            Route::get('/credits', [CreditController::class, 'index'])->middleware('shop.permission:billing.manage');
+            Route::get('/billing/history', [CreditController::class, 'history'])->middleware('shop.permission:billing.manage');
+            Route::post('/credits/top-ups', [CreditController::class, 'topUp'])->middleware('shop.permission:billing.manage');
+            Route::post('/subscriptions/purchase', [CreditController::class, 'purchase'])->middleware('shop.permission:billing.manage');
+            Route::put('/subscriptions/auto-renew', [CreditController::class, 'updateAutoRenew'])->middleware('shop.permission:billing.manage');
             Route::get('/export/inventory.csv', ExportController::class)->middleware('shop.permission:data.export');
         });
     });

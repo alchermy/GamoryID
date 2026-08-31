@@ -1,32 +1,56 @@
-# React + TypeScript + Vite
+# GamoryID Merchant SPA
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript backoffice สำหรับเจ้าของร้านและพนักงาน ใช้ React Router,
+REST API ของ Laravel และ design tokens กลางของ GamoryID
 
-Currently, two official plugins are available:
+## โครงสร้าง frontend
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```text
+src/
+├─ app/                 # application entry และ route tree
+├─ config/              # navigation และ route mapping
+├─ features/            # UI และ flow แยกตาม domain
+│  ├─ auth/
+│  ├─ billing/
+│  ├─ dashboard/
+│  ├─ history/
+│  ├─ imports/
+│  ├─ inventory/
+│  ├─ merchant/         # authenticated application orchestrator
+│  ├─ settings/
+│  ├─ team/
+│  └─ transactions/
+├─ shared/
+│  ├─ hooks/            # behavior ที่ใช้ร่วมกัน
+│  ├─ lib/              # pure utilities
+│  └─ ui/               # primitive UI components
+├─ styles/              # shared Tailwind component recipes
+├─ test/
+└─ types/               # API และ domain models กลาง
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+`src/App.tsx` เป็น public entry เท่านั้น ห้ามเพิ่ม page, API state หรือ business
+logic ลงในไฟล์นี้ ฟีเจอร์ใหม่ควรอยู่ใต้ `features/<domain>` และนำของที่ใช้ซ้ำ
+ตั้งแต่สอง domain ขึ้นไปไว้ใน `shared` เท่านั้น
+
+## Routing
+
+Route tree อยู่ที่ `src/app/router.tsx` และ path mapping สำหรับเมนูอยู่ที่
+`src/config/navigation.tsx` การเปลี่ยนหน้าภายในระบบต้องใช้ React Router เพื่อให้
+URL, browser history และ active navigation สอดคล้องกัน
+
+## Theme และ CSS
+
+ลำดับชั้น styling คือ `DESIGN.md` → CSS tokens ใน `src/index.css` → shared
+recipes ใน `src/styles/tailwind-system.css` → feature stylesheet เฉพาะหน้า
+Component ควรใช้ semantic class ที่มีอยู่ก่อนเพิ่มสี ระยะ หรือ shadow ใหม่
+
+## คำสั่งพัฒนา
+
+```powershell
+npm run dev
+npm run lint
+npm run test:unit
+npm run build
+npm run format:check
+```

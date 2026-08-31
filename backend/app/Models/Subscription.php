@@ -7,15 +7,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Subscription extends Model
 {
-    protected $fillable = ['shop_id', 'subscription_plan_id', 'status', 'starts_at', 'ends_at', 'grace_ends_at'];
+    protected $fillable = ['shop_id', 'subscription_plan_id', 'status', 'starts_at', 'ends_at', 'grace_ends_at', 'auto_renew'];
 
     protected function casts(): array
     {
-        return ['status' => SubscriptionStatus::class, 'starts_at' => 'datetime', 'ends_at' => 'datetime', 'grace_ends_at' => 'datetime'];
+        return ['status' => SubscriptionStatus::class, 'starts_at' => 'datetime', 'ends_at' => 'datetime', 'grace_ends_at' => 'datetime', 'auto_renew' => 'boolean'];
     }
 
     public function plan()
     {
         return $this->belongsTo(SubscriptionPlan::class, 'subscription_plan_id');
+    }
+
+    public function shop()
+    {
+        return $this->belongsTo(Shop::class);
     }
 }

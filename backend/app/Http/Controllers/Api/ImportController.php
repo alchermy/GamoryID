@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Storage;
 
 class ImportController extends Controller
 {
+    private const MAPPABLE_FIELDS = [
+        'title', 'riot_id', 'username', 'rank', 'level', 'skin_count', 'cost', 'list_price',
+        'description', 'notes', 'username', 'password', 'recovery_email',
+    ];
+
     public function preview(Request $request, CurrentShop $currentShop)
     {
         $shop = $currentShop->from($request);
@@ -46,10 +51,17 @@ class ImportController extends Controller
         $shop = $currentShop->from($request);
         $data = $request->validate([
             'mapping' => ['required', 'array'],
-            'mapping.title' => ['required', 'string'],
+            'mapping.title' => ['nullable', 'string', 'required_without:mapping.riot_id'],
+            'mapping.riot_id' => ['nullable', 'string', 'required_without:mapping.title'],
             'mapping.list_price' => ['required', 'string'],
         ]);
         $job = ImportJob::where('shop_id', $shop->id)->where('status', 'preview')->findOrFail($import);
+        $headers = $this->headersFor($job);
+        foreach ($data['mapping'] as $target => $source) {
+            if (! in_array($target, self::MAPPABLE_FIELDS, true) || ! in_array($source, $headers, true)) {
+                return response()->json(['message' => 'การจับคู่คอลัมน์ไม่ถูกต้อง'], 422);
+            }
+        }
         $planGate->ensureInventoryCapacity($shop, $job->total_rows);
         $job->update(['mapping' => $data['mapping'], 'status' => 'queued']);
         ProcessInventoryImport::dispatch($job->id);
@@ -64,5 +76,18 @@ class ImportController extends Controller
         $job = ImportJob::where('shop_id', $shop->id)->findOrFail($import);
 
         return response()->json(['data' => $job, 'errors' => ImportError::where('import_job_id', $job->id)->limit(100)->get()]);
+    }
+
+    /** @return array<int, string> */
+    private function headersFor(ImportJob $job): array
+    {
+        $handle = fopen(Storage::disk($job->disk)->path($job->path), 'rb');
+        if ($handle === false) {
+            return [];
+        }
+        $headers = fgetcsv($handle) ?: [];
+        fclose($handle);
+
+        return array_values(array_filter(array_map(static fn ($header) => trim((string) $header), $headers)));
     }
 }
