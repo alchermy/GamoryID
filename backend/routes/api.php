@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\CreditController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomFieldController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DiscordInteractionController;
+use App\Http\Controllers\Api\DiscordSettingsController;
 use App\Http\Controllers\Api\ExportController;
 use App\Http\Controllers\Api\ImportController;
 use App\Http\Controllers\Api\InventoryController;
@@ -23,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+    Route::post('/discord/interactions', DiscordInteractionController::class)->middleware('throttle:120,1');
     Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
     Route::get('/team-invitations/{token}', [ShopInvitationController::class, 'show'])->middleware('throttle:20,1');
@@ -41,7 +44,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
             $request->fulfill();
 
-            return response()->json(['message' => 'ยืนยันอีเมลแล้ว']);
+            return redirect()->away(rtrim(config('app.frontend_url'), '/').'/verify-email?verified=1');
         })->middleware('signed')->name('verification.verify');
         Route::post('/security/2fa/begin', [SensitiveAccessController::class, 'beginTwoFactor']);
         Route::post('/security/2fa/confirm', [SensitiveAccessController::class, 'confirmTwoFactor']);
@@ -59,6 +62,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/custom-fields', [CustomFieldController::class, 'index']);
             Route::get('/customers', [CustomerController::class, 'index'])->middleware('shop.permission:inventory.sell');
             Route::get('/sales', [SaleController::class, 'index'])->middleware('shop.permission:inventory.sell');
+            Route::get('/sales/{sale}', [SaleController::class, 'show'])->middleware('shop.permission:inventory.sell');
 
             Route::middleware(['shop.writable', 'shop.permission:inventory.manage'])->group(function () {
                 Route::post('/inventory', [InventoryController::class, 'store']);
@@ -99,6 +103,17 @@ Route::prefix('v1')->group(function () {
             Route::post('/subscriptions/purchase', [CreditController::class, 'purchase'])->middleware('shop.permission:billing.manage');
             Route::put('/subscriptions/auto-renew', [CreditController::class, 'updateAutoRenew'])->middleware('shop.permission:billing.manage');
             Route::get('/export/inventory.csv', ExportController::class)->middleware('shop.permission:data.export');
+
+            Route::get('/discord/settings', [DiscordSettingsController::class, 'show']);
+            Route::post('/discord/link-code', [DiscordSettingsController::class, 'linkCode'])->middleware('throttle:10,1');
+            Route::middleware(['shop.writable', 'shop.permission:discord.manage'])->group(function () {
+                Route::post('/discord/setup-code', [DiscordSettingsController::class, 'setupCode'])->middleware('throttle:5,1');
+                Route::post('/discord/demo-connect', [DiscordSettingsController::class, 'demoConnect'])->middleware('throttle:5,1');
+                Route::post('/discord/channels/auto-create', [DiscordSettingsController::class, 'autoCreateChannels'])->middleware('throttle:5,1');
+                Route::put('/discord/channels', [DiscordSettingsController::class, 'updateChannels']);
+                Route::post('/discord/test-notification', [DiscordSettingsController::class, 'testNotification'])->middleware('throttle:10,1');
+                Route::delete('/discord/disconnect', [DiscordSettingsController::class, 'disconnect'])->middleware('throttle:5,1');
+            });
         });
     });
 });

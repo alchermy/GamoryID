@@ -10,6 +10,7 @@ import {
   AuthScreen,
   InviteScreen,
   StatePage,
+  VerifyEmailScreen,
 } from "../features/auth/auth-pages";
 import { MerchantApp } from "../features/merchant/MerchantApp";
 
@@ -22,6 +23,7 @@ const merchantPaths = [
   "/team",
   "/billing",
   "/transactions",
+  "/discord",
   "/settings",
 ];
 
@@ -51,10 +53,12 @@ function AppRoutes() {
         }
       />
       <Route element={<AuthGate />}>
+        <Route path="/verify-email" element={<VerifyEmailScreen />} />
         <Route element={<MerchantApp />}>
           {merchantPaths.map((path) => (
             <Route key={path} path={path} element={null} />
           ))}
+          <Route path="/sales/:saleId" element={null} />
         </Route>
       </Route>
       <Route

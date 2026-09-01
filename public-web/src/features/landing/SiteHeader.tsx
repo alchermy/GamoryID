@@ -1,23 +1,34 @@
+import {
+  merchantLoginUrl,
+  merchantRegisterUrl,
+} from "../../config/links";
+
 export function SiteHeader() {
   return (
-    <header className="container nav">
-      <a className="logo" href="#top">
-        <img src="/mascot/gammy-hello.png" alt="Gammy" />
-        <span>
-          Gamory<span>ID</span>
-        </span>
-      </a>
-      <nav className="links" aria-label="เมนูเว็บไซต์">
-        <a href="#features">ฟีเจอร์</a>
-        <a href="#workflow">วิธีใช้งาน</a>
-        <a href="#pricing">แพ็กเกจ</a>
-        <a className="btn" href="http://localhost:5173">
-          เข้าสู่ระบบ
+    <header className="site-header">
+      <div className="container nav">
+        <a className="logo" href="#top" aria-label="GamoryID หน้าแรก">
+          <img src="/mascot/gammy-hello.png" alt="" />
+          <span>
+            Gamory<span>ID</span>
+          </span>
         </a>
-        <a className="btn orange" href="#pricing">
-          เริ่มใช้ฟรี
-        </a>
-      </nav>
+        <nav className="links" aria-label="เมนูเว็บไซต์">
+          <div className="nav-links">
+            <a href="#features">ฟีเจอร์</a>
+            <a href="#workflow">วิธีใช้งาน</a>
+            <a href="#pricing">แพ็กเกจ</a>
+          </div>
+          <div className="nav-actions">
+            <a className="btn btn-quiet" href={merchantLoginUrl}>
+              เข้าสู่ระบบ
+            </a>
+            <a className="btn orange" href={merchantRegisterUrl}>
+              เริ่มใช้ฟรี
+            </a>
+          </div>
+        </nav>
+      </div>
     </header>
   );
 }

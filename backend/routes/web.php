@@ -1,10 +1,19 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return redirect()->route(session()->has('admin_user_id') ? 'admin.dashboard' : 'admin.login');
+    $adminId = session()->get('admin_user_id');
+
+    if ($adminId && User::whereKey($adminId)->where('is_super_admin', true)->exists()) {
+        return redirect()->route('admin.dashboard');
+    }
+
+    session()->forget('admin_user_id');
+
+    return redirect()->route('admin.login');
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {

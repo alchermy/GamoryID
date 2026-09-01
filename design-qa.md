@@ -138,4 +138,34 @@ final result: passed
 - Browser route checks confirmed `/`, `/inventory`, and `/settings`, including active navigation and document titles.
 - Mobile inventory remained usable at 390 × 844 with card layout, search, direct status controls, actions, and bottom navigation.
 
+## Merchant authentication card redesign
+
+- Visual source: `C:\Users\User\AppData\Local\Temp\codex-clipboard-c5a7d54f-06b2-4116-aa73-0ced92bc9801.png`
+- Normalized source: `docs/design/merchant-admin-reference-cropped.jpg`
+- Login implementation: `docs/design/merchant-login-reference-viewport.jpg`
+- Registration implementation: `docs/design/merchant-register-admin-style.jpg`
+- Mobile evidence: `docs/design/merchant-login-mobile.jpg` and `docs/design/merchant-register-mobile.jpg`
+- Combined same-viewport comparison: `docs/design/merchant-auth-admin-comparison.jpg`
+- Runtime routes: `http://localhost:5173/login` and `http://localhost:5173/register`
+- Desktop comparison viewport: 2559 × 1273 CSS pixels at density 1.0; source browser chrome was cropped so both states use the same pixel dimensions.
+- Mobile verification viewport: 390 × 844 CSS pixels at density 1.0.
+- State: unauthenticated, empty login and registration forms; desktop art panel visible and mobile art panel intentionally collapsed.
+
+### Findings resolved
+
+- Replaced the prior viewport-wide split layout with the same 920px centered shell used by Super Admin: white task panel, navy context panel, cyan divider, rounded border, and controlled shadow.
+- Kept merchant identity through the Gammy mark and `MERCHANT` role label without changing the established navy, cyan, blue, and orange theme.
+- Gave registration a wider 1040px shell so owner and shop fields remain comfortable without compressing labels or controls.
+- Standardized controls to a 44px minimum target, removed inherited decorative rails and oversized field spacing, and retained visible focus, inline errors, first-invalid focus, and password reveal behavior.
+- Collapsed the contextual panel below 760px and verified both forms have no horizontal overflow at 390px.
+- First comparison exposed inherited full-screen grid columns and large-screen form spacing; the auth layer now explicitly resets those rules before applying the centered-card geometry.
+
+### Verification evidence
+
+- Production build passed with Vite and TypeScript.
+- React test suite: 25 tests passed across 6 files.
+- Oxlint completed with no errors; existing React Compiler advisory warnings remain outside this visual change.
+- Browser checks confirmed empty-submit validation, first-invalid focus, password reveal state, correct desktop panel visibility, correct mobile panel collapse, and zero mobile horizontal overflow.
+- Same-viewport comparison found no unresolved P0, P1, or P2 visual issue.
+
 final result: passed

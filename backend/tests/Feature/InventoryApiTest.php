@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendDiscordShopNotification;
 use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\InventoryItem;
@@ -12,6 +13,7 @@ use App\Models\ShopMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -38,6 +40,8 @@ class InventoryApiTest extends TestCase
 
     public function test_create_generates_tag_and_never_exposes_credentials(): void
     {
+        Queue::fake();
+        config()->set('app.frontend_url', 'http://localhost:5173');
         [$user, $shop] = $this->owner('owner@example.test', 'Nexus Store');
         $response = $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)->postJson('/api/v1/inventory', [
             'riot_id' => 'Gammy#TH01', 'username' => 'gammy.ops01', 'rank' => 'Diamond 3',
@@ -49,6 +53,13 @@ class InventoryApiTest extends TestCase
         $this->assertMatchesRegularExpression('/^#[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{5}$/', $response->json('data.tag'));
         $this->assertDatabaseCount('inventory_credentials', 1);
         $this->assertDatabaseHas('inventory_items', ['riot_id' => 'Gammy#TH01', 'username' => 'gammy.ops01', 'region' => 'TH']);
+        Queue::assertPushed(SendDiscordShopNotification::class, function (SendDiscordShopNotification $job) use ($user) {
+            return $job->purpose === 'inventory'
+                && str_contains($job->description, 'เพิ่มโดย: '.$user->name)
+                && str_contains($job->description, 'http://localhost:5173/inventory?item=')
+                && ! str_contains($job->description, 'very-secret')
+                && ! str_contains($job->description, 'secret@example.test');
+        });
     }
 
     public function test_exact_tag_search_is_scoped_to_current_shop(): void
@@ -239,6 +250,8 @@ class InventoryApiTest extends TestCase
 
     public function test_an_item_can_only_be_sold_once(): void
     {
+        Queue::fake();
+        config()->set('app.frontend_url', 'http://localhost:5173');
         [$user, $shop] = $this->owner('sell@example.test', 'ร้านขาย');
         $item = $this->item($shop, 'S4LE5');
         $payload = [
@@ -265,6 +278,15 @@ class InventoryApiTest extends TestCase
             'line_id' => 'customer-line',
             'phone' => '0812345678',
         ]);
+        Queue::assertPushed(SendDiscordShopNotification::class, 1);
+        Queue::assertPushed(SendDiscordShopNotification::class, function (SendDiscordShopNotification $job) use ($user) {
+            return $job->purpose === 'sales'
+                && str_contains($job->description, 'ขายให้: ลูกค้า')
+                && str_contains($job->description, 'ผู้ขาย: '.$user->name)
+                && str_contains($job->description, 'http://localhost:5173/sales/')
+                && ! str_contains($job->description, '0812345678')
+                && ! str_contains($job->description, 'customer-line');
+        });
     }
 
     public function test_grace_shop_is_read_only_but_can_list_inventory(): void
@@ -300,8 +322,8 @@ class InventoryApiTest extends TestCase
         $customerB = Customer::create(['shop_id' => $shopB->id, 'name' => 'ลูกค้า B', 'line_id' => 'line-b']);
         $itemA = $this->item($shopA, 'SALEA');
         $itemB = $this->item($shopB, 'SALEB');
-        Sale::create(['shop_id' => $shopA->id, 'inventory_item_id' => $itemA->id, 'customer_id' => $customerA->id, 'created_by' => $user->id, 'sold_price' => 5000, 'cost_snapshot' => 3000, 'profit' => 2000, 'sold_at' => now()]);
-        Sale::create(['shop_id' => $shopB->id, 'inventory_item_id' => $itemB->id, 'customer_id' => $customerB->id, 'created_by' => $foreignUser->id, 'sold_price' => 6000, 'cost_snapshot' => 3000, 'profit' => 3000, 'sold_at' => now()]);
+        $saleA = Sale::create(['shop_id' => $shopA->id, 'inventory_item_id' => $itemA->id, 'customer_id' => $customerA->id, 'created_by' => $user->id, 'sold_price' => 5000, 'cost_snapshot' => 3000, 'profit' => 2000, 'sold_at' => now()]);
+        $saleB = Sale::create(['shop_id' => $shopB->id, 'inventory_item_id' => $itemB->id, 'customer_id' => $customerB->id, 'created_by' => $foreignUser->id, 'sold_price' => 6000, 'cost_snapshot' => 3000, 'profit' => 3000, 'sold_at' => now()]);
 
         $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shopA->id)
             ->getJson('/api/v1/sales')->assertOk()->assertJsonCount(1, 'data')
@@ -309,6 +331,35 @@ class InventoryApiTest extends TestCase
         $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shopA->id)
             ->getJson('/api/v1/customers')->assertOk()->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'ลูกค้า A')->assertJsonPath('data.0.sales_count', 1);
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shopA->id)
+            ->getJson("/api/v1/sales/{$saleA->id}")
+            ->assertOk()
+            ->assertJsonPath('data.customer.name', 'ลูกค้า A')
+            ->assertJsonPath('data.creator.name', 'เจ้าของร้าน')
+            ->assertJsonPath('data.profit', '2000.00');
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shopA->id)
+            ->getJson("/api/v1/sales/{$saleB->id}")
+            ->assertNotFound();
+
+        $staff = User::create([
+            'name' => 'พนักงานขาย',
+            'email' => 'history-staff@example.test',
+            'password' => 'password',
+            'current_shop_id' => $shopA->id,
+            'email_verified_at' => now(),
+        ]);
+        ShopMember::create([
+            'shop_id' => $shopA->id,
+            'user_id' => $staff->id,
+            'role' => 'staff',
+            'permissions' => ['inventory.sell'],
+            'joined_at' => now(),
+        ]);
+        $this->actingAs($staff)->withHeader('X-Shop-Id', (string) $shopA->id)
+            ->getJson("/api/v1/sales/{$saleA->id}")
+            ->assertOk()
+            ->assertJsonPath('data.cost_snapshot', null)
+            ->assertJsonPath('data.profit', null);
     }
 
     public function test_dashboard_returns_a_tenant_scoped_seven_day_sales_trend(): void

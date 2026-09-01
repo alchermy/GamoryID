@@ -68,7 +68,7 @@ GamoryID feels like the control panel embedded in Gammy's illuminated inventory 
 - **Anti-references:** No neon-dark cyberpunk UI, bento-card dashboard, Riot/VALORANT art, glassmorphism, excessive pills, or decorative gaming HUD chrome.
 - **Token ownership/runtime mapping:** This file is canonical. Tailwind v4 semantic adapters in `merchant/src/index.css` and `backend/resources/css/app.css` mirror these exact values; `merchant/src/styles/tokens.css` remains the Merchant primitive source and `public-web/src/index.css` mirrors the public surface. Shared component recipes consume semantic Tailwind/CSS variables, never screen-local palette values.
 
-Visual references: `docs/design/dashboard-desktop-concept.png` and `docs/design/inventory-mobile-concept.png`.
+Visual references: `docs/design/dashboard-desktop-concept.png`, `docs/design/inventory-mobile-concept.png`, and `docs/design/public-landing-signal-flow-concept.png`.
 
 ## Colors
 
@@ -115,6 +115,8 @@ Inventory media uses one 4:3 Display image followed by up to four detail images.
 Inventory reminder notes are an internal team annotation: use `MessageSquareText`, a compact warm-tinted preview beneath the Riot ID, and one current note per item. Notes are editable from the list and detail view, never included in customer copy, and never written verbatim to audit metadata.
 
 Bulk inventory import uses one canonical Excel workbook with machine-readable English headers on the first sheet and Thai guidance on the second sheet. The importer also accepts CSV with the same headers. Preview masks password values, reports the total row count, and confirms column mapping before the whole batch enters the queue.
+
+Discord setup is a guided operations surface, not a developer console. Use the cyan signal rail, one restrained navy bot-introduction panel, numbered steps only for the real install sequence, and plain Thai labels for server, notification rooms, one-time codes, and account linking. Slash commands use the Thai `/ร้าน` vocabulary and auto-created rooms use Thai names, including one clearly separated `คำสั่งทั่วไป` room. Present the command catalog as concise task-and-permission rows, explain that web team permissions apply to Discord immediately, and keep secret-safe constraints adjacent to the add command. Configuration failures stay inline; bot tokens and signing keys never appear in the Merchant UI.
 
 ### Iconography
 

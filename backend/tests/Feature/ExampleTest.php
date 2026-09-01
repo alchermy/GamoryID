@@ -6,6 +6,7 @@ use App\Models\PaymentSubmission;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Middleware\TrustProxies;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
@@ -24,9 +25,32 @@ class ExampleTest extends TestCase
 
     public function test_the_root_redirects_to_super_admin_dashboard_when_an_admin_session_exists(): void
     {
-        $this->withSession(['admin_user_id' => 1])
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'root-admin@example.test',
+            'password' => 'password',
+            'is_super_admin' => true,
+        ]);
+
+        $this->withSession(['admin_user_id' => $admin->id])
             ->get('/')
             ->assertRedirect(route('admin.dashboard'));
+    }
+
+    public function test_stale_super_admin_session_redirects_to_login_instead_of_forbidden(): void
+    {
+        $this->withSession(['admin_user_id' => 999999])
+            ->get('/admin')
+            ->assertRedirect(route('admin.login'))
+            ->assertSessionMissing('admin_user_id');
+    }
+
+    public function test_root_clears_a_stale_super_admin_session(): void
+    {
+        $this->withSession(['admin_user_id' => 999999])
+            ->get('/')
+            ->assertRedirect(route('admin.login'))
+            ->assertSessionMissing('admin_user_id');
     }
 
     public function test_super_admin_can_login_without_a_two_factor_code(): void
@@ -41,6 +65,27 @@ class ExampleTest extends TestCase
         $this->post(route('admin.login'), ['email' => 'admin@example.test', 'password' => 'password'])
             ->assertRedirect(route('admin.dashboard'))
             ->assertSessionHas('admin_user_id');
+    }
+
+    public function test_super_admin_assets_use_https_behind_a_trusted_proxy(): void
+    {
+        TrustProxies::at('*');
+
+        try {
+            $response = $this->withServerVariables(['REMOTE_ADDR' => '127.0.0.1'])
+                ->withHeaders([
+                    'X-Forwarded-Host' => 'gamory-test.example',
+                    'X-Forwarded-Port' => '443',
+                    'X-Forwarded-Proto' => 'https',
+                ])
+                ->get('/admin/login')
+                ->assertOk();
+
+            $this->assertStringContainsString('https://gamory-test.example/build/assets/', $response->getContent());
+            $this->assertStringNotContainsString('http://gamory-test.example/build/assets/', $response->getContent());
+        } finally {
+            TrustProxies::flushState();
+        }
     }
 
     public function test_super_admin_can_open_all_management_pages_and_approve_a_pending_top_up(): void

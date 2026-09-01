@@ -3,6 +3,7 @@ import {
   CreditCard,
   FileUp,
   ReceiptText,
+  MessagesSquare,
   Settings,
   ShieldCheck,
   ShoppingBag,
@@ -20,6 +21,7 @@ export const PAGE_PATHS: Record<MerchantPage, string> = {
   team: "/team",
   billing: "/billing",
   transactions: "/transactions",
+  discord: "/discord",
   settings: "/settings",
 };
 
@@ -42,15 +44,41 @@ export const managementNavigation = [
   ["team", "ทีมและสิทธิ์", ShieldCheck],
   ["billing", "แพ็กเกจ", CreditCard],
   ["transactions", "ประวัติธุรกรรม", ReceiptText],
+  ["discord", "Discord", MessagesSquare],
   ["settings", "ตั้งค่าร้าน", Settings],
 ] as const;
 
-export const permissionOptions: [string, string][] = [
-  ["inventory.manage", "จัดการสต็อก"],
-  ["inventory.sell", "จองและขาย"],
-  ["profit.view", "ดูต้นทุนและกำไร"],
-  ["data.export", "ส่งออกข้อมูล"],
-  ["credentials.reveal", "เปิดดูข้อมูลเข้าสู่ระบบ"],
-  ["team.manage", "จัดการทีม"],
-  ["billing.manage", "จัดการแพ็กเกจและชำระเงิน"],
+export const permissionOptions: [string, string, string][] = [
+  [
+    "inventory.manage",
+    "จัดการสต็อก",
+    "ใช้คำสั่ง Discord สำหรับค้นหา ดูรายการ เพิ่มไอดี และบันทึกโน้ต",
+  ],
+  [
+    "inventory.sell",
+    "จองและขาย",
+    "ใช้คำสั่ง Discord สำหรับค้นหา ดูรายการ จอง ยกเลิกจอง ปิดการขาย และบันทึกโน้ต",
+  ],
+  [
+    "profit.view",
+    "ดูต้นทุนและกำไร",
+    "แสดงกำไรในคำสั่ง /ร้าน สรุป และหน้ารายงานที่เกี่ยวข้อง",
+  ],
+  ["data.export", "ส่งออกข้อมูล", "ดาวน์โหลดข้อมูลของร้านจากหน้าเว็บ"],
+  [
+    "credentials.reveal",
+    "เปิดดูข้อมูลเข้าสู่ระบบ",
+    "เปิดดูข้อมูลลับจากหน้าเว็บเท่านั้น ระบบจะไม่ส่งผ่าน Discord",
+  ],
+  ["team.manage", "จัดการทีม", "เชิญพนักงานและกำหนดสิทธิ์ของสมาชิก"],
+  [
+    "billing.manage",
+    "จัดการแพ็กเกจและชำระเงิน",
+    "เติมเครดิต ซื้อแพ็กเกจ และตั้งค่าต่ออายุ",
+  ],
+  [
+    "discord.manage",
+    "จัดการ Discord ของร้าน",
+    "เชื่อมบอท สร้างห้อง และตั้งค่าการแจ้งเตือน ไม่รวมสิทธิ์จัดการสต็อก",
+  ],
 ];

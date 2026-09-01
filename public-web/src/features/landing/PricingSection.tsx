@@ -1,44 +1,50 @@
 import { ArrowRight, Check } from "lucide-react";
+import { merchantRegisterUrl } from "../../config/links";
+import { Reveal } from "./Motion";
 
 export function PricingSection() {
   return (
     <>
       <section className="section container" id="pricing">
-        <div className="section-head">
+        <Reveal className="section-head">
           <span className="kicker">เริ่มเล็ก ขยายตามร้าน</span>
           <h2>แพ็กเกจตรงไปตรงมา</h2>
           <p>
             ทดลองใช้ฟรี 30 วัน หลังจากนั้นเลือกแพ็กเกจตามจำนวนสต็อกและทีมของคุณ
           </p>
-        </div>
+        </Reveal>
         <div className="price-wrap">
-          <PriceCard
-            name="Starter"
-            amount="299"
-            inventory="1,000"
-            members="3"
-          />
-          <PriceCard
-            name="Growth"
-            amount="699"
-            inventory="5,000"
-            members="8"
-            recommended
-          />
+          <Reveal>
+            <PriceCard
+              name="Starter"
+              amount="299"
+              inventory="1,000"
+              members="3"
+            />
+          </Reveal>
+          <Reveal delay={90}>
+            <PriceCard
+              name="Growth"
+              amount="699"
+              inventory="5,000"
+              members="8"
+              recommended
+            />
+          </Reveal>
         </div>
       </section>
-      <section className="container cta">
+      <Reveal className="container cta">
         <div>
           <h2>พร้อมจัดร้านให้เป็นระบบหรือยัง?</h2>
           <p>เริ่มนำเข้าสต็อก ค้นหา และบันทึกขายได้วันนี้</p>
           <div className="hero-actions">
-            <a href="mailto:hello@gamoryid.local" className="btn orange">
-              ขอทดลองใช้งาน <ArrowRight size={17} />
+            <a href={merchantRegisterUrl} className="btn orange btn-lg">
+              เริ่มทดลองใช้ฟรี <ArrowRight size={17} />
             </a>
           </div>
         </div>
         <img src="/mascot/gammy-hello.png" alt="Gammy กล่าวต้อนรับ" />
-      </section>
+      </Reveal>
     </>
   );
 }
@@ -80,8 +86,8 @@ function PriceCard({
         </li>
       </ul>
       <a
-        className={`btn ${recommended ? "blue" : ""}`}
-        href="mailto:hello@gamoryid.local"
+        className={`btn price-action ${recommended ? "blue" : ""}`}
+        href={merchantRegisterUrl}
       >
         เริ่มทดลองใช้ฟรี
       </a>

@@ -1,3 +1,5 @@
+import { Eye } from "lucide-react";
+import { Link } from "react-router-dom";
 import { formatDate, money } from "../../shared/lib/format";
 import { AsyncError } from "../../shared/ui/async-state";
 import type { CustomerRecord, SaleRecord } from "../../types/models";
@@ -7,11 +9,13 @@ export function SalesPanel({
   loading,
   error,
   retry,
+  canViewProfit,
 }: {
   records: SaleRecord[];
   loading: boolean;
   error: string;
   retry: () => void;
+  canViewProfit: boolean;
 }) {
   return (
     <section className="panel history-panel" aria-labelledby="sales-title">
@@ -42,7 +46,8 @@ export function SalesPanel({
                 <th>ลูกค้า</th>
                 <th>ผู้ทำรายการ</th>
                 <th>ราคาขาย</th>
-                <th>กำไร</th>
+                {canViewProfit ? <th>กำไร</th> : null}
+                <th className="sale-action-column">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -67,7 +72,18 @@ export function SalesPanel({
                   <td>
                     <strong>{money.format(Number(record.sold_price))}</strong>
                   </td>
-                  <td>{money.format(Number(record.profit))}</td>
+                  {canViewProfit ? (
+                    <td>{money.format(Number(record.profit ?? 0))}</td>
+                  ) : null}
+                  <td className="sale-action-column">
+                    <Link
+                      className="button ghost sale-detail-link"
+                      to={`/sales/${record.id}`}
+                      aria-label={`ดูรายละเอียดการขาย #${record.inventory_item?.tag ?? record.id}`}
+                    >
+                      <Eye size={16} /> ดูรายละเอียด
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

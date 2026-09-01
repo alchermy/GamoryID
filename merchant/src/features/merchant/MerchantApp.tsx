@@ -78,12 +78,58 @@ import {
 } from "../inventory/inventory-components";
 import type { InventoryMediaDraft } from "../inventory/inventory-media-model";
 import { CustomersPanel, SalesPanel } from "../history/history-panels";
+import { DiscordSettingsPanel } from "../discord/DiscordSettingsPanel";
+import { SaleDetailPage } from "../sales/SaleDetailPage";
+
+const inventoryUpdatedFormatter = new Intl.DateTimeFormat("th-TH", {
+  dateStyle: "short",
+  timeStyle: "short",
+});
+
+function mapInventoryItem(
+  record: InventoryResponse["data"][number],
+): InventoryItem {
+  return {
+    id: record.id,
+    tag: record.tag,
+    title: record.title,
+    riotId: record.riot_id ?? record.title,
+    username: record.username ?? "–",
+    rank: record.rank ?? "–",
+    level: record.level ?? 0,
+    skins: record.skin_count,
+    cost: Number(record.cost ?? 0),
+    price: Number(record.list_price),
+    status: record.status,
+    updated: inventoryUpdatedFormatter.format(new Date(record.updated_at)),
+    description: record.description,
+    notes: record.notes,
+    hasCredentials: record.has_credentials,
+    media: (record.media ?? []).map((media) => ({
+      id: media.id,
+      role: media.role,
+      originalName: media.original_name,
+      mimeType: media.mime_type,
+      sizeBytes: media.size_bytes,
+      sortOrder: media.sort_order,
+      url: apiAssetUrl(media.url),
+    })),
+  };
+}
 
 export function MerchantApp() {
   const authenticatedSession = useOutletContext<SessionUser | undefined>();
   const location = useLocation();
   const navigate = useNavigate();
-  const page = PATH_PAGES.get(location.pathname) ?? "dashboard";
+  const saleDetailMatch = location.pathname.match(/^\/sales\/(\d+)$/);
+  const saleDetailId = saleDetailMatch ? Number(saleDetailMatch[1]) : null;
+  const page = saleDetailId
+    ? "sales"
+    : (PATH_PAGES.get(location.pathname) ?? "dashboard");
+  const inventoryDetailId =
+    page === "inventory"
+      ? Number(new URLSearchParams(location.search).get("item")) || null
+      : null;
   const [items, setInventoryItems] = useState(initialInventoryItems),
     [query, setQuery] = useState(""),
     [searchComposing, setSearchComposing] = useState(false),
@@ -156,6 +202,19 @@ export function MerchantApp() {
     !shop ||
     shop.role === "owner" ||
     shop.permissions.includes(permission) === true;
+  const canAccessManagementPage = (key: MerchantPage) => {
+    if (key === "team" || key === "settings")
+      return hasShopPermission("team.manage");
+    if (key === "billing" || key === "transactions")
+      return hasShopPermission("billing.manage");
+    if (key === "discord")
+      return (
+        hasShopPermission("discord.manage") ||
+        hasShopPermission("inventory.manage") ||
+        hasShopPermission("inventory.sell")
+      );
+    return true;
+  };
   const filtered = useMemo(
     () =>
       items.filter((i) => {
@@ -204,38 +263,6 @@ export function MerchantApp() {
       tone === "error" ? 6000 : 4000,
     );
   };
-  const mapInventoryItem = (
-    record: InventoryResponse["data"][number],
-  ): InventoryItem => ({
-    id: record.id,
-    tag: record.tag,
-    title: record.title,
-    riotId: record.riot_id ?? record.title,
-    username: record.username ?? "–",
-    rank: record.rank ?? "–",
-    level: record.level ?? 0,
-    skins: record.skin_count,
-    cost: Number(record.cost ?? 0),
-    price: Number(record.list_price),
-    status: record.status,
-    updated: new Intl.DateTimeFormat("th-TH", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(new Date(record.updated_at)),
-    description: record.description,
-    notes: record.notes,
-    hasCredentials: record.has_credentials,
-    media: (record.media ?? []).map((media) => ({
-      id: media.id,
-      role: media.role,
-      originalName: media.original_name,
-      mimeType: media.mime_type,
-      sizeBytes: media.size_bytes,
-      sortOrder: media.sort_order,
-      url: apiAssetUrl(media.url),
-    })),
-  });
-
   const syncInventoryMedia = async (
     inventoryId: number,
     media: InventoryMediaDraft,
@@ -304,7 +331,7 @@ export function MerchantApp() {
     setDashboardData(result);
   }, [shop]);
   const refreshHistory = useCallback(async () => {
-    if (!shop || !["sales", "customers"].includes(page)) return;
+    if (!shop || !["sales", "customers"].includes(page) || saleDetailId) return;
     const endpoint =
       page === "sales" ? "/sales?per_page=25" : "/customers?per_page=25";
     setHistoryLoading(true);
@@ -323,7 +350,7 @@ export function MerchantApp() {
     } finally {
       setHistoryLoading(false);
     }
-  }, [page, shop]);
+  }, [page, saleDetailId, shop]);
   const refreshManagement = useCallback(async () => {
     if (!shop || !["team", "billing", "settings"].includes(page)) return;
     setManagementLoading(true);
@@ -403,6 +430,37 @@ export function MerchantApp() {
     void refreshHistory();
   }, [historyRevision, refreshHistory]);
   useEffect(() => {
+    if (!shop || !inventoryDetailId) return;
+    const controller = new AbortController();
+    void shopRequest<{ data: InventoryResponse["data"][number] }>(
+      `/inventory/${inventoryDetailId}`,
+      shop.id,
+      { signal: controller.signal },
+    )
+      .then((result) => {
+        const item = mapInventoryItem(result.data);
+        setSelected(item);
+        setInventoryItems((current) => {
+          const exists = current.some((candidate) => candidate.id === item.id);
+          return exists
+            ? current.map((candidate) =>
+                candidate.id === item.id ? item : candidate,
+              )
+            : [item, ...current];
+        });
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name === "AbortError") return;
+        notify(
+          error instanceof Error
+            ? error.message
+            : "ไม่สามารถเปิดข้อมูลไอดีจากลิงก์ได้",
+        );
+      });
+
+    return () => controller.abort();
+  }, [inventoryDetailId, shop]);
+  useEffect(() => {
     void refreshManagement();
   }, [managementRevision, refreshManagement]);
   useEffect(() => {
@@ -410,7 +468,7 @@ export function MerchantApp() {
   }, [transactionsRevision, refreshTransactions]);
   const go = (p: MerchantPage) => {
     navigate(PAGE_PATHS[p]);
-    if (p !== "inventory") setSelected(null);
+    setSelected(null);
     if (p === "inventory")
       window.setTimeout(() => searchRef.current?.focus(), 0);
   };
@@ -654,28 +712,9 @@ export function MerchantApp() {
       setInventoryBusy(false);
     }
   };
-  const openDetail = async (i: InventoryItem) => {
-    navigate(PAGE_PATHS.inventory);
+  const openDetail = (i: InventoryItem) => {
     setSelected(i);
-    if (!shop) return;
-    try {
-      const result = await shopRequest<{
-        data: InventoryResponse["data"][number];
-      }>(`/inventory/${i.id}`, shop.id);
-      const item = mapInventoryItem(result.data);
-      setSelected(item);
-      setInventoryItems((current) =>
-        current.map((candidate) =>
-          candidate.id === item.id ? item : candidate,
-        ),
-      );
-    } catch (error) {
-      notify(
-        error instanceof Error
-          ? error.message
-          : "ไม่สามารถโหลดรายละเอียดไอดีได้",
-      );
-    }
+    navigate(`${PAGE_PATHS.inventory}?item=${i.id}`);
   };
   const editInventoryItem = async (
     e: FormEvent<HTMLFormElement>,
@@ -1009,8 +1048,9 @@ export function MerchantApp() {
       setInventoryBusy(false);
     }
   };
-  const activeTitle =
-    page === "dashboard"
+  const activeTitle = saleDetailId
+    ? "รายละเอียดการขาย"
+    : page === "dashboard"
       ? "ภาพรวมร้าน"
       : page === "inventory"
         ? "คลังไอดี"
@@ -1045,13 +1085,7 @@ export function MerchantApp() {
         <div className="nav-label">จัดการร้าน</div>
         <nav className="nav">
           {managementNavigation
-            .filter(([key]) =>
-              key === "team"
-                ? hasShopPermission("team.manage")
-                : key === "billing" || key === "transactions"
-                  ? hasShopPermission("billing.manage")
-                  : hasShopPermission("team.manage"),
-            )
+            .filter(([key]) => canAccessManagementPage(key))
             .map(([key, label, Icon]) => (
               <button
                 key={key}
@@ -1101,7 +1135,7 @@ export function MerchantApp() {
         </div>
       </header>
       <main
-        className={`page ${page === "dashboard" ? "dashboard-page" : ""} ${page === "inventory" ? "inventory-page" : ""} ${page === "inventory" && selected ? "inventory-detail-page" : ""} ${page === "sales" ? "sales-page" : ""} ${page === "customers" ? "customers-page" : ""} ${["team", "billing", "transactions", "settings"].includes(page) ? "management-page" : ""}`}
+        className={`page ${page === "dashboard" ? "dashboard-page" : ""} ${page === "inventory" ? "inventory-page" : ""} ${page === "inventory" && selected ? "inventory-detail-page" : ""} ${page === "sales" ? "sales-page" : ""} ${saleDetailId ? "sale-detail-page" : ""} ${page === "customers" ? "customers-page" : ""} ${["team", "billing", "transactions", "discord", "settings"].includes(page) ? "management-page" : ""}`}
       >
         <div className="page-head">
           <div>
@@ -1119,7 +1153,9 @@ export function MerchantApp() {
                 ? "ภาพรวมร้านสำหรับวางแผนสต็อกและยอดขายวันนี้"
                 : page === "transactions"
                   ? "ตรวจสอบประวัติแพ็กเกจและเครดิตของร้านจากรายการล่าสุด"
-                  : "ค้นหา จอง และขายไอดีได้จากที่เดียว"}
+                  : page === "discord"
+                    ? "เชื่อมเซิร์ฟเวอร์ ตั้งค่าห้องแจ้งเตือน และจัดการร้านด้วยคำสั่งภาษาไทย"
+                    : "ค้นหา จอง และขายไอดีได้จากที่เดียว"}
             </p>
           </div>
           <div className="actions">
@@ -1146,19 +1182,15 @@ export function MerchantApp() {
             )}
           </div>
         </div>
-        {["team", "billing", "transactions", "settings"].includes(page) && (
+        {["team", "billing", "transactions", "discord", "settings"].includes(
+          page,
+        ) && (
           <nav
             className="mobile-manage-nav"
             aria-label="เมนูจัดการร้านบนมือถือ"
           >
             {managementNavigation
-              .filter(([key]) =>
-                key === "team"
-                  ? hasShopPermission("team.manage")
-                  : key === "billing" || key === "transactions"
-                    ? hasShopPermission("billing.manage")
-                    : hasShopPermission("team.manage"),
-              )
+              .filter(([key]) => canAccessManagementPage(key))
               .map(([key, label]) => (
                 <button
                   key={key}
@@ -1189,12 +1221,21 @@ export function MerchantApp() {
             }}
           />
         )}
-        {page === "sales" && (
+        {page === "sales" && saleDetailId && shop ? (
+          <SaleDetailPage
+            key={saleDetailId}
+            shopId={shop.id}
+            saleId={saleDetailId}
+            canViewProfit={hasShopPermission("profit.view")}
+          />
+        ) : null}
+        {page === "sales" && !saleDetailId && (
           <SalesPanel
             records={sales}
             loading={historyLoading}
             error={historyError}
             retry={() => setHistoryRevision((value) => value + 1)}
+            canViewProfit={hasShopPermission("profit.view")}
           />
         )}{" "}
         {page === "customers" && (
@@ -1253,6 +1294,13 @@ export function MerchantApp() {
             retry={() => setTransactionsRevision((value) => value + 1)}
           />
         )}{" "}
+        {page === "discord" && (
+          <DiscordSettingsPanel
+            shopId={shop?.id}
+            canManage={hasShopPermission("discord.manage")}
+            notify={notify}
+          />
+        )}{" "}
         {page === "settings" && (
           <SettingsPanel
             shop={shopDetails ?? shop ?? null}
@@ -1286,7 +1334,10 @@ export function MerchantApp() {
               hasShopPermission("inventory.manage") ||
               hasShopPermission("inventory.sell")
             }
-            onBack={() => setSelected(null)}
+            onBack={() => {
+              setSelected(null);
+              navigate(PAGE_PATHS.inventory);
+            }}
             onEdit={() => setDialog("edit")}
             onCopyDetails={() => void copyDetails(selected)}
             onReserve={() => void reserve(selected)}

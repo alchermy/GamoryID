@@ -9,6 +9,7 @@ SaaS ภาษาไทยสำหรับจัดการสต็อกส
 - `public-web/` React Landing Page
 - `backend/openapi.yaml` API contract
 - `DESIGN.md` และ `UX-CONTRACT.md` ข้อตกลงด้านภาพและพฤติกรรม
+- `docs/discord-setup.md` คู่มือตั้งค่า Gamory Bot และ queue สำหรับ Production
 
 Frontend ทั้งสองส่วนแยก application entry, routes, domain features, shared UI,
 utilities และ types ออกจากกันแล้ว ดูแนวทางเพิ่มฟีเจอร์ Merchant ได้ที่
@@ -17,8 +18,8 @@ utilities และ types ออกจากกันแล้ว ดูแน�
 ## เริ่มต้นบน XAMPP (Windows)
 
 1. เปิด Apache และ MySQL จาก XAMPP Control Panel
-2. สร้างฐานข้อมูลชื่อ `gamoryid` แบบ `utf8mb4_unicode_ci` (ฐานข้อมูลในเครื่องนี้สร้างไว้แล้ว)
-3. ตรวจ `backend/.env`: MySQL `127.0.0.1:3306`, database `gamoryid`, user `root`, password ว่าง
+2. สร้างฐานข้อมูลสำหรับพัฒนา เช่น `gamoryid_dev` แบบ `utf8mb4_unicode_ci`
+3. ตรวจ `backend/.env`: MySQL `127.0.0.1:3306`, ชื่อฐานข้อมูลให้ตรงกับข้อ 2, user `root`, password ว่าง
 4. รันคำสั่งต่อไปนี้คนละ Terminal
 
 ```powershell
@@ -29,7 +30,7 @@ php artisan serve
 
 ```powershell
 cd C:\gamoryid\backend
-php artisan queue:work
+php artisan queue:work --queue=notifications,default
 ```
 
 ```powershell
@@ -42,9 +43,13 @@ cd C:\gamoryid\public-web
 npm run dev -- --port 5174
 ```
 
-Merchant demo: `http://localhost:5173` · API: `http://localhost:8000` · Landing: `http://localhost:5174` · Super Admin: `http://localhost:8000/admin/login`
+Merchant: `http://localhost:5173` · สมัครร้าน: `http://localhost:5173/register` · API: `http://localhost:8000` · Landing: `http://localhost:5174` · Super Admin: `http://localhost:8000/admin/login`
 
-บัญชี seed สำหรับ API คือ `owner@gamoryid.local` / `password` ใช้เพื่อการพัฒนาเท่านั้น ข้อมูล credentials ใช้ AES-256-GCM ใน XAMPP; ก่อน production ต้องตั้ง `CREDENTIAL_ENCRYPTION_KEY_V1` เป็นคีย์สุ่ม 32 bytes แบบ base64 และห้ามเก็บร่วมฐานข้อมูล
+`php artisan migrate:fresh --seed` จะสร้างฐานสะอาดที่มีเฉพาะแพ็กเกจและ Super Admin เหมาะสำหรับทดสอบ Flow สมัครร้านใหม่ หากต้องการข้อมูลตัวอย่างภายหลังให้รัน `php artisan db:seed --class=DemoShopSeeder`
+
+การทดสอบยืนยันอีเมลบนเครื่องใช้ `MAIL_MAILER=log`: เปิด `backend/storage/logs/laravel.log` แล้วค้นหา `/email/verify/` จากอีเมลล่าสุด จากนั้นเปิดลิงก์ดังกล่าวใน Browser
+
+ข้อมูล credentials ใช้ AES-256-GCM ใน XAMPP; ก่อน production ต้องตั้ง `CREDENTIAL_ENCRYPTION_KEY_V1` เป็นคีย์สุ่ม 32 bytes แบบ base64 และห้ามเก็บร่วมฐานข้อมูล
 
 Super Admin สำหรับการพัฒนาใช้บัญชี `admin@gamoryid.local` / `password`
 

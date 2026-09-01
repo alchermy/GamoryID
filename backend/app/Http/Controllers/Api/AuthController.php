@@ -8,6 +8,7 @@ use App\Http\Requests\RegisterRequest;
 use App\Models\Shop;
 use App\Models\ShopMember;
 use App\Models\Subscription;
+use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,10 @@ class AuthController extends Controller
     {
         $data = $request->validated();
         [$user, $shop] = DB::transaction(function () use ($data) {
+            $starterPlan = SubscriptionPlan::query()
+                ->where('code', 'starter')
+                ->where('is_active', true)
+                ->firstOrFail();
             $shop = Shop::create([
                 'name' => $data['shop_name'],
                 'slug' => Str::slug($data['shop_name']).'-'.Str::lower(Str::random(5)),
@@ -44,6 +49,7 @@ class AuthController extends Controller
             ]);
             Subscription::create([
                 'shop_id' => $shop->id,
+                'subscription_plan_id' => $starterPlan->id,
                 'status' => SubscriptionStatus::Trialing->value,
                 'starts_at' => now(),
                 'ends_at' => now()->addDays(30),
@@ -116,6 +122,7 @@ class AuthController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'email_verified_at' => $user->email_verified_at?->toIso8601String(),
             'current_shop_id' => $user->current_shop_id,
             'two_factor_enabled' => (bool) $user->two_factor_confirmed_at,
             'shops' => $user->shops()->get()->map(fn ($shop) => [

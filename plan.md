@@ -78,9 +78,18 @@ Domain หลัก:
 - ตั้ง monitoring, error tracking, queue alerts, encrypted backup และทดสอบ restore จริง
 - เปิด pilot เป็นกลุ่มเล็ก เก็บเวลาที่ใช้ import/search/sell และปรับ UX ก่อนเริ่มเฟสถัดไป
 
+### Discord Phase 1 — ดำเนินการแล้ว (อัปเดต 31 สิงหาคม 2026)
+
+- ร้านเชื่อม Discord server ด้วยรหัสใช้ครั้งเดียวและกำหนดห้องแจ้งเตือนแยกตามระบบ การขาย การจอง และคลังไอดี
+- สมาชิกเชื่อมบัญชี Discord ของตนเองก่อนใช้คำสั่งในห้อง `คำสั่งทั่วไป`; รองรับสรุป รายการ ค้นหา จอง ยกเลิกจอง ปิดการขาย โน้ต เพิ่มไอดี และช่วยเหลือ โดยคำตอบเป็นข้อความส่วนตัว
+- คำสั่งตรวจสิทธิ์ ShopMember ล่าสุดทุกครั้ง: `inventory.manage` สำหรับเพิ่ม/รายการ/โน้ต, `inventory.sell` สำหรับจอง/ยกเลิก/ขายพร้อมรายการ/โน้ต และ `profit.view` สำหรับกำไรในสรุป เจ้าของร้านใช้ได้ทั้งหมด
+- การเพิ่มผ่าน Discord ไม่รับ Username หรือ Password และคำตอบ/แจ้งเตือนไม่ส่งข้อมูลเข้าสู่ระบบ ต้นทุน ข้อมูลติดต่อลูกค้า หรือโน้ตภายใน
+- เพิ่ม notification queue สำหรับเหตุการณ์เพิ่มไอดี จอง ยกเลิกจอง และขาย พร้อมโหมดจำลองสำหรับ local/testing
+- Production ใช้ HTTP Interactions จึงไม่ต้องเปิด Gateway bot ค้างไว้ แต่ต้องมี HTTPS, outbound HTTPS, PHP CLI และ cron/queue worker
+
 ### เฟสถัดไป
 
-1. Discord: ติดตั้ง bot ต่อร้าน, `/gid find #TAG`, ตอบข้อมูลแบบ ephemeral/DM ตาม permission และแจ้งเตือนความสนใจ โดยไม่ส่ง credentials ใน public channel
+1. Discord Phase 2: เพิ่มแจ้งเตือนความสนใจและ workflow จาก Public Storefront หลังผ่าน legal/business-risk review
 2. Public Storefront: แสดงเฉพาะข้อมูลที่อนุญาต, CTA Facebook/LINE/โทรศัพท์ และเก็บ unique view/click/lead
 3. Super Admin เต็มรูปแบบและ Landing Page สำหรับทำตลาด
 

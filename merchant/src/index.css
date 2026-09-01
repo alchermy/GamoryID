@@ -5,8 +5,10 @@
 @import "./import.css";
 @import "./history.css";
 @import "./management.css";
+@import "./discord.css";
 @import "./inventory-management.css";
 @import "./styles/tailwind-system.css";
+@import "/src/styles/auth-card.css";
 
 @source './**/*.{ts,tsx}';
 

@@ -1,15 +1,58 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Check } from "lucide-react";
-import { Outlet } from "react-router-dom";
+import { ArrowRight, Check } from "lucide-react";
+import {
+  Navigate,
+  Outlet,
+  useLocation,
+  useOutletContext,
+} from "react-router-dom";
 import { apiRequest, prepareCsrf } from "../../api";
 import { formatDate } from "../../shared/lib/format";
 import { Field, PasswordInput } from "../../shared/ui/form-controls";
 import type { SessionUser } from "../../types/models";
+import { RegistrationJourney } from "./registration-journey";
+import { LoginWorkspaceContext } from "./login-workspace-context";
+
+type RegistrationField = "name" | "shop_name" | "email" | "password";
+
+function validateLogin(data: FormData) {
+  const errors: Partial<Record<RegistrationField, string>> = {};
+  const email = String(data.get("email") ?? "").trim();
+  const password = String(data.get("password") ?? "");
+
+  if (!email) errors.email = "กรอกอีเมลสำหรับเข้าใช้งาน";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    errors.email = "กรอกอีเมลให้ถูกต้อง เช่น name@example.com";
+  if (!password) errors.password = "กรอกรหัสผ่าน";
+
+  return errors;
+}
+
+function validateRegistration(data: FormData) {
+  const errors: Partial<Record<RegistrationField, string>> = {};
+  const name = String(data.get("name") ?? "").trim();
+  const shopName = String(data.get("shop_name") ?? "").trim();
+  const email = String(data.get("email") ?? "").trim();
+  const password = String(data.get("password") ?? "");
+
+  if (!name) errors.name = "กรอกชื่อของคุณ";
+  if (!shopName) errors.shop_name = "กรอกชื่อร้าน";
+  if (!email) errors.email = "กรอกอีเมลสำหรับเข้าใช้งาน";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    errors.email = "กรอกอีเมลให้ถูกต้อง เช่น name@example.com";
+  if (password.length < 10)
+    errors.password = "รหัสผ่านต้องมีอย่างน้อย 10 ตัวอักษร";
+
+  return errors;
+}
 
 export function AuthScreen({ mode }: { mode: "login" | "register" }) {
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [fieldErrors, setFieldErrors] = useState<
+      Partial<Record<RegistrationField, string>>
+    >({});
   useEffect(() => {
     document.title = `${mode === "login" ? "เข้าสู่ระบบ" : "สมัครใช้งาน"} — GamoryID`;
   }, [mode]);
@@ -18,6 +61,16 @@ export function AuthScreen({ mode }: { mode: "login" | "register" }) {
     setBusy(true);
     setError("");
     const d = new FormData(e.currentTarget);
+    const nextErrors =
+      mode === "register" ? validateRegistration(d) : validateLogin(d);
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      const firstField = Object.keys(nextErrors)[0] as RegistrationField;
+      const target = e.currentTarget.elements.namedItem(firstField);
+      if (target instanceof HTMLElement) target.focus();
+      setBusy(false);
+      return;
+    }
     try {
       const csrf = await prepareCsrf();
       const payload =
@@ -44,88 +97,153 @@ export function AuthScreen({ mode }: { mode: "login" | "register" }) {
       setBusy(false);
     }
   };
+  const clearFieldError = (field: RegistrationField) => {
+    if (!fieldErrors[field] && !error) return;
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+    setError("");
+  };
+  const isRegister = mode === "register";
   return (
-    <main className="auth-page">
-      <section className="auth-panel">
-        <a className="auth-brand" href="/">
-          <img src="/mascot/gammy-main.png" alt="Gammy" />
-          Gamory<span>ID</span>
-        </a>
-        <h1>{mode === "login" ? "ยินดีต้อนรับกลับ" : "สร้างร้านของคุณ"}</h1>
-        <p>
-          {mode === "login"
-            ? "เข้าสู่ระบบเพื่อจัดการสต็อกและงานขาย"
-            : "ทดลองใช้ฟรี 30 วัน ตั้งค่าร้านและเริ่มนำเข้าได้เลย"}
-        </p>
-        {error && (
-          <div className="auth-error" role="alert">
-            {error}
-          </div>
-        )}
-        <form onSubmit={submit} noValidate>
-          {mode === "register" && (
-            <>
-              <Field label="ชื่อของคุณ">
-                <input name="name" required autoComplete="name" />
-              </Field>
-              <Field label="ชื่อร้าน">
-                <input name="shop_name" required />
-              </Field>
-            </>
-          )}
-          <Field label="อีเมล">
-            <input name="email" type="email" required autoComplete="email" />
-          </Field>
-          <Field label="รหัสผ่าน">
-            <PasswordInput
-              name="password"
-              minLength={8}
-              required
-              autoComplete={
-                mode === "login" ? "current-password" : "new-password"
-              }
-            />
-          </Field>
-          <button className="button primary auth-submit" disabled={busy}>
-            {busy
-              ? "กำลังดำเนินการ…"
-              : mode === "login"
-                ? "เข้าสู่ระบบ"
-                : "สร้างร้านและเริ่มทดลอง"}
-          </button>
-        </form>
-        <p className="auth-switch">
-          {mode === "login" ? "ยังไม่มีบัญชี?" : "มีบัญชีแล้ว?"}{" "}
-          <a href={mode === "login" ? "/register" : "/login"}>
-            {mode === "login" ? "เริ่มใช้ฟรี" : "เข้าสู่ระบบ"}
+    <main className={`auth-page auth-page-${mode}`}>
+      <div className="merchant-auth-shell">
+        <section className="auth-panel" aria-labelledby={`${mode}-title`}>
+          <a className="auth-brand" href="/" aria-label="GamoryID หน้าหลัก">
+            <img src="/mascot/gammy-main.png" alt="" />
+            Gamory<span>ID</span>
+            <small>MERCHANT</small>
           </a>
-        </p>
-      </section>
-      <aside className="auth-art">
-        <div>
-          <span className="eyebrow">GAMMY OPS CONSOLE</span>
-          <h2>
-            จัดสต็อกเป็นระบบ
-            <br />
-            หาไอดีได้ในไม่กี่วินาที
-          </h2>
-          <ul>
-            <li>
-              <Check />
-              แท็กเฉพาะ 5 ตัว
-            </li>
-            <li>
-              <Check />
-              นำเข้าหลายรายการด้วย Excel หรือ CSV
-            </li>
-            <li>
-              <Check />
-              สิทธิ์แยกสำหรับทีมร้าน
-            </li>
-          </ul>
-        </div>
-        <img src="/mascot/gammy-secure.png" alt="Gammy ดูแลข้อมูล" />
-      </aside>
+          <h1 id={`${mode}-title`}>
+            {mode === "login" ? "เข้าสู่ระบบร้านค้า" : "เปิดร้านบน GamoryID"}
+          </h1>
+          <p>
+            {mode === "login"
+              ? "กลับมาจัดการคลังไอดี การจอง และงานขายของร้านคุณ"
+              : "สร้างพื้นที่จัดการสต็อกของร้านคุณ และเริ่มทดลองใช้ได้ทันที"}
+          </p>
+          {error && (
+            <div className="auth-error" role="alert">
+              {error}
+            </div>
+          )}
+          <form onSubmit={submit} noValidate>
+            {isRegister && (
+              <div className="auth-form-grid">
+                <Field label="ชื่อของคุณ" htmlFor="register-name">
+                  <input
+                    id="register-name"
+                    name="name"
+                    required
+                    autoComplete="name"
+                    placeholder="เช่น พีท"
+                    aria-invalid={Boolean(fieldErrors.name) || undefined}
+                    aria-describedby={
+                      fieldErrors.name ? "register-name-error" : undefined
+                    }
+                    onChange={() => clearFieldError("name")}
+                  />
+                  {fieldErrors.name ? (
+                    <span className="field-error" id="register-name-error">
+                      {fieldErrors.name}
+                    </span>
+                  ) : null}
+                </Field>
+                <Field label="ชื่อร้าน" htmlFor="register-shop-name">
+                  <input
+                    id="register-shop-name"
+                    name="shop_name"
+                    required
+                    autoComplete="organization"
+                    placeholder="เช่น Nexus Store"
+                    aria-invalid={Boolean(fieldErrors.shop_name) || undefined}
+                    aria-describedby={
+                      fieldErrors.shop_name
+                        ? "register-shop-name-error"
+                        : undefined
+                    }
+                    onChange={() => clearFieldError("shop_name")}
+                  />
+                  {fieldErrors.shop_name ? (
+                    <span className="field-error" id="register-shop-name-error">
+                      {fieldErrors.shop_name}
+                    </span>
+                  ) : null}
+                </Field>
+              </div>
+            )}
+            <Field label="อีเมล" htmlFor={`${mode}-email`}>
+              <input
+                id={`${mode}-email`}
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                inputMode="email"
+                placeholder={isRegister ? "name@example.com" : undefined}
+                aria-invalid={Boolean(fieldErrors.email) || undefined}
+                aria-describedby={
+                  fieldErrors.email ? `${mode}-email-error` : undefined
+                }
+                onChange={() => clearFieldError("email")}
+              />
+              {fieldErrors.email ? (
+                <span className="field-error" id={`${mode}-email-error`}>
+                  {fieldErrors.email}
+                </span>
+              ) : null}
+            </Field>
+            <Field label="รหัสผ่าน" htmlFor={`${mode}-password`}>
+              <PasswordInput
+                id={`${mode}-password`}
+                name="password"
+                minLength={mode === "register" ? 10 : undefined}
+                required
+                placeholder={isRegister ? "สร้างรหัสผ่านของคุณ" : undefined}
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
+                ariaInvalid={Boolean(fieldErrors.password)}
+                ariaDescribedBy={
+                  isRegister
+                    ? fieldErrors.password
+                      ? "register-password-hint register-password-error"
+                      : "register-password-hint"
+                    : fieldErrors.password
+                      ? "login-password-error"
+                      : undefined
+                }
+                onChange={() => clearFieldError("password")}
+              />
+              {fieldErrors.password ? (
+                <span className="field-error" id={`${mode}-password-error`}>
+                  {fieldErrors.password}
+                </span>
+              ) : null}
+            </Field>
+            {isRegister ? (
+              <p className="field-help" id="register-password-hint">
+                ใช้รหัสผ่านอย่างน้อย 10 ตัวอักษร
+              </p>
+            ) : null}
+            <button className="button primary auth-submit" disabled={busy}>
+              {busy
+                ? "กำลังดำเนินการ…"
+                : mode === "login"
+                  ? "เข้าสู่ระบบ"
+                  : "สร้างร้านและเริ่มทดลอง"}
+              {!busy && isRegister ? (
+                <ArrowRight size={18} aria-hidden="true" />
+              ) : null}
+            </button>
+          </form>
+          <p className="auth-switch">
+            {mode === "login" ? "ยังไม่มีร้าน?" : "มีบัญชีแล้ว?"}{" "}
+            <a href={mode === "login" ? "/register" : "/login"}>
+              {mode === "login" ? "เปิดร้านใช้ฟรี" : "เข้าสู่ระบบ"}
+            </a>
+          </p>
+        </section>
+        {isRegister ? <RegistrationJourney /> : <LoginWorkspaceContext />}
+      </div>
     </main>
   );
 }
@@ -312,6 +430,7 @@ export function AuthGate() {
   const [session, setSession] = useState<SessionUser | null>(null);
   const [checking, setChecking] = useState(import.meta.env.MODE !== "test");
   const [error, setError] = useState("");
+  const location = useLocation();
   const checkSession = useCallback(async () => {
     setChecking(true);
     setError("");
@@ -356,7 +475,15 @@ export function AuthGate() {
         </section>
       </main>
     );
-  if (session) return <Outlet context={session} />;
+  if (session) {
+    if (!session.email_verified_at && location.pathname !== "/verify-email") {
+      return <Navigate to="/verify-email" replace />;
+    }
+    if (session.email_verified_at && location.pathname === "/verify-email") {
+      return <Navigate to="/" replace />;
+    }
+    return <Outlet context={session} />;
+  }
   return (
     <main className="auth-gate">
       <section>
@@ -370,6 +497,75 @@ export function AuthGate() {
           </button>
           <a className="button" href="/login">
             ไปหน้าเข้าสู่ระบบ
+          </a>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export function VerifyEmailScreen() {
+  const session = useOutletContext<SessionUser>();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    document.title = "ยืนยันอีเมล — GamoryID";
+  }, []);
+
+  const resend = async () => {
+    setBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      const csrf = await prepareCsrf();
+      const result = await apiRequest<{ message: string }>(
+        "/email/verification-notification",
+        { method: "POST", headers: csrf },
+      );
+      setMessage(result.message);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "ไม่สามารถส่งอีเมลยืนยันได้",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <main className="auth-gate">
+      <section>
+        <img src="/mascot/gammy-secure.png" alt="Gammy" />
+        <p className="eyebrow">ยืนยันเจ้าของร้าน</p>
+        <h1>ตรวจสอบอีเมลของคุณ</h1>
+        <p>
+          เราส่งลิงก์ยืนยันไปที่ <strong>{session.email}</strong>
+          <br />
+          เปิดลิงก์ในอีเมลแล้วระบบจะพากลับเข้าร้านโดยอัตโนมัติ
+        </p>
+        {message ? (
+          <div className="notice" role="status">
+            {message}
+          </div>
+        ) : null}
+        {error ? (
+          <div className="auth-error" role="alert">
+            {error}
+          </div>
+        ) : null}
+        <div className="auth-gate-actions">
+          <button
+            className="button blue"
+            type="button"
+            disabled={busy}
+            onClick={() => void resend()}
+          >
+            {busy ? "กำลังส่ง…" : "ส่งอีเมลยืนยันอีกครั้ง"}
+          </button>
+          <a className="button" href="/login">
+            กลับหน้าเข้าสู่ระบบ
           </a>
         </div>
       </section>

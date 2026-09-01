@@ -6,9 +6,10 @@ export function useModalLayer(active: string | null) {
   useEffect(() => {
     if (!active) return;
 
-    const layer = document.querySelector<HTMLElement>(
+    const layers = document.querySelectorAll<HTMLElement>(
       ".dialog-backdrop .dialog, .drawer",
     );
+    const layer = layers.item(layers.length - 1);
     const shell = document.querySelector<HTMLElement>(".app-shell");
     if (!layer || !shell) return;
 
@@ -17,16 +18,20 @@ export function useModalLayer(active: string | null) {
         ? document.activeElement
         : null;
 
-    const background = Array.from(shell.children).filter(
-      (element) =>
-        !element.classList.contains("dialog-backdrop") &&
-        !element.classList.contains("drawer") &&
-        !element.classList.contains("drawer-backdrop"),
-    ) as HTMLElement[];
+    const modalRoot =
+      layer.closest<HTMLElement>(".dialog-backdrop, .drawer") ?? layer;
+    const background: Array<{ element: HTMLElement; wasInert: boolean }> = [];
+    let branch: HTMLElement | null = modalRoot;
 
-    background.forEach((element) => {
-      element.inert = true;
-    });
+    while (branch && branch !== shell && branch.parentElement) {
+      const parent: HTMLElement = branch.parentElement;
+      for (const sibling of Array.from(parent.children)) {
+        if (sibling === branch || !(sibling instanceof HTMLElement)) continue;
+        background.push({ element: sibling, wasInert: sibling.inert });
+        sibling.inert = true;
+      }
+      branch = parent;
+    }
 
     const focusable = () =>
       Array.from(
@@ -77,8 +82,8 @@ export function useModalLayer(active: string | null) {
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      background.forEach((element) => {
-        element.inert = false;
+      background.forEach(({ element, wasInert }) => {
+        element.inert = wasInert;
       });
       if (restoreFocus.current?.isConnected) restoreFocus.current.focus();
     };

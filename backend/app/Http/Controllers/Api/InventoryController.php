@@ -8,11 +8,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreInventoryRequest;
 use App\Http\Requests\UpdateInventoryNoteRequest;
 use App\Http\Resources\InventoryItemResource;
+use App\Jobs\SendDiscordShopNotification;
 use App\Models\InventoryCredential;
 use App\Models\InventoryItem;
 use App\Services\AuditLogger;
 use App\Services\CredentialCipher;
 use App\Services\CurrentShop;
+use App\Services\Discord\DiscordNotificationMessageBuilder;
 use App\Services\PlanGate;
 use App\Services\TagGenerator;
 use Illuminate\Http\Request;
@@ -52,7 +54,7 @@ class InventoryController extends Controller
         return InventoryItemResource::collection($query->paginate($validated['per_page'] ?? 25)->withQueryString());
     }
 
-    public function store(StoreInventoryRequest $request, CurrentShop $currentShop, TagGenerator $tags, CredentialCipher $cipher, AuditLogger $audit, PlanGate $planGate)
+    public function store(StoreInventoryRequest $request, CurrentShop $currentShop, TagGenerator $tags, CredentialCipher $cipher, AuditLogger $audit, PlanGate $planGate, DiscordNotificationMessageBuilder $discordMessages)
     {
         $shop = $currentShop->from($request);
         $planGate->ensureInventoryCapacity($shop);
@@ -75,6 +77,12 @@ class InventoryController extends Controller
             return $item;
         });
         $audit->record($request, $shop, 'inventory.created', $item, ['tag' => '#'.$item->tag]);
+        SendDiscordShopNotification::dispatch(
+            $shop->id,
+            'inventory',
+            'เพิ่มไอดีใหม่เข้าคลัง',
+            $discordMessages->inventoryCreated($item, $request->user()),
+        );
 
         return (new InventoryItemResource($item->load(['shop', 'media'])))->response()->setStatusCode(201);
     }

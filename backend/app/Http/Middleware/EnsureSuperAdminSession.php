@@ -12,7 +12,12 @@ class EnsureSuperAdminSession
     public function handle(Request $request, Closure $next): Response
     {
         $adminId = $request->session()->get('admin_user_id');
-        abort_unless($adminId && User::whereKey($adminId)->where('is_super_admin', true)->exists(), 403);
+
+        if (! $adminId || ! User::whereKey($adminId)->where('is_super_admin', true)->exists()) {
+            $request->session()->forget('admin_user_id');
+
+            return redirect()->route('admin.login');
+        }
 
         return $next($request);
     }

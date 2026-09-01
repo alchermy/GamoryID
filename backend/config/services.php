@@ -2,6 +2,13 @@
 
 return [
 
+    'discord' => [
+        'application_id' => env('DISCORD_APPLICATION_ID'),
+        'public_key' => env('DISCORD_PUBLIC_KEY'),
+        'bot_token' => env('DISCORD_BOT_TOKEN'),
+        'test_bypass' => env('DISCORD_TEST_BYPASS', false),
+    ],
+
     'slipok' => [
         'endpoint' => env('SLIPOK_ENDPOINT', 'https://api.slipok.com'),
         'api_key' => env('SLIPOK_API_KEY'),

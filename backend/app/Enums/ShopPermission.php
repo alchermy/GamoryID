@@ -11,4 +11,5 @@ enum ShopPermission: string
     case CredentialsReveal = 'credentials.reveal';
     case TeamManage = 'team.manage';
     case BillingManage = 'billing.manage';
+    case DiscordManage = 'discord.manage';
 }

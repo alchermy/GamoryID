@@ -119,6 +119,16 @@ paths:
       security: [{sanctum: []}]
       parameters: [{$ref: '#/components/parameters/ShopId'}, {name: q, in: query, schema: {type: string}}, {name: per_page, in: query, schema: {type: integer, enum: [25, 50, 100]}}]
       responses: {'200': {description: Paginated sales}}
+  /sales/{sale}:
+    get:
+      summary: รายละเอียดรายการขายภายในร้าน
+      security: [{sanctum: []}]
+      parameters:
+        - {$ref: '#/components/parameters/ShopId'}
+        - {name: sale, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {description: Sale detail with inventory, customer and seller}
+        '404': {description: Sale does not belong to current shop}
   /inventory/{inventory}/credentials:
     get:
       summary: เปิด credentials หลัง permission + recent re-auth
@@ -166,6 +176,28 @@ paths:
     post: {summary: ใช้เครดิตซื้อแพ็กเกจ, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Subscription purchased}}}
   /subscriptions/auto-renew:
     put: {summary: เปิดหรือปิดต่ออายุอัตโนมัติด้วยเครดิต, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Auto-renew updated}}}
+  /discord/interactions:
+    post:
+      summary: รับ signed interaction จาก Discord (PING และคำสั่งภาษาไทย /ร้าน สำหรับสรุป รายการ ค้นหา จอง ยกเลิกจอง ปิดการขาย โน้ต เพิ่มไอดี และช่วยเหลือ)
+      description: คำสั่งทำงานเฉพาะห้องคำสั่งทั่วไป ตอบแบบ ephemeral และตรวจสมาชิกกับ ShopMember permissions ล่าสุดทุกครั้ง โดยไม่รับ credentials ผ่าน Discord
+      parameters:
+        - {name: X-Signature-Ed25519, in: header, required: true, schema: {type: string}}
+        - {name: X-Signature-Timestamp, in: header, required: true, schema: {type: string}}
+      responses: {'200': {description: Discord interaction response}, '401': {description: Invalid signature}}
+  /discord/settings:
+    get: {summary: สถานะเซิร์ฟเวอร์ ห้องแจ้งเตือน และบัญชี Discord ของสมาชิกปัจจุบัน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Discord settings scoped to current shop}}}
+  /discord/setup-code:
+    post: {summary: สร้างรหัสเชื่อมร้านแบบใช้ครั้งเดียวและหมดอายุใน 10 นาที, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'201': {description: Setup code and bot install URL}, '403': {description: Requires discord.manage permission}, '503': {description: Discord App is not configured}}}
+  /discord/link-code:
+    post: {summary: สร้างรหัสเชื่อมสมาชิกปัจจุบันกับ Discord แบบใช้ครั้งเดียว, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'201': {description: Link code}, '409': {description: Shop has no connected guild}}}
+  /discord/channels/auto-create:
+    post: {summary: สร้างหมวด GamoryID ห้องคำสั่งทั่วไป 1 ห้อง และห้องแจ้งเตือนภาษาไทย 4 ห้องใน guild, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Channels created}, '403': {description: Requires discord.manage permission}}}
+  /discord/channels:
+    put: {summary: บันทึก mapping ห้องแจ้งเตือนของร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Channel mappings saved}, '422': {$ref: '#/components/responses/ValidationError'}}}
+  /discord/test-notification:
+    post: {summary: ส่งข้อความทดสอบที่ไม่มี credentials ไปยังห้องระบบ, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Test notification sent}}}
+  /discord/disconnect:
+    delete: {summary: ให้บอทออกจาก guild และลบการเชื่อมต่อของร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Disconnected}}}
   /team:
     get: {summary: สมาชิกและสิทธิ์ของร้าน, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Team members}}}
     post: {summary: สร้างลิงก์คำเชิญพนักงานแบบใช้ครั้งเดียว, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'201': {description: Invitation created}}}

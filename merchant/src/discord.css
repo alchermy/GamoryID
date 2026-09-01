@@ -1,0 +1,446 @@
+.discord-layout {
+  @apply w-full max-w-[1120px];
+}
+
+.discord-panel {
+  @apply relative mb-6 overflow-hidden;
+}
+
+.discord-panel::before {
+  @apply absolute top-0 bottom-0 left-0 z-10 w-1 bg-signal content-[''];
+}
+
+.discord-panel-head {
+  @apply flex min-h-[84px] items-center gap-3 px-6 py-5;
+}
+
+.discord-panel-head > div {
+  @apply min-w-0 flex-1;
+}
+
+.discord-brand-icon,
+.discord-server-icon,
+.discord-section-icon {
+  @apply inline-grid shrink-0 place-items-center rounded-control border border-blue-100 bg-blue-50 text-brand;
+}
+
+.discord-brand-icon {
+  @apply size-11;
+}
+
+.discord-connection-badge,
+.discord-linked {
+  @apply inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-extrabold;
+}
+
+.discord-connection-badge.connected,
+.discord-linked {
+  @apply bg-emerald-50 text-emerald-700;
+}
+
+.discord-connection-badge.disconnected {
+  @apply bg-slate-100 text-slate-600;
+}
+
+.discord-loading {
+  @apply flex min-h-56 items-center justify-center gap-3 text-sm font-bold text-muted;
+}
+
+.discord-inline-alert {
+  @apply mx-6 mt-5 flex min-h-12 items-center gap-3 rounded-control border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700;
+}
+
+.discord-inline-alert span {
+  @apply min-w-0 flex-1;
+}
+
+.discord-inline-alert.warning {
+  @apply mx-0 mt-0 border-amber-200 bg-amber-50 text-amber-800;
+}
+
+.discord-connect-body,
+.discord-connected-body {
+  @apply space-y-5 bg-slate-50/60 p-6;
+}
+
+.discord-intro {
+  @apply flex items-center justify-between gap-8 overflow-hidden rounded-panel bg-ink px-7 py-6 text-white;
+  background-image: linear-gradient(
+    110deg,
+    var(--ink) 0%,
+    #0a2b5f 62%,
+    #0b6bff 145%
+  );
+}
+
+.discord-intro > div {
+  @apply max-w-[650px];
+}
+
+.discord-intro > svg {
+  @apply shrink-0 text-signal opacity-90;
+}
+
+.discord-kicker {
+  @apply text-[0.6875rem] font-extrabold tracking-[0.15em] text-cyan-300;
+}
+
+.discord-intro h3 {
+  @apply mt-2 mb-2 text-xl leading-tight font-extrabold tracking-[-0.025em];
+}
+
+.discord-intro p {
+  @apply m-0 text-sm leading-6 text-blue-100;
+}
+
+.discord-steps {
+  @apply grid list-none grid-cols-3 gap-px overflow-hidden rounded-panel border border-line bg-line p-0;
+}
+
+.discord-steps li {
+  @apply flex min-h-24 items-center gap-3 bg-white px-5 py-4;
+}
+
+.discord-steps li > span {
+  @apply grid size-8 shrink-0 place-items-center rounded-full bg-blue-50 font-data text-xs font-extrabold text-brand;
+}
+
+.discord-steps strong,
+.discord-steps small {
+  @apply block;
+}
+
+.discord-steps strong {
+  @apply text-sm text-ink;
+}
+
+.discord-steps small {
+  @apply mt-1 text-xs leading-5 text-muted;
+}
+
+.discord-config-note {
+  @apply flex items-start gap-3 rounded-control border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900;
+}
+
+.discord-config-note svg {
+  @apply mt-0.5 shrink-0;
+}
+
+.discord-config-note strong,
+.discord-config-note span {
+  @apply block;
+}
+
+.discord-config-note strong {
+  @apply text-sm;
+}
+
+.discord-config-note span {
+  @apply mt-0.5 text-xs leading-5;
+}
+
+.discord-connect-actions,
+.discord-section-actions {
+  @apply flex flex-wrap items-center gap-3;
+}
+
+.discord-permission-note {
+  @apply text-xs leading-5 text-muted;
+}
+
+.discord-setup-card,
+.discord-section {
+  @apply rounded-panel border border-line bg-white p-5;
+}
+
+.discord-setup-heading,
+.discord-section-head,
+.discord-server-card,
+.discord-danger-zone {
+  @apply flex items-center justify-between gap-5;
+}
+
+.discord-setup-heading > div,
+.discord-danger-zone > div {
+  @apply min-w-0;
+}
+
+.discord-setup-heading strong,
+.discord-setup-heading span,
+.discord-danger-zone strong,
+.discord-danger-zone span {
+  @apply block;
+}
+
+.discord-setup-heading strong,
+.discord-danger-zone strong {
+  @apply text-sm text-ink;
+}
+
+.discord-setup-heading span,
+.discord-danger-zone span {
+  @apply mt-1 text-xs leading-5 text-muted;
+}
+
+.discord-code {
+  @apply my-4 flex items-center justify-between gap-5 rounded-control border border-blue-200 bg-blue-50 px-5 py-4;
+}
+
+.discord-code > div {
+  @apply min-w-0;
+}
+
+.discord-code span,
+.discord-code strong,
+.discord-code code {
+  @apply block;
+}
+
+.discord-code span {
+  @apply text-[0.6875rem] font-semibold text-muted;
+}
+
+.discord-code strong {
+  @apply mt-1 font-data text-2xl tracking-[0.18em] text-ink;
+}
+
+.discord-code code {
+  @apply mt-2 overflow-x-auto text-xs whitespace-nowrap text-brand;
+}
+
+.discord-server-card {
+  @apply rounded-panel border border-blue-100 bg-white p-5;
+}
+
+.discord-server-icon {
+  @apply size-11;
+}
+
+.discord-server-card > div {
+  @apply min-w-0 flex-1;
+}
+
+.discord-server-card small,
+.discord-server-card strong,
+.discord-server-card span {
+  @apply block;
+}
+
+.discord-server-card small {
+  @apply text-[0.6875rem] font-extrabold tracking-[0.08em] text-brand uppercase;
+}
+
+.discord-server-card strong {
+  @apply mt-1 truncate text-base text-ink;
+}
+
+.discord-server-card span {
+  @apply mt-1 text-xs text-muted;
+}
+
+.discord-section-head {
+  @apply mb-5 border-b border-slate-100 pb-4;
+}
+
+.discord-section-head > div:first-child {
+  @apply flex min-w-0 items-center gap-3;
+}
+
+.discord-section-head.compact {
+  @apply items-start;
+}
+
+.discord-section-icon {
+  @apply size-9;
+}
+
+.discord-section-head h3 {
+  @apply m-0 text-sm font-extrabold text-ink;
+}
+
+.discord-section-head p {
+  @apply mt-1 mb-0 text-xs leading-5 text-muted;
+}
+
+.discord-command-channel {
+  @apply mb-5 grid grid-cols-[36px_minmax(0,1fr)] gap-3 rounded-control border border-cyan-200 bg-cyan-50/60 p-4;
+}
+
+.discord-command-channel > div {
+  @apply min-w-0;
+}
+
+.discord-command-channel p {
+  @apply mt-2 mb-0 text-xs leading-5 text-muted;
+}
+
+.discord-channel-subhead {
+  @apply mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1;
+}
+
+.discord-channel-subhead strong {
+  @apply text-xs font-extrabold text-ink;
+}
+
+.discord-channel-subhead span {
+  @apply text-xs text-muted;
+}
+
+.discord-channel-grid {
+  @apply grid grid-cols-2 gap-4;
+}
+
+.discord-channel-field {
+  @apply min-w-0;
+}
+
+.discord-channel-field > span {
+  @apply mb-1.5 block text-xs font-bold text-ink-soft;
+}
+
+.discord-channel-field select {
+  @apply h-11 w-full rounded-control border border-line bg-white px-3 text-sm text-ink transition-colors hover:border-slate-400 focus:border-brand focus:outline-none disabled:bg-slate-100 disabled:text-slate-500;
+}
+
+.discord-section-actions {
+  @apply mt-5 border-t border-slate-100 pt-4;
+}
+
+.discord-command-preview {
+  @apply mt-4 flex items-center gap-4 rounded-control border border-dashed border-blue-200 bg-blue-50/70 px-4 py-3;
+}
+
+.discord-command-preview code {
+  @apply shrink-0 font-data text-sm font-bold text-brand;
+}
+
+.discord-command-preview span {
+  @apply text-xs leading-5 text-muted;
+}
+
+.discord-command-catalog {
+  @apply grid grid-cols-2 gap-x-5 gap-y-1;
+}
+
+.discord-command-catalog > div {
+  @apply flex min-h-11 min-w-0 items-center justify-between gap-3 border-b border-slate-100 py-2;
+}
+
+.discord-command-catalog code {
+  @apply shrink-0 font-data text-xs font-bold text-brand;
+}
+
+.discord-command-catalog span {
+  @apply text-right text-[0.6875rem] leading-4 text-muted;
+}
+
+.discord-command-safety {
+  @apply mt-4 flex items-start gap-2 rounded-control border border-blue-100 bg-blue-50/60 px-3.5 py-3 text-xs leading-5 text-ink-soft;
+}
+
+.discord-command-safety svg {
+  @apply mt-0.5 shrink-0 text-brand;
+}
+
+.discord-danger-zone {
+  @apply rounded-panel border border-red-100 bg-white px-5 py-4;
+}
+
+.spin {
+  animation: discord-spin 0.9s linear infinite;
+}
+
+@keyframes discord-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 767px) {
+  .discord-layout {
+    @apply max-w-none;
+  }
+
+  .discord-panel-head {
+    @apply min-h-[76px] flex-wrap px-4 py-4;
+  }
+
+  .discord-panel-head > div {
+    @apply min-w-[calc(100%-4rem)];
+  }
+
+  .discord-connection-badge {
+    @apply ml-[3.5rem];
+  }
+
+  .discord-connect-body,
+  .discord-connected-body {
+    @apply space-y-4 p-3.5;
+  }
+
+  .discord-intro {
+    @apply items-start px-5 py-5;
+  }
+
+  .discord-intro > svg {
+    @apply size-11;
+  }
+
+  .discord-intro h3 {
+    @apply text-lg;
+  }
+
+  .discord-steps {
+    @apply grid-cols-1;
+  }
+
+  .discord-steps li {
+    @apply min-h-0 px-4 py-3.5;
+  }
+
+  .discord-setup-card,
+  .discord-section {
+    @apply rounded-control p-4;
+  }
+
+  .discord-setup-heading,
+  .discord-section-head,
+  .discord-server-card,
+  .discord-danger-zone,
+  .discord-code {
+    @apply items-stretch flex-col;
+  }
+
+  .discord-server-card > .button,
+  .discord-setup-heading .button,
+  .discord-code > .button,
+  .discord-danger-zone > .button {
+    @apply w-full;
+  }
+
+  .discord-channel-grid {
+    @apply grid-cols-1;
+  }
+
+  .discord-section-actions {
+    @apply items-stretch flex-col;
+  }
+
+  .discord-section-actions .button {
+    @apply w-full;
+  }
+
+  .discord-command-preview {
+    @apply items-start flex-col;
+  }
+
+  .discord-command-catalog {
+    @apply grid-cols-1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation-duration: 2s;
+  }
+}

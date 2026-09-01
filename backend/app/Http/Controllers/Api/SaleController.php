@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Enums\InventoryStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SellInventoryRequest;
+use App\Jobs\SendDiscordShopNotification;
 use App\Models\Customer;
 use App\Models\InventoryItem;
 use App\Models\Reservation;
 use App\Models\Sale;
 use App\Services\AuditLogger;
 use App\Services\CurrentShop;
+use App\Services\Discord\DiscordNotificationMessageBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -27,7 +29,7 @@ class SaleController extends Controller
         $query = Sale::query()
             ->where('shop_id', $shop->id)
             ->with([
-                'inventoryItem:id,tag,title',
+                'inventoryItem:id,tag,title,riot_id,rank,level,list_price',
                 'customer:id,name,phone,line_id,facebook_url',
                 'creator:id,name',
             ])
@@ -46,10 +48,34 @@ class SaleController extends Controller
             });
         }
 
-        return response()->json($query->paginate($validated['per_page'] ?? 25)->withQueryString());
+        $canViewProfit = $request->user()->hasShopPermission($shop, 'profit.view');
+        $sales = $query->paginate($validated['per_page'] ?? 25)->withQueryString();
+        $sales->through(fn (Sale $sale) => $this->serialize($sale, $canViewProfit));
+
+        return response()->json($sales);
     }
 
-    public function store(SellInventoryRequest $request, int $inventory, CurrentShop $currentShop, AuditLogger $audit)
+    public function show(Request $request, int $sale, CurrentShop $currentShop)
+    {
+        $shop = $currentShop->from($request);
+        $record = Sale::query()
+            ->where('shop_id', $shop->id)
+            ->with([
+                'inventoryItem:id,tag,title,riot_id,rank,level,list_price',
+                'customer:id,name,phone,line_id,facebook_url',
+                'creator:id,name',
+            ])
+            ->findOrFail($sale);
+
+        return response()->json([
+            'data' => $this->serialize(
+                $record,
+                $request->user()->hasShopPermission($shop, 'profit.view'),
+            ),
+        ]);
+    }
+
+    public function store(SellInventoryRequest $request, int $inventory, CurrentShop $currentShop, AuditLogger $audit, DiscordNotificationMessageBuilder $discordMessages)
     {
         $shop = $currentShop->from($request);
         $sale = DB::transaction(function () use ($request, $shop, $inventory) {
@@ -94,7 +120,52 @@ class SaleController extends Controller
             'has_warranty' => $sale->has_warranty,
             'warranty_ends_at' => $sale->warranty_ends_at?->toDateString(),
         ]);
+        $sale->load([
+            'inventoryItem:id,tag,title,riot_id,rank,level,list_price',
+            'customer:id,name,phone,line_id,facebook_url',
+            'creator:id,name',
+        ]);
+        SendDiscordShopNotification::dispatch(
+            $shop->id,
+            'sales',
+            'ปิดการขายสำเร็จ',
+            $discordMessages->saleCompleted($sale),
+        );
 
         return response()->json(['data' => $sale], 201);
+    }
+
+    private function serialize(Sale $sale, bool $canViewProfit): array
+    {
+        return [
+            'id' => $sale->id,
+            'sold_price' => $sale->sold_price,
+            'cost_snapshot' => $canViewProfit ? $sale->cost_snapshot : null,
+            'profit' => $canViewProfit ? $sale->profit : null,
+            'has_warranty' => $sale->has_warranty,
+            'warranty_ends_at' => $sale->warranty_ends_at?->toDateString(),
+            'notes' => $sale->notes,
+            'sold_at' => $sale->sold_at?->toIso8601String(),
+            'inventory_item' => $sale->inventoryItem ? [
+                'id' => $sale->inventoryItem->id,
+                'tag' => $sale->inventoryItem->tag,
+                'title' => $sale->inventoryItem->title,
+                'riot_id' => $sale->inventoryItem->riot_id,
+                'rank' => $sale->inventoryItem->rank,
+                'level' => $sale->inventoryItem->level,
+                'list_price' => $sale->inventoryItem->list_price,
+            ] : null,
+            'customer' => $sale->customer ? [
+                'id' => $sale->customer->id,
+                'name' => $sale->customer->name,
+                'phone' => $sale->customer->phone,
+                'line_id' => $sale->customer->line_id,
+                'facebook_url' => $sale->customer->facebook_url,
+            ] : null,
+            'creator' => $sale->creator ? [
+                'id' => $sale->creator->id,
+                'name' => $sale->creator->name,
+            ] : null,
+        ];
     }
 }

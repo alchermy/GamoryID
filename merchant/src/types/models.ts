@@ -19,6 +19,7 @@ export type MerchantPage =
   | "team"
   | "billing"
   | "transactions"
+  | "discord"
   | "settings";
 
 export type InventoryItem = {
@@ -57,6 +58,7 @@ export type SessionUser = {
   id: number;
   name: string;
   email: string;
+  email_verified_at: string | null;
   current_shop_id: number;
   shops: Shop[];
 };
@@ -130,19 +132,29 @@ export type Paged<T> = {
 export type SaleRecord = {
   id: number;
   sold_price: number | string;
-  cost_snapshot: number | string;
-  profit: number | string;
+  cost_snapshot?: number | string | null;
+  profit?: number | string | null;
   sold_at: string;
-  has_warranty?: boolean;
-  warranty_ends_at?: string | null;
+  has_warranty: boolean;
+  warranty_ends_at: string | null;
   notes: string | null;
-  inventory_item: { tag: string; title: string } | null;
+  inventory_item: {
+    id: number;
+    tag: string;
+    title: string;
+    riot_id: string | null;
+    rank: string | null;
+    level: number | null;
+    list_price: number | string;
+  } | null;
   customer: {
+    id: number;
     name: string;
     phone: string | null;
     line_id: string | null;
+    facebook_url: string | null;
   } | null;
-  creator: { name: string } | null;
+  creator: { id: number; name: string } | null;
 };
 
 export type SalePayload = {
@@ -256,3 +268,41 @@ export type BillingHistory = {
 };
 
 export type ToastMessage = { message: string; tone: "success" | "error" };
+
+export type DiscordChannelPurpose = {
+  value: "commands" | "system" | "sales" | "reservations" | "inventory";
+  label: string;
+};
+
+export type DiscordSettings = {
+  configured: boolean;
+  test_mode: boolean;
+  connected: boolean;
+  installation: {
+    guild_id: string;
+    guild_name: string;
+    status: string;
+    installed_at: string | null;
+    last_verified_at: string | null;
+    channels: Array<{
+      purpose: DiscordChannelPurpose["value"];
+      channel_id: string;
+      channel_name: string;
+      enabled: boolean;
+    }>;
+  } | null;
+  available_channels: Array<{ id: string; name: string }>;
+  channel_sync_error: string | null;
+  user_link: {
+    linked: boolean;
+    discord_username: string | null;
+    linked_at: string | null;
+  };
+  purposes: DiscordChannelPurpose[];
+};
+
+export type DiscordOneTimeCode = {
+  code: string;
+  expires_at: string;
+  install_url?: string;
+};

@@ -1,5 +1,13 @@
 import type { FormEvent } from "react";
-import { Copy, Crown, ShieldCheck, Trash2, UserPlus, X } from "lucide-react";
+import {
+  Copy,
+  Crown,
+  MessagesSquare,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { permissionOptions } from "../../config/navigation";
 import { formatDate } from "../../shared/lib/format";
 import { DialogHead, Field } from "../../shared/ui/form-controls";
@@ -50,7 +58,9 @@ export function TeamPanel({
       <div className="panel-head">
         <div>
           <h2 id="team-title">ทีมและสิทธิ์</h2>
-          <small>กำหนดการเข้าถึงข้อมูลให้เหมาะกับหน้าที่ของแต่ละคน</small>
+          <small>
+            กำหนดสิทธิ์ครั้งเดียว ใช้ร่วมกันทั้งหน้าเว็บและคำสั่ง Discord
+          </small>
         </div>
         {canManage && (
           <button className="button primary" onClick={invite}>
@@ -58,6 +68,17 @@ export function TeamPanel({
             เชิญพนักงาน
           </button>
         )}
+      </div>
+      <div className="permission-context" role="note">
+        <MessagesSquare size={19} aria-hidden="true" />
+        <div>
+          <strong>สิทธิ์คำสั่ง Discord ของพนักงาน</strong>
+          <span>
+            พนักงานต้องเชื่อมบัญชี Discord ของตนเองก่อน
+            จากนั้นบอทจะตรวจสิทธิ์ล่าสุดทุกครั้ง: จัดการสต็อกใช้เพิ่มไอดี
+            และจองและขายใช้จองหรือปิดการขาย
+          </span>
+        </div>
       </div>
       {error ? (
         <ManagementError error={error} retry={retry} />
@@ -100,7 +121,10 @@ export function TeamPanel({
                           <label key={key} className="permission-item">
                             <input
                               type="checkbox"
-                              checked={(member.permissions ?? []).includes(key)}
+                              checked={
+                                member.role === "owner" ||
+                                (member.permissions ?? []).includes(key)
+                              }
                               disabled={!canManage || member.role === "owner"}
                               onChange={(event) => {
                                 const next = new Set(member.permissions ?? []);
@@ -132,6 +156,60 @@ export function TeamPanel({
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="member-mobile-list">
+            {members.map((member) => (
+              <article className="member-mobile-card" key={member.id}>
+                <header>
+                  <div>
+                    <strong>{member.user.name}</strong>
+                    <small>{member.user.email}</small>
+                  </div>
+                  {member.role === "owner" ? (
+                    <span className="role-badge">
+                      <Crown size={14} />
+                      เจ้าของร้าน
+                    </span>
+                  ) : (
+                    <span className="role-badge">พนักงาน</span>
+                  )}
+                </header>
+                <fieldset className="member-mobile-permissions">
+                  <legend>สิทธิ์การใช้งาน</legend>
+                  {permissionOptions.map(([key, label]) => (
+                    <label key={key} className="permission-item">
+                      <input
+                        type="checkbox"
+                        checked={
+                          member.role === "owner" ||
+                          (member.permissions ?? []).includes(key)
+                        }
+                        disabled={!canManage || member.role === "owner"}
+                        onChange={(event) => {
+                          const next = new Set(member.permissions ?? []);
+                          if (event.target.checked) {
+                            next.add(key);
+                          } else {
+                            next.delete(key);
+                          }
+                          onPermissionsChange(member, [...next]);
+                        }}
+                      />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </fieldset>
+                {canManage && member.role === "staff" && (
+                  <button
+                    className="button danger member-remove-button"
+                    onClick={() => onRemove(member)}
+                  >
+                    <Trash2 size={16} />
+                    นำออกจากร้าน
+                  </button>
+                )}
+              </article>
+            ))}
           </div>
           {members.length === 0 && (
             <div className="empty">
@@ -211,14 +289,17 @@ export function InviteDialog({
           </div>
           <fieldset className="permission-fieldset">
             <legend>สิทธิ์การใช้งาน</legend>
-            {permissionOptions.map(([key, label], index) => (
+            {permissionOptions.map(([key, label, description], index) => (
               <label key={key} className="permission-item">
                 <input
                   type="checkbox"
                   name={`permission-${key}`}
                   defaultChecked={index < 2}
                 />
-                <span>{label}</span>
+                <span className="permission-copy">
+                  <strong>{label}</strong>
+                  <small>{description}</small>
+                </span>
               </label>
             ))}
           </fieldset>

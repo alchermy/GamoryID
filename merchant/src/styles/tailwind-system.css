@@ -126,10 +126,146 @@ tbody tr:last-child td {
 .pagination {
   @apply min-h-14 border-t border-line bg-slate-50/60 px-5 py-3 text-xs text-muted;
 }
+.sale-action-column {
+  @apply text-right;
+}
+.sale-detail-link {
+  @apply min-h-9 px-3 whitespace-nowrap;
+}
+.sale-detail-page > .page-head,
+.sale-detail-page > .kpis,
+.sale-detail-page > .work-grid {
+  @apply hidden;
+}
+.sale-detail {
+  @apply grid gap-5;
+}
+.sale-detail-state {
+  @apply grid min-h-52 place-items-center px-6 py-12 text-sm text-muted;
+}
+.sale-detail-header {
+  @apply flex items-start justify-between gap-6 border-b border-line pb-5;
+}
+.sale-detail-kicker {
+  @apply flex flex-wrap items-center gap-3 text-xs font-bold text-muted;
+}
+.sale-detail-header h2 {
+  @apply mt-3 text-[2rem] leading-tight font-extrabold tracking-[-0.035em] text-ink;
+}
+.sale-detail-header p {
+  @apply mt-1 text-sm leading-6 text-muted;
+}
+.sale-detail-layout {
+  @apply grid grid-cols-[minmax(0,1.55fr)_minmax(300px,0.7fr)] items-start gap-5;
+}
+.sale-detail-main {
+  @apply grid gap-5;
+}
+.sale-detail-card,
+.sale-detail-summary {
+  @apply p-5;
+}
+.sale-detail-section-head {
+  @apply flex items-center gap-3 border-b border-line pb-4;
+}
+.sale-detail-section-icon {
+  @apply grid size-10 shrink-0 place-items-center rounded-control bg-blue-50 text-brand;
+}
+.sale-detail-section-head h3 {
+  @apply mt-0.5 text-base font-extrabold text-ink;
+}
+.sale-detail-values {
+  @apply grid grid-cols-2 gap-x-6 gap-y-0 pt-2;
+}
+.sale-detail-value {
+  @apply flex min-w-0 items-center justify-between gap-4 border-b border-slate-100 py-3 text-sm;
+}
+.sale-detail-value span {
+  @apply shrink-0 text-muted;
+}
+.sale-detail-value strong {
+  @apply min-w-0 text-right font-bold text-ink break-words;
+}
+.sale-detail-value a {
+  @apply inline-flex items-center justify-end gap-1.5 text-brand hover:underline;
+}
+.sale-customer-name {
+  @apply flex flex-col gap-1 border-b border-slate-100 py-5;
+}
+.sale-customer-name strong {
+  @apply text-xl font-extrabold text-ink;
+}
+.sale-customer-name span {
+  @apply text-xs leading-5 text-muted;
+}
+.sale-contact-list {
+  @apply grid grid-cols-1;
+}
+.sale-detail-note {
+  @apply m-0 pt-5 text-sm leading-7 whitespace-pre-wrap text-slate-700;
+}
+.sale-price-block {
+  @apply mt-5 rounded-panel bg-gradient-to-br from-ink to-blue-800 px-5 py-5 text-white;
+}
+.sale-price-block span {
+  @apply block text-xs font-bold text-blue-100;
+}
+.sale-price-block strong {
+  @apply mt-1 block font-data text-[1.75rem] leading-tight font-extrabold tabular-nums;
+}
+.sale-profit-grid {
+  @apply mt-3 grid grid-cols-2 gap-3;
+}
+.sale-profit-grid .sale-detail-value {
+  @apply block rounded-control border-0 bg-slate-50 px-3 py-3;
+}
+.sale-profit-grid .sale-detail-value span,
+.sale-profit-grid .sale-detail-value strong {
+  @apply block text-left;
+}
+.sale-profit-grid .sale-detail-value strong {
+  @apply mt-1 font-data tabular-nums;
+}
+.sale-summary-list {
+  @apply mt-4 grid;
+}
+.sale-summary-list > div {
+  @apply grid grid-cols-[20px_minmax(0,1fr)] gap-x-2.5 border-t border-slate-100 py-3;
+}
+.sale-summary-list svg {
+  @apply row-span-2 mt-0.5 text-muted;
+}
+.sale-summary-list span {
+  @apply text-xs text-muted;
+}
+.sale-summary-list strong {
+  @apply mt-0.5 text-sm leading-5 text-ink;
+}
 .status,
 .role-badge,
 .current-badge {
   @apply inline-flex min-h-7 items-center gap-1.5 rounded-lg px-2.5 py-1 text-[0.6875rem] font-extrabold whitespace-nowrap;
+}
+
+@media (max-width: 767px) {
+  .sale-detail-header {
+    @apply flex-col;
+  }
+  .sale-detail-header .button {
+    @apply w-full;
+  }
+  .sale-detail-layout {
+    @apply grid-cols-1;
+  }
+  .sale-detail-summary {
+    @apply order-first;
+  }
+  .sale-detail-values {
+    @apply grid-cols-1;
+  }
+  .sale-action-column {
+    @apply sticky right-0 bg-white;
+  }
 }
 
 .field {
@@ -427,6 +563,411 @@ tbody tr:last-child td {
 .auth-art {
   @apply border-l-[3px] border-signal bg-ink;
 }
+
+/* Merchant login: a continuous signal rail links daily tasks to the form. */
+.auth-page-login {
+  grid-template-columns: minmax(410px, 0.78fr) minmax(590px, 1.22fr);
+  min-height: 100svh;
+  background: white;
+}
+.auth-page-login .auth-panel {
+  order: 2;
+  width: min(clamp(590px, 29.7vw, 760px), calc(100% - 80px));
+  padding: 54px 0 44px;
+}
+.auth-page-login .auth-brand {
+  width: fit-content;
+}
+.auth-page-login .auth-panel h1 {
+  margin: clamp(64px, 10vh, 104px) 0 9px;
+  font-size: clamp(2.15rem, 3.4vw, 2.85rem);
+  line-height: 1.2;
+  letter-spacing: -0.05em;
+}
+.auth-page-login .auth-panel > p {
+  max-width: 550px;
+  margin-bottom: 34px;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+.auth-page-login form {
+  position: relative;
+  padding-top: 24px;
+}
+.auth-page-login form::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -34px;
+  width: 98px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--signal);
+}
+.auth-page-login .field {
+  min-height: 96px;
+  margin-bottom: 3px;
+}
+.auth-page-login .field-label {
+  margin-bottom: 7px;
+  font-size: 0.875rem;
+}
+.auth-page-login .field input {
+  min-height: 52px;
+  padding-inline: 16px;
+  font-size: 0.9375rem;
+}
+.auth-page-login .password-control input {
+  padding-right: 52px;
+}
+.auth-page-login .password-control .icon-button {
+  top: 8px;
+  right: 8px;
+}
+.auth-page-login input[aria-invalid="true"] {
+  border-color: #e17d85;
+  background: #fffafb;
+  box-shadow: 0 0 0 3px rgb(217 58 69 / 0.09);
+}
+.auth-page-login .auth-error {
+  margin: 18px 0 4px;
+}
+.auth-page-login .auth-submit {
+  min-height: 52px;
+  margin-top: 5px;
+  font-size: 0.9375rem;
+}
+.auth-page-login .auth-switch {
+  margin-top: 19px !important;
+}
+.login-workspace {
+  position: relative;
+  order: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: clamp(58px, 7vw, 102px) clamp(40px, 5vw, 76px);
+  border-right: 3px solid var(--signal);
+  background: var(--ink);
+  color: white;
+}
+.login-workspace::after {
+  content: "";
+  position: absolute;
+  right: -82px;
+  bottom: -82px;
+  width: 215px;
+  height: 215px;
+  border: 1px solid rgb(0 194 255 / 0.17);
+  border-radius: 50%;
+}
+.login-workspace-content {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 390px);
+  margin-inline: auto;
+}
+.login-workspace h2 {
+  position: relative;
+  width: fit-content;
+  max-width: 330px;
+  margin: 0;
+  color: white;
+  font-size: clamp(1.65rem, 2.5vw, 2.05rem);
+  line-height: 1.35;
+  letter-spacing: -0.04em;
+}
+.login-workspace h2::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 22px);
+  width: clamp(48px, 7vw, 108px);
+  height: 3px;
+  border-radius: 999px;
+  background: var(--signal);
+  transform: translateY(-50%);
+}
+.login-workspace-tasks {
+  position: relative;
+  display: grid;
+  gap: 0;
+  margin: clamp(62px, 9vh, 92px) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.login-workspace-tasks::before {
+  content: "";
+  position: absolute;
+  top: 28px;
+  bottom: 28px;
+  left: 27px;
+  width: 2px;
+  background: var(--signal);
+}
+.login-workspace-tasks li {
+  position: relative;
+  display: flex;
+  min-height: 118px;
+  align-items: center;
+  gap: 22px;
+}
+.login-workspace-tasks li > span {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  place-items: center;
+  border: 2px solid var(--signal);
+  border-radius: 50%;
+  background: var(--ink);
+  color: white;
+}
+.login-workspace-tasks strong {
+  color: #d7e3ef;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+}
+.login-workspace-mascot {
+  position: absolute;
+  z-index: 1;
+  bottom: 20px;
+  left: clamp(24px, 5vw, 74px);
+  width: clamp(112px, 12vw, 174px);
+  max-height: 26vh;
+  object-fit: contain;
+  filter: drop-shadow(0 16px 22px rgb(0 0 0 / 0.3));
+}
+.login-mobile-context {
+  display: none;
+}
+
+/* Merchant registration: the cyan signal rail connects signup to first use. */
+.auth-page-register {
+  grid-template-columns: minmax(340px, 0.78fr) minmax(620px, 1.55fr);
+  min-height: 100svh;
+  background: var(--background);
+}
+.auth-page-register .auth-panel {
+  order: 2;
+  width: min(680px, calc(100% - 80px));
+  padding: 54px 0 44px;
+}
+.auth-page-register .auth-brand {
+  width: fit-content;
+}
+.auth-page-register .auth-panel h1 {
+  margin: 54px 0 8px;
+  font-size: clamp(2rem, 3vw, 2.5rem);
+  line-height: 1.22;
+  letter-spacing: -0.045em;
+}
+.auth-page-register .auth-panel > p {
+  max-width: 620px;
+  margin-bottom: 30px;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+.auth-page-register form {
+  position: relative;
+  padding-top: 4px;
+}
+.auth-page-register form::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 64px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--signal);
+}
+.auth-page-register .auth-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 23px;
+}
+.auth-page-register .field {
+  margin-bottom: 17px;
+}
+.auth-page-register .field-label {
+  margin-bottom: 7px;
+  font-size: 0.875rem;
+}
+.auth-page-register .field input {
+  min-height: 50px;
+  padding-inline: 15px;
+  font-size: 0.9375rem;
+}
+.auth-page-register .password-control input {
+  padding-right: 50px;
+}
+.auth-page-register .password-control .icon-button {
+  top: 7px;
+  right: 7px;
+}
+.auth-page-register input[aria-invalid="true"] {
+  border-color: #e17d85;
+  background: #fffafb;
+  box-shadow: 0 0 0 3px rgb(217 58 69 / 0.09);
+}
+.field-error {
+  display: block;
+  margin-top: 6px;
+  color: var(--danger);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.auth-page-register .field-help {
+  margin-top: -11px;
+  margin-bottom: 18px;
+}
+.auth-page-register .auth-error {
+  margin: 18px 0 6px;
+}
+.auth-page-register .auth-submit {
+  min-height: 50px;
+  margin-top: 2px;
+  font-size: 0.9375rem;
+}
+.auth-page-register .auth-switch {
+  margin-top: 18px !important;
+}
+.registration-journey {
+  position: relative;
+  order: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: clamp(42px, 5vw, 72px) clamp(34px, 4vw, 64px);
+  border-right: 3px solid var(--signal);
+  background: var(--ink);
+  color: white;
+}
+.registration-journey::after {
+  content: "";
+  position: absolute;
+  inset: auto -88px -88px auto;
+  width: 230px;
+  height: 230px;
+  border: 1px solid rgb(0 194 255 / 0.18);
+  border-radius: 50%;
+}
+.registration-journey-content {
+  position: relative;
+  z-index: 1;
+  max-width: 370px;
+  margin-inline: auto;
+}
+.registration-journey-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.registration-journey-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border: 1px solid rgb(0 194 255 / 0.38);
+  border-radius: 12px;
+  background: rgb(0 194 255 / 0.08);
+  color: #67d7ff;
+}
+.registration-journey-heading p {
+  margin: 0 0 4px;
+  color: #67d7ff;
+  font: 800 0.6875rem/1.4 var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.registration-journey-heading h2 {
+  margin: 0;
+  max-width: 270px;
+  color: white;
+  font-size: clamp(1.55rem, 2.4vw, 2rem);
+  line-height: 1.38;
+  letter-spacing: -0.035em;
+}
+.registration-steps {
+  position: relative;
+  display: grid;
+  gap: 0;
+  margin: 50px 0 42px;
+  padding: 0;
+  list-style: none;
+}
+.registration-steps::before {
+  content: "";
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  left: 23px;
+  width: 2px;
+  background: var(--signal);
+}
+.registration-steps li {
+  position: relative;
+  display: flex;
+  min-height: 92px;
+  align-items: center;
+  gap: 20px;
+}
+.registration-steps li > span {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  border: 2px solid var(--signal);
+  border-radius: 50%;
+  background: var(--ink);
+  color: white;
+  font: 800 1rem/1 var(--font-data);
+}
+.registration-steps strong {
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+}
+.registration-benefits {
+  display: grid;
+  gap: 15px;
+  margin: 0;
+  padding: 25px 0 0;
+  border-top: 1px solid rgb(216 227 240 / 0.18);
+  list-style: none;
+}
+.registration-benefits li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #c8d7e8;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.registration-benefits svg {
+  flex: 0 0 auto;
+  color: var(--signal);
+}
+.registration-mascot {
+  position: absolute;
+  z-index: 1;
+  right: clamp(16px, 3vw, 44px);
+  bottom: 18px;
+  width: clamp(108px, 11vw, 164px);
+  max-height: 25vh;
+  object-fit: contain;
+  filter: drop-shadow(0 16px 22px rgb(0 0 0 / 0.28));
+}
+.registration-mobile-steps {
+  display: none;
+}
 .state-page,
 .auth-gate {
   @apply min-h-screen bg-canvas px-6 text-center;
@@ -510,5 +1051,260 @@ tbody tr:last-child td {
   }
   .sale-dialog-actions > div {
     @apply grid grid-cols-2;
+  }
+
+  .auth-page-login {
+    display: block;
+    min-height: 100svh;
+    background: white;
+  }
+  .auth-page-login .auth-panel {
+    width: min(100% - 32px, 560px);
+    padding: 24px 0 32px;
+  }
+  .auth-page-login .auth-brand img {
+    width: 38px;
+    height: 38px;
+  }
+  .auth-page-login .auth-panel h1 {
+    margin-top: 48px;
+    font-size: 1.95rem;
+  }
+  .auth-page-login .auth-panel > p {
+    margin-bottom: 14px;
+  }
+  .auth-page-login form {
+    padding-top: 22px;
+  }
+  .auth-page-login form::before {
+    left: 0;
+    width: 56px;
+  }
+  .auth-page-login .field {
+    min-height: 94px;
+  }
+  .login-workspace {
+    display: none;
+  }
+  .login-mobile-context {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 !important;
+    padding: 0 0 17px;
+    border-bottom: 1px solid var(--border);
+    color: var(--primary) !important;
+    font: 700 0.75rem/1.5 var(--font-data);
+  }
+  .login-mobile-context span {
+    color: var(--signal);
+  }
+
+  .auth-page-register {
+    display: block;
+    min-height: 100svh;
+    background: white;
+  }
+  .auth-page-register .auth-panel {
+    width: min(100% - 32px, 560px);
+    padding: 24px 0 32px;
+  }
+  .auth-page-register .auth-brand img {
+    width: 38px;
+    height: 38px;
+  }
+  .auth-page-register .auth-panel h1 {
+    margin-top: 30px;
+    font-size: 1.85rem;
+  }
+  .auth-page-register .auth-panel > p {
+    margin-bottom: 18px;
+  }
+  .auth-page-register .auth-form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-top: 20px;
+  }
+  .auth-page-register .field {
+    margin-bottom: 14px;
+  }
+  .registration-journey {
+    display: none;
+  }
+  .registration-mobile-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    margin: 0 0 22px;
+    padding: 0;
+    list-style: none;
+  }
+  .registration-mobile-steps li {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .registration-mobile-steps li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 12px;
+    right: 5px;
+    left: 32px;
+    height: 1px;
+    background: var(--border);
+  }
+  .registration-mobile-steps span {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    place-items: center;
+    border: 1px solid var(--signal);
+    border-radius: 50%;
+    background: white;
+    color: var(--primary);
+    font: 800 0.6875rem/1 var(--font-data);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1020px) {
+  .auth-page-login {
+    grid-template-columns: minmax(310px, 0.72fr) minmax(458px, 1.28fr);
+  }
+  .auth-page-login .auth-panel {
+    width: min(100% - 48px, 540px);
+  }
+  .login-workspace {
+    padding-inline: 30px;
+  }
+  .login-workspace h2::after {
+    width: 44px;
+  }
+  .login-workspace-mascot {
+    width: 112px;
+  }
+
+  .auth-page-register {
+    grid-template-columns: minmax(300px, 0.8fr) minmax(468px, 1.2fr);
+  }
+  .auth-page-register .auth-panel {
+    width: min(100% - 48px, 580px);
+  }
+  .auth-page-register .auth-form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .registration-journey {
+    padding-inline: 30px;
+  }
+  .registration-mascot {
+    width: 112px;
+  }
+}
+
+@media (min-width: 1800px) {
+  .auth-page-login {
+    grid-template-columns: minmax(640px, 0.76fr) minmax(960px, 1.24fr);
+  }
+  .auth-page-login .auth-panel {
+    width: min(clamp(590px, 29.7vw, 760px), calc(100% - 144px));
+    padding-block: 72px 58px;
+  }
+  .auth-page-login .auth-brand {
+    gap: 11px;
+    font-size: 1.5rem;
+  }
+  .auth-page-login .auth-brand img {
+    width: 48px;
+    height: 48px;
+  }
+  .auth-page-login .auth-panel h1 {
+    margin-top: clamp(76px, 9vh, 116px);
+    font-size: 3rem;
+  }
+  .auth-page-login .auth-panel > p {
+    max-width: 660px;
+    margin-bottom: 40px;
+    font-size: 1.0625rem;
+  }
+  .auth-page-login form {
+    padding-top: 30px;
+  }
+  .auth-page-login form::before {
+    left: -40px;
+    width: 116px;
+  }
+  .auth-page-login .field {
+    min-height: 112px;
+  }
+  .auth-page-login .field-label {
+    margin-bottom: 9px;
+    font-size: 0.9375rem;
+  }
+  .auth-page-login .field input {
+    min-height: 60px;
+    padding-inline: 18px;
+    font-size: 1rem;
+  }
+  .auth-page-login .password-control input {
+    padding-right: 60px;
+  }
+  .auth-page-login .password-control .icon-button {
+    top: 12px;
+    right: 10px;
+  }
+  .auth-page-login .auth-submit {
+    min-height: 60px;
+    font-size: 1rem;
+  }
+  .auth-page-login .auth-switch {
+    margin-top: 22px !important;
+    font-size: 0.875rem !important;
+  }
+  .login-workspace {
+    padding: clamp(80px, 8vh, 112px) clamp(72px, 6vw, 118px);
+  }
+  .login-workspace-content {
+    width: min(100%, 520px);
+  }
+  .login-workspace h2 {
+    max-width: 420px;
+    font-size: 2.25rem;
+  }
+  .login-workspace h2::after {
+    width: 112px;
+  }
+  .login-workspace-tasks {
+    margin-top: clamp(82px, 9vh, 112px);
+  }
+  .login-workspace-tasks::before {
+    top: 32px;
+    bottom: 32px;
+    left: 31px;
+  }
+  .login-workspace-tasks li {
+    min-height: 136px;
+    gap: 28px;
+  }
+  .login-workspace-tasks li > span {
+    width: 64px;
+    height: 64px;
+    flex-basis: 64px;
+  }
+  .login-workspace-tasks strong {
+    font-size: 1.0625rem;
+  }
+  .login-workspace-mascot {
+    bottom: 28px;
+    left: clamp(48px, 6vw, 112px);
+    width: 190px;
   }
 }

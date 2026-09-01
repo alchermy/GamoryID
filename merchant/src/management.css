@@ -57,6 +57,62 @@
 .permission-item input {
   accent-color: #f97316;
 }
+.member-mobile-list {
+  display: none;
+}
+.permission-context {
+  align-items: flex-start;
+  background: #f3f9ff;
+  border: 1px solid #cfe3fb;
+  border-radius: 12px;
+  color: #2455a4;
+  display: flex;
+  gap: 10px;
+  margin: 18px 20px 0;
+  padding: 12px 14px;
+}
+.permission-context > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.permission-context strong,
+.permission-context span,
+.permission-copy strong,
+.permission-copy small {
+  display: block;
+}
+.permission-context strong {
+  color: #17324f;
+  font-size: 12px;
+}
+.permission-context span {
+  color: #52677f;
+  font-size: 11px;
+  line-height: 1.65;
+  margin-top: 2px;
+}
+.permission-copy {
+  min-width: 0;
+}
+.permission-copy strong {
+  color: #344054;
+  font-size: 12px;
+}
+.permission-copy small {
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.55;
+  margin-top: 2px;
+  white-space: normal;
+}
+.permission-fieldset .permission-item {
+  align-items: flex-start;
+  white-space: normal;
+}
+.permission-fieldset .permission-item input {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
 .danger-icon {
   color: #c2410c;
 }
@@ -713,6 +769,64 @@
   }
   .member-table {
     min-width: 760px;
+  }
+  .member-mobile-list {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+  }
+  .member-mobile-card {
+    background: #fff;
+    border: 1px solid #d8e3f0;
+    border-radius: 14px;
+    padding: 15px;
+  }
+  .member-mobile-card header {
+    align-items: flex-start;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+  }
+  .member-mobile-card header strong,
+  .member-mobile-card header small {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+  .member-mobile-card header small {
+    color: var(--muted, #667085);
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  .member-mobile-permissions {
+    border: 0;
+    display: grid;
+    gap: 9px;
+    margin: 16px 0 0;
+    padding: 0;
+  }
+  .member-mobile-permissions legend {
+    color: #344054;
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 9px;
+  }
+  .member-mobile-permissions .permission-item {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e5edf6;
+    border-radius: 10px;
+    min-height: 42px;
+    padding: 9px 11px;
+    white-space: normal;
+  }
+  .member-mobile-permissions .permission-item input {
+    height: 17px;
+    width: 17px;
+  }
+  .member-remove-button {
+    justify-content: center;
+    margin-top: 14px;
+    width: 100%;
   }
   .pending-invitation {
     align-items: stretch;

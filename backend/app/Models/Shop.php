@@ -51,6 +51,11 @@ class Shop extends Model
         return $this->hasMany(CreditTransaction::class);
     }
 
+    public function discordInstallation(): HasOne
+    {
+        return $this->hasOne(DiscordInstallation::class);
+    }
+
     public function isWritable(): bool
     {
         return in_array($this->status, [SubscriptionStatus::Trialing->value, SubscriptionStatus::Active->value], true);

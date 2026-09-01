@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Enums\InventoryStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReserveInventoryRequest;
+use App\Jobs\SendDiscordShopNotification;
 use App\Models\Customer;
 use App\Models\InventoryItem;
 use App\Models\Reservation;
@@ -43,6 +44,13 @@ class ReservationController extends Controller
             return $reservation;
         });
         $audit->record($request, $shop, 'inventory.reserved', $reservation, ['inventory_id' => $inventory]);
+        $item = InventoryItem::forShop($shop)->find($inventory);
+        SendDiscordShopNotification::dispatch(
+            $shop->id,
+            'reservations',
+            'มีการจองไอดี',
+            $item ? "**#{$item->tag}** · {$item->riot_id}\nหมดเวลาจอง ".$reservation->expires_at->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.' : "รายการ #{$inventory}",
+        );
 
         return response()->json(['data' => $reservation], 201);
     }
@@ -61,6 +69,12 @@ class ReservationController extends Controller
             return $item;
         });
         $audit->record($request, $shop, 'inventory.reservation_released', $item, ['tag' => '#'.$item->tag]);
+        SendDiscordShopNotification::dispatch(
+            $shop->id,
+            'reservations',
+            'ยกเลิกการจองแล้ว',
+            "**#{$item->tag}** · {$item->riot_id}\nรายการกลับเป็นสถานะพร้อมขาย",
+        );
 
         return response()->json(['message' => 'ยกเลิกการจองแล้ว']);
     }
