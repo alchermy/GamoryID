@@ -1,6 +1,6 @@
 # แผนพัฒนา GamoryID
 
-> อัปเดตล่าสุด 1 กันยายน 2026 — ปรับให้ตรงกับโค้ดที่ลงจริงถึง commit `e2721a9`
+> อัปเดตล่าสุด 2 กันยายน 2026 — ปรับให้ตรงกับโค้ดที่ลงจริงถึง commit `ac9bb06`
 > เอกสารนี้เป็น product plan หลักที่ `UX-CONTRACT.md` และ `DESIGN.md` อ้างอิง
 
 ## 1. เป้าหมายและขอบเขต
@@ -116,23 +116,27 @@ Domain หลัก (Models จริง):
 
 ## 5. Backlog ที่ควรทำต่อ (เรียงตามความสำคัญ)
 
-### P0 — ปิดช่องโหว่ก่อน pilot
+### ✅ เสร็จแล้ว (commit `ac9bb06`)
 
-1. **Reservation auto-expire job** — scheduled sweeper ปลด `reserved` → `available` เมื่อ `expires_at` ผ่าน + append timeline/notification; ปัจจุบันของค้างจองถาวรถ้าพนักงานลืมยกเลิก
-2. **Email lifecycle notifications** (M4) — trial ใกล้หมด (เช่น 7/3/1 วัน), เข้า grace, ถูกระงับ, ผลตรวจสลิป; ผูกเข้า `SubscriptionLifecycle` + จุด review top-up
-3. **ยืนยัน concurrency + rollback tests** — ทดสอบ "พนักงาน 2 คนขายรายการเดียวกันพร้อมกัน สำเร็จรายการเดียว" และ CSV 1,000 แถว rollback ทั้ง batch ให้เป็น automated test ตามเกณฑ์ §6
+- Reservation auto-expire job (`ReservationLifecycle`, schedule ทุก 5 นาที)
+- Concurrency + rollback tests (`SaleConcurrencyTest`, `ReservationApiTest`, ขยาย `InventoryImportTest`)
+- ยืนยันอีเมล: เมลไทย, ลิงก์เปิดได้โดยไม่ต้อง login, หน้า "ยืนยันสำเร็จ" + บังคับ login ใหม่
+- Team: เจ้าของสร้าง/แก้ไข/รีเซ็ตรหัส/ลบพนักงานเอง (เลิกใช้ลิงก์เชิญ)
+- Logging: daily channel แยกตามระบบ + exception context
+- Lifecycle notifications ครบ (commit ถัดไป): near-expiry 7/3/1 วัน, เข้า grace, ถูกระงับ, ต่ออายุอัตโนมัติสำเร็จ, ผลตรวจสลิป (อนุมัติ/ปฏิเสธ) — `ShopLifecycleNotification`, `PaymentReviewedNotification`
 
 ### P1 — ความถูกต้องและความเชื่อมั่น
 
-4. **openapi.yaml sync** — spec มี ~257 บรรทัดแต่ routes จริง ~50 endpoint; อัปเดตให้ครบ (billing, discord, sales, reservation, import, export) แล้วพิจารณา generate TS client
-5. **Data export/delete + retention** (M5) — privacy notice, คำขอลบข้อมูลลูกค้า, retention policy, mask PII ใน export
-6. **Monitoring/alerting** (M5) — error tracking, queue failure alert, backup + ทดสอบ restore
+1. **openapi.yaml sync** — spec มี ~40 paths แต่ routes จริง ~63 endpoint; อัปเดตให้ครบ (team ใหม่, billing, discord, sales, reservation, import, export) แล้วพิจารณา generate TS client
+2. **Data export/delete + retention** (M5) — privacy notice, คำขอลบข้อมูลลูกค้า, retention policy, mask PII ใน export
+3. **Monitoring/alerting** (M5) — error tracking (Sentry), queue failure alert, backup + ทดสอบ restore
 
 ### P2 — คุณภาพระยะยาว
 
-7. **E2E tests (Playwright)** — ยังไม่มีเลย ทั้งที่ §6 กำหนดที่ 375/768/1440 px สำหรับ flow import/search/sell และ tenant isolation
-8. **พิจารณา Laravel Policy classes** — ถ้า authz rule เริ่มซับซ้อนเกิน middleware + scope
-9. **Reservation/Sale จาก Discord — cover edge cases** ใน `DiscordIntegrationTest` เพิ่มเติม (สิทธิ์ถูกถอนกลางคัน, ห้องผิด)
+4. **E2E tests (Playwright)** — ยังไม่มีเลย ทั้งที่ §6 กำหนดที่ 375/768/1440 px สำหรับ flow import/search/sell และ tenant isolation
+5. **พิจารณา Laravel Policy classes** — ถ้า authz rule เริ่มซับซ้อนเกิน middleware + scope
+6. **Reservation/Sale จาก Discord — cover edge cases** ใน `DiscordIntegrationTest` เพิ่มเติม (สิทธิ์ถูกถอนกลางคัน, ห้องผิด)
+7. **Prune dormant auth CSS** — `tailwind-system.css` ยังมี rule ชุด full-screen auth เดิม (`.login-workspace-tasks`, `.registration-steps` ฯลฯ) ที่ถูก `auth-card.css` override ทั้งหมดแล้ว
 
 ## 6. Test Plan และเกณฑ์รับงาน
 

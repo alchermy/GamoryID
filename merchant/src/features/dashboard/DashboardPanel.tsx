@@ -54,6 +54,8 @@ export function DashboardPanel({
     "inventory.exported": "ส่งออกข้อมูลคลัง",
     "import.queued": "เริ่มนำเข้าข้อมูล",
     "credit.top_up_submitted": "ส่งสลิปเติมเครดิต",
+    "credit.top_up_approved": "อนุมัติการเติมเครดิต",
+    "credit.top_up_rejected": "ไม่อนุมัติการเติมเครดิต",
     "subscription.purchased_with_credits": "ใช้เครดิตซื้อแพ็กเกจ",
     "subscription.auto_renew_updated": "ปรับต่ออายุอัตโนมัติ",
     "team.member_created": "เพิ่มพนักงานใหม่",

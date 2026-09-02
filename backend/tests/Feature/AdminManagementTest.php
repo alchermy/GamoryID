@@ -8,7 +8,9 @@ use App\Models\ShopMember;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Notifications\PaymentReviewedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class AdminManagementTest extends TestCase
@@ -141,6 +143,32 @@ class AdminManagementTest extends TestCase
             'id' => $payment->id, 'status' => 'verified', 'review_note' => 'ตรวจสอบสลิปและยอดเงินถูกต้อง',
         ]);
         $this->assertDatabaseHas('shops', ['id' => $shop->id, 'credit_balance' => 1220]);
+    }
+
+    public function test_reviewing_a_top_up_emails_the_shop_billing_recipients(): void
+    {
+        Notification::fake();
+        $admin = $this->admin();
+        [$shop] = $this->shopWithSubscription();
+        $owner = User::where('current_shop_id', $shop->id)->firstOrFail();
+
+        $approved = PaymentSubmission::create([
+            'shop_id' => $shop->id, 'status' => 'pending_review', 'expected_amount' => 300,
+            'credit_amount' => 300, 'slip_path' => 'slips/ok.png',
+        ]);
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->patch(route('admin.top-ups.review', $approved), ['decision' => 'approved'])
+            ->assertRedirect(route('admin.top-ups.show', $approved));
+
+        $rejected = PaymentSubmission::create([
+            'shop_id' => $shop->id, 'status' => 'pending_review', 'expected_amount' => 300,
+            'credit_amount' => 300, 'slip_path' => 'slips/bad.png',
+        ]);
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->patch(route('admin.top-ups.review', $rejected), ['decision' => 'rejected', 'review_note' => 'ยอดเงินไม่ตรง'])
+            ->assertRedirect(route('admin.top-ups.show', $rejected));
+
+        Notification::assertSentToTimes($owner, PaymentReviewedNotification::class, 2);
     }
 
     private function admin(): User

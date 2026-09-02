@@ -9,6 +9,7 @@ use App\Models\ShopMember;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Notifications\ShopLifecycleNotification;
 use App\Notifications\SubscriptionExpiringNotification;
 use App\Services\SubscriptionLifecycle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -102,6 +103,61 @@ class SubscriptionLifecycleTest extends TestCase
 
         Notification::assertSentTo($owner, SubscriptionExpiringNotification::class);
         $this->assertSame(3, $subscription->fresh()->expiry_reminder_stage);
+    }
+
+    public function test_a_trial_past_expiry_moves_to_grace_and_notifies(): void
+    {
+        Notification::fake();
+        Queue::fake();
+        [$shop, $subscription, $owner] = $this->trialShop(now()->subDay());
+        $shop->update(['grace_ends_at' => now()->addDays(13)]);
+
+        app(SubscriptionLifecycle::class)->run();
+
+        $this->assertSame(SubscriptionStatus::GraceReadOnly->value, $shop->fresh()->status);
+        Notification::assertSentTo($owner, ShopLifecycleNotification::class);
+        Queue::assertPushed(SendDiscordShopNotification::class, fn (SendDiscordShopNotification $job) => $job->shopId === $shop->id && $job->purpose === 'system' && str_contains($job->title, 'อ่านอย่างเดียว'));
+    }
+
+    public function test_a_shop_past_grace_is_suspended_and_notifies(): void
+    {
+        Notification::fake();
+        Queue::fake();
+        [$shop, $owner] = $this->owner('grace-owner@example.test', 'ร้านหมดผ่อนผัน');
+        $shop->update([
+            'status' => SubscriptionStatus::GraceReadOnly->value,
+            'trial_ends_at' => null,
+            'grace_ends_at' => now()->subDay(),
+        ]);
+
+        app(SubscriptionLifecycle::class)->run();
+
+        $this->assertSame(SubscriptionStatus::Suspended->value, $shop->fresh()->status);
+        Notification::assertSentTo($owner, ShopLifecycleNotification::class);
+        Queue::assertPushed(SendDiscordShopNotification::class, fn (SendDiscordShopNotification $job) => $job->purpose === 'system' && str_contains($job->title, 'ระงับ'));
+    }
+
+    public function test_an_active_subscription_past_ends_at_without_auto_renew_enters_grace_and_notifies(): void
+    {
+        Notification::fake();
+        Queue::fake();
+        [$shop, $owner] = $this->owner('expired-owner@example.test', 'ร้านหมดอายุ');
+        $plan = $this->plan();
+        Subscription::create([
+            'shop_id' => $shop->id,
+            'subscription_plan_id' => $plan->id,
+            'status' => SubscriptionStatus::Active,
+            'starts_at' => now()->subDays(31),
+            'ends_at' => now()->subDay(),
+            'grace_ends_at' => now()->addDays(13),
+            'auto_renew' => false,
+        ]);
+        $shop->update(['status' => SubscriptionStatus::Active->value, 'trial_ends_at' => null]);
+
+        app(SubscriptionLifecycle::class)->run();
+
+        $this->assertSame(SubscriptionStatus::GraceReadOnly->value, $shop->fresh()->status);
+        Notification::assertSentTo($owner, ShopLifecycleNotification::class);
     }
 
     /**

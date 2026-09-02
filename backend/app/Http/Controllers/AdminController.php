@@ -11,10 +11,12 @@ use App\Models\ShopMember;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Notifications\PaymentReviewedNotification;
 use App\Services\CreditWallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -279,6 +281,19 @@ class AdminController extends Controller
             $message = 'ไม่อนุมัติการเติมเครดิตแล้ว';
         }
         $this->recordAdminLog($request, $payment->shop, $data['decision'] === 'approved' ? 'credit.top_up_approved' : 'credit.top_up_rejected', $payment, ['credits' => $payment->credit_amount, 'note' => $payment->review_note]);
+
+        $payment->loadMissing('shop');
+        if ($payment->shop) {
+            $recipients = $payment->shop->billingRecipients();
+            if ($recipients->isNotEmpty()) {
+                Notification::send($recipients, new PaymentReviewedNotification(
+                    $payment->fresh('shop'),
+                    $data['decision'] === 'approved'
+                        ? PaymentReviewedNotification::OUTCOME_APPROVED
+                        : PaymentReviewedNotification::OUTCOME_REJECTED,
+                ));
+            }
+        }
 
         return redirect()->route('admin.top-ups.show', $payment)->with('message', $message);
     }

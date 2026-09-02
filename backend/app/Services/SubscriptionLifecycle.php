@@ -7,6 +7,7 @@ use App\Exceptions\InsufficientCreditsException;
 use App\Jobs\SendDiscordShopNotification;
 use App\Models\Shop;
 use App\Models\Subscription;
+use App\Notifications\ShopLifecycleNotification;
 use App\Notifications\SubscriptionExpiringNotification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -27,19 +28,24 @@ class SubscriptionLifecycle
         Subscription::where('status', SubscriptionStatus::Active->value)
             ->whereNotNull('ends_at')->where('ends_at', '<=', now())
             ->with(['shop', 'plan'])->orderBy('id')->each(function (Subscription $subscription) use ($log) {
-                if ($subscription->auto_renew && $subscription->shop && $subscription->plan) {
+                if (! $subscription->shop) {
+                    return;
+                }
+
+                if ($subscription->auto_renew && $subscription->plan) {
                     try {
                         $this->wallet->purchase($subscription->shop, $subscription->plan, true, (string) Str::uuid(), 'subscription_renewal');
                         $log->info('ต่ออายุแพ็กเกจอัตโนมัติด้วยเครดิตสำเร็จ', [
                             'shop_id' => $subscription->shop_id,
                             'plan_code' => $subscription->plan->code,
                         ]);
+                        $this->notify($subscription->shop->fresh(), ShopLifecycleNotification::STAGE_RENEWED, $log);
 
                         return;
                     } catch (InsufficientCreditsException) {
                         $log->warning('ต่ออายุอัตโนมัติไม่สำเร็จ: เครดิตไม่พอ เข้าสู่โหมดอ่านอย่างเดียว', [
                             'shop_id' => $subscription->shop_id,
-                            'plan_code' => $subscription->plan->code,
+                            'plan_code' => $subscription->plan?->code,
                         ]);
                     }
                 }
@@ -54,21 +60,55 @@ class SubscriptionLifecycle
                     'shop_id' => $subscription->shop_id,
                     'grace_ends_at' => $graceEndsAt->toDateTimeString(),
                 ]);
+                $this->notify($subscription->shop->fresh(), ShopLifecycleNotification::STAGE_GRACE, $log, $graceEndsAt->timezone('Asia/Bangkok')->format('d/m/Y H:i'));
             });
 
-        $trialExpired = Shop::whereIn('status', [SubscriptionStatus::Trialing->value, SubscriptionStatus::Active->value])
+        Shop::whereIn('status', [SubscriptionStatus::Trialing->value, SubscriptionStatus::Active->value])
             ->whereNotNull('trial_ends_at')->where('trial_ends_at', '<', now())
-            ->update(['status' => SubscriptionStatus::GraceReadOnly->value]);
-        if ($trialExpired > 0) {
-            $log->info('ทดลองใช้หมดอายุ: เปลี่ยนสถานะร้านเป็นโหมดอ่านอย่างเดียว', ['shops' => $trialExpired]);
+            ->orderBy('id')->each(function (Shop $shop) use ($log) {
+                $shop->update(['status' => SubscriptionStatus::GraceReadOnly->value]);
+                $log->info('ทดลองใช้หมดอายุ: เปลี่ยนสถานะร้านเป็นโหมดอ่านอย่างเดียว', ['shop_id' => $shop->id]);
+                $graceLabel = $shop->grace_ends_at?->timezone('Asia/Bangkok')->format('d/m/Y H:i');
+                $this->notify($shop, ShopLifecycleNotification::STAGE_GRACE, $log, $graceLabel);
+            });
+
+        Shop::where('status', SubscriptionStatus::GraceReadOnly->value)
+            ->whereNotNull('grace_ends_at')->where('grace_ends_at', '<', now())
+            ->orderBy('id')->each(function (Shop $shop) use ($log) {
+                $shop->update(['status' => SubscriptionStatus::Suspended->value]);
+                $log->info('พ้นช่วงผ่อนผัน: ระงับการใช้งานร้าน', ['shop_id' => $shop->id]);
+                $this->notify($shop, ShopLifecycleNotification::STAGE_SUSPENDED, $log);
+            });
+    }
+
+    private function notify(Shop $shop, string $stage, LoggerInterface $log, ?string $graceEndsAtLabel = null): void
+    {
+        $recipients = $shop->billingRecipients();
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new ShopLifecycleNotification($shop, $stage, $graceEndsAtLabel));
         }
 
-        $suspended = Shop::where('status', SubscriptionStatus::GraceReadOnly->value)
-            ->whereNotNull('grace_ends_at')->where('grace_ends_at', '<', now())
-            ->update(['status' => SubscriptionStatus::Suspended->value]);
-        if ($suspended > 0) {
-            $log->info('พ้นช่วงผ่อนผัน: ระงับการใช้งานร้าน', ['shops' => $suspended]);
-        }
+        [$title, $body] = match ($stage) {
+            ShopLifecycleNotification::STAGE_GRACE => [
+                'ร้านเข้าสู่โหมดอ่านอย่างเดียว',
+                "ร้าน **{$shop->name}** หมดอายุแพ็กเกจแล้ว เข้าสู่โหมดอ่านอย่างเดียว".($graceEndsAtLabel ? " จนถึง {$graceEndsAtLabel} น." : '')."\nต่ออายุได้ที่หน้าจัดการแพ็กเกจ",
+            ],
+            ShopLifecycleNotification::STAGE_SUSPENDED => [
+                'ร้านถูกระงับการใช้งาน',
+                "ร้าน **{$shop->name}** ถูกระงับเนื่องจากไม่ได้ต่ออายุแพ็กเกจ\nเหลือเพียงการชำระเงินและส่งออกข้อมูล",
+            ],
+            default => [
+                'ต่ออายุแพ็กเกจอัตโนมัติแล้ว',
+                "ร้าน **{$shop->name}** ต่ออายุแพ็กเกจอัตโนมัติด้วยเครดิตเรียบร้อย ใช้งานได้ต่อเนื่อง",
+            ],
+        };
+
+        SendDiscordShopNotification::dispatch($shop->id, 'system', $title, $body);
+        $log->info('ส่งแจ้งเตือนสถานะร้าน', [
+            'shop_id' => $shop->id,
+            'stage' => $stage,
+            'email_recipients' => $recipients->count(),
+        ]);
     }
 
     private function sendExpiryReminders(LoggerInterface $log): void
