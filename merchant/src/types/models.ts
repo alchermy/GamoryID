@@ -110,6 +110,7 @@ export type PlanFeatureKey =
   | "activity_log"
   | "discord"
   | "analytics"
+  | "early_access"
   | "priority_support";
 
 export type PlanFeatures = Record<PlanFeatureKey, boolean>;

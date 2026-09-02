@@ -326,6 +326,7 @@ const FEATURE_ORDER = [
   "activity_log",
   "discord",
   "analytics",
+  "early_access",
   "priority_support",
 ] as const;
 
@@ -335,6 +336,7 @@ const FEATURE_LABELS: Record<(typeof FEATURE_ORDER)[number], string> = {
   activity_log: "บันทึกกิจกรรม",
   discord: "เชื่อมต่อ Discord",
   analytics: "วิเคราะห์ต้นทุน–กำไร",
+  early_access: "ได้ฟีเจอร์ใหม่ก่อนใคร",
   priority_support: "ซัพพอร์ตให้ความสำคัญก่อน",
 };
 

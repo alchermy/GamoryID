@@ -4,6 +4,7 @@
     'activity_log' => 'บันทึกกิจกรรม (audit log)',
     'discord' => 'เชื่อมต่อ Discord',
     'analytics' => 'วิเคราะห์ต้นทุน–กำไร / รายงานลึก',
+    'early_access' => 'ได้ฟีเจอร์ใหม่ก่อนใคร',
     'priority_support' => 'ซัพพอร์ตแบบให้ความสำคัญก่อน',
 ])
 <section class="form-card" aria-labelledby="plan-form-title">

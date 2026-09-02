@@ -13,6 +13,7 @@ class SubscriptionPlan extends Model
         'activity_log',
         'discord',
         'analytics',
+        'early_access',
         'priority_support',
     ];
 
@@ -116,13 +117,13 @@ class SubscriptionPlan extends Model
                 'code' => 'growth', 'name' => 'Growth', 'sort_order' => 2,
                 'price_monthly' => 499, 'price_yearly' => 4990,
                 'active_inventory_limit' => 5000, 'member_limit' => 6,
-                'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics'),
+                'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access'),
             ],
             [
                 'code' => 'pro', 'name' => 'Pro', 'sort_order' => 3,
                 'price_monthly' => 990, 'price_yearly' => 9900,
                 'active_inventory_limit' => 50000, 'member_limit' => null,
-                'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'priority_support'),
+                'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access', 'priority_support'),
             ],
         ];
     }

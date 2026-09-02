@@ -12,6 +12,7 @@ type FeatureKey =
   | "activity_log"
   | "discord"
   | "analytics"
+  | "early_access"
   | "priority_support";
 
 type ApiPlan = {
@@ -80,6 +81,7 @@ const FALLBACK_PLANS: ApiPlan[] = [
       "advanced_export",
       "discord",
       "analytics",
+      "early_access",
     ),
   },
   {
@@ -100,6 +102,7 @@ const FALLBACK_PLANS: ApiPlan[] = [
       "advanced_export",
       "discord",
       "analytics",
+      "early_access",
       "priority_support",
     ),
   },
@@ -112,6 +115,7 @@ function feats(...on: FeatureKey[]): Record<FeatureKey, boolean> {
     "activity_log",
     "discord",
     "analytics",
+    "early_access",
     "priority_support",
   ];
   return Object.fromEntries(
@@ -132,6 +136,7 @@ const FEATURE_ROWS: { key: FeatureKey; label: string }[] = [
   { key: "discord", label: "เชื่อมต่อ Discord" },
   { key: "advanced_export", label: "ส่งออกยอดขาย/กำไร/ประวัติ" },
   { key: "analytics", label: "วิเคราะห์ต้นทุน–กำไร / รายงานลึก" },
+  { key: "early_access", label: "ได้ฟีเจอร์ใหม่ก่อนใคร" },
 ];
 
 export function PricingSection() {

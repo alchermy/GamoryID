@@ -4,6 +4,7 @@
     'activity_log' => 'บันทึกกิจกรรม',
     'discord' => 'Discord',
     'analytics' => 'วิเคราะห์กำไร',
+    'early_access' => 'ฟีเจอร์ใหม่ก่อน',
     'priority_support' => 'ซัพพอร์ตพิเศษ',
 ])
 <div class="section-actions"><div><h2>แพ็กเกจบริการ</h2><p>เลือกรายการเพื่อดูและแก้ไขราคา/สิทธิ์</p></div><a class="button action" href="{{ route('admin.plans.create') }}">เพิ่มแพ็กเกจ</a></div>
