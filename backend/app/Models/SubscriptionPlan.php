@@ -104,25 +104,25 @@ class SubscriptionPlan extends Model
             [
                 'code' => 'free', 'name' => 'Free', 'sort_order' => 0,
                 'price_monthly' => 0, 'price_yearly' => null,
-                'active_inventory_limit' => 150, 'member_limit' => 1,
+                'active_inventory_limit' => 30, 'member_limit' => 1,
                 'features' => $feat(),
             ],
             [
                 'code' => 'starter', 'name' => 'Starter', 'sort_order' => 1,
                 'price_monthly' => 299, 'price_yearly' => 2990,
-                'active_inventory_limit' => 1000, 'member_limit' => 3,
+                'active_inventory_limit' => 150, 'member_limit' => 3,
                 'features' => $feat('bulk_import', 'activity_log'),
             ],
             [
                 'code' => 'growth', 'name' => 'Growth', 'sort_order' => 2,
                 'price_monthly' => 690, 'price_yearly' => 6900,
-                'active_inventory_limit' => 5000, 'member_limit' => 8,
+                'active_inventory_limit' => 1000, 'member_limit' => 8,
                 'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access'),
             ],
             [
                 'code' => 'pro', 'name' => 'Pro', 'sort_order' => 3,
                 'price_monthly' => 1490, 'price_yearly' => 14900,
-                'active_inventory_limit' => 50000, 'member_limit' => null,
+                'active_inventory_limit' => 10000, 'member_limit' => null,
                 'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access', 'priority_support'),
             ],
         ];
