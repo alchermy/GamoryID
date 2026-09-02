@@ -33,6 +33,13 @@ Route::prefix('v1')->group(function () {
     // Public plan catalogue for the marketing site (no auth).
     Route::get('/public/plans', [PaymentController::class, 'publicPlans'])->middleware('throttle:60,1');
 
+    // Current legal-document versions (no auth) — the register screen shows these.
+    Route::get('/public/legal', fn () => response()->json(['data' => [
+        'terms_version' => config('legal.terms_version'),
+        'privacy_version' => config('legal.privacy_version'),
+        'effective_date' => config('legal.effective_date'),
+    ]]))->middleware('throttle:60,1');
+
     // The verification link is opened straight from an email, in any browser or
     // device, so it must NOT require an authenticated session. It is protected
     // by the signed URL (APP_KEY) plus the per-user email hash.

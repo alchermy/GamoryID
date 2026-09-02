@@ -8,12 +8,18 @@ import {
   useOutletContext,
 } from "react-router-dom";
 import { apiRequest, prepareCsrf } from "../../api";
+import { privacyUrl, termsUrl } from "../../config/links";
 import { Field, PasswordInput } from "../../shared/ui/form-controls";
 import type { SessionUser } from "../../types/models";
 import { RegistrationJourney } from "./registration-journey";
 import { LoginWorkspaceContext } from "./login-workspace-context";
 
-type RegistrationField = "name" | "shop_name" | "email" | "password";
+type RegistrationField =
+  | "name"
+  | "shop_name"
+  | "email"
+  | "password"
+  | "accept_terms";
 
 function validateLogin(data: FormData) {
   const errors: Partial<Record<RegistrationField, string>> = {};
@@ -42,6 +48,9 @@ function validateRegistration(data: FormData) {
     errors.email = "กรอกอีเมลให้ถูกต้อง เช่น name@example.com";
   if (password.length < 10)
     errors.password = "รหัสผ่านต้องมีอย่างน้อย 10 ตัวอักษร";
+  if (data.get("accept_terms") !== "on")
+    errors.accept_terms =
+      "ต้องยอมรับข้อกำหนดการใช้บริการและนโยบายความเป็นส่วนตัว";
 
   return errors;
 }
@@ -81,6 +90,7 @@ export function AuthScreen({ mode }: { mode: "login" | "register" }) {
               password: d.get("password"),
               password_confirmation: d.get("password"),
               shop_name: d.get("shop_name"),
+              accept_terms: d.get("accept_terms") === "on",
             };
       await apiRequest(`/auth/${mode}`, {
         method: "POST",
@@ -222,6 +232,46 @@ export function AuthScreen({ mode }: { mode: "login" | "register" }) {
               <p className="field-help" id="register-password-hint">
                 ใช้รหัสผ่านอย่างน้อย 10 ตัวอักษร
               </p>
+            ) : null}
+            {isRegister ? (
+              <div className="auth-consent">
+                <label htmlFor="register-accept-terms">
+                  <input
+                    id="register-accept-terms"
+                    name="accept_terms"
+                    type="checkbox"
+                    aria-invalid={Boolean(fieldErrors.accept_terms) || undefined}
+                    aria-describedby={
+                      fieldErrors.accept_terms
+                        ? "register-accept-terms-error"
+                        : undefined
+                    }
+                    onChange={() => clearFieldError("accept_terms")}
+                  />
+                  <span>
+                    ฉันยอมรับ{" "}
+                    <a href={termsUrl} target="_blank" rel="noopener noreferrer">
+                      ข้อกำหนดการใช้บริการ
+                    </a>{" "}
+                    และ{" "}
+                    <a
+                      href={privacyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      นโยบายความเป็นส่วนตัว
+                    </a>
+                  </span>
+                </label>
+                {fieldErrors.accept_terms ? (
+                  <span
+                    className="field-error"
+                    id="register-accept-terms-error"
+                  >
+                    {fieldErrors.accept_terms}
+                  </span>
+                ) : null}
+              </div>
             ) : null}
             <button className="button primary auth-submit" disabled={busy}>
               {busy

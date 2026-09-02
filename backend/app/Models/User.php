@@ -24,7 +24,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
      *
      * @var list<string>
      */
-    protected $fillable = ['name', 'email', 'password', 'current_shop_id', 'email_verified_at', 'is_super_admin'];
+    protected $fillable = ['name', 'email', 'password', 'current_shop_id', 'email_verified_at', 'is_super_admin', 'terms_accepted_at', 'terms_version'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -50,6 +50,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'is_super_admin' => 'boolean',
             'two_factor_secret' => 'encrypted',
             'two_factor_confirmed_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
         ];
     }
 

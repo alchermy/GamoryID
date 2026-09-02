@@ -5,7 +5,7 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="container nav">
-        <a className="logo" href="#top" aria-label="GamoryID หน้าแรก">
+        <a className="logo" href="/" aria-label="GamoryID หน้าแรก">
           <Mascot pose="main" alt="" width={44} priority />
           <span>
             Gamory<span>ID</span>
@@ -13,10 +13,10 @@ export function SiteHeader() {
         </a>
         <nav className="links" aria-label="เมนูเว็บไซต์">
           <div className="nav-links">
-            <a href="#features">ฟีเจอร์</a>
-            <a href="#about">เกี่ยวกับระบบ</a>
-            <a href="#workflow">วิธีใช้งาน</a>
-            <a href="#pricing">แพ็กเกจ</a>
+            <a href="/#features">ฟีเจอร์</a>
+            <a href="/#about">เกี่ยวกับระบบ</a>
+            <a href="/#workflow">วิธีใช้งาน</a>
+            <a href="/#pricing">แพ็กเกจ</a>
           </div>
           <div className="nav-actions">
             <a className="btn btn-quiet" href={merchantLoginUrl}>

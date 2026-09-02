@@ -44,6 +44,8 @@ class AuthController extends Controller
                 'email' => Str::lower($data['email']),
                 'password' => $data['password'],
                 'current_shop_id' => $shop->id,
+                'terms_accepted_at' => now(),
+                'terms_version' => config('legal.terms_version'),
             ]);
             ShopMember::create([
                 'shop_id' => $shop->id,

@@ -18,6 +18,7 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'email', 'max:190', 'unique:users,email'],
             'password' => ['required', 'string', 'min:10', 'confirmed'],
             'shop_name' => ['required', 'string', 'max:120'],
+            'accept_terms' => ['accepted'],
         ];
     }
 
@@ -27,6 +28,7 @@ class RegisterRequest extends FormRequest
             'email.unique' => 'อีเมลนี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบ',
             'password.min' => 'รหัสผ่านต้องมีอย่างน้อย 10 ตัวอักษร',
             'password.confirmed' => 'การยืนยันรหัสผ่านไม่ตรงกัน',
+            'accept_terms.accepted' => 'ต้องยอมรับข้อกำหนดการใช้บริการและนโยบายความเป็นส่วนตัวก่อนสมัคร',
         ];
     }
 }

@@ -34,6 +34,7 @@ class MerchantRegistrationTest extends TestCase
                 'email' => 'new-owner@example.test',
                 'password' => 'strong-pass-123',
                 'password_confirmation' => 'strong-pass-123',
+                'accept_terms' => true,
             ]);
 
         $response
@@ -43,6 +44,8 @@ class MerchantRegistrationTest extends TestCase
             ->assertJsonPath('shop.name', 'ร้านเริ่มใหม่');
 
         $user = User::query()->where('email', 'new-owner@example.test')->firstOrFail();
+        $this->assertNotNull($user->terms_accepted_at);
+        $this->assertSame(config('legal.terms_version'), $user->terms_version);
         $this->assertAuthenticatedAs($user);
         $this->assertDatabaseHas('shops', [
             'id' => $user->current_shop_id,
@@ -101,6 +104,21 @@ class MerchantRegistrationTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['password'])
             ->assertJsonPath('errors.password.0', 'รหัสผ่านต้องมีอย่างน้อย 10 ตัวอักษร');
+    }
+
+    public function test_registration_requires_accepting_the_terms(): void
+    {
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'พีท',
+            'shop_name' => 'ร้านทดสอบ',
+            'email' => 'no-consent@example.test',
+            'password' => 'strong-pass-123',
+            'password_confirmation' => 'strong-pass-123',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['accept_terms']);
+
+        $this->assertDatabaseMissing('users', ['email' => 'no-consent@example.test']);
     }
 
     public function test_verified_email_link_works_without_an_authenticated_session(): void

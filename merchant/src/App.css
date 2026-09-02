@@ -1281,6 +1281,33 @@ tbody tr:last-child td {
   width: 100%;
   margin-top: 6px;
 }
+.auth-consent {
+  margin: 14px 0 4px;
+}
+.auth-consent label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #475467;
+  cursor: pointer;
+}
+.auth-consent input[type="checkbox"] {
+  margin-top: 2px;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+.auth-consent a {
+  color: var(--primary);
+  font-weight: 600;
+}
+.auth-consent .field-error {
+  display: block;
+  margin-top: 6px;
+}
 .auth-switch {
   text-align: center;
   font-size: 13px !important;
