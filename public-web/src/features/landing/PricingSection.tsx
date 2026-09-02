@@ -1,49 +1,52 @@
 import { ArrowRight, Check } from "lucide-react";
 import { merchantRegisterUrl } from "../../config/links";
-import { Reveal } from "./Motion";
+import { CountUp, Reveal } from "./Motion";
+import { Mascot } from "./Mascot";
+
+const PLANS = [
+  { name: "Starter", amount: 299, inventory: "1,000", members: "3" },
+  {
+    name: "Growth",
+    amount: 699,
+    inventory: "5,000",
+    members: "8",
+    recommended: true,
+  },
+] as const;
 
 export function PricingSection() {
   return (
     <>
       <section className="section container" id="pricing">
         <Reveal className="section-head">
-          <span className="kicker">เริ่มเล็ก ขยายตามร้าน</span>
+          <span className="kicker">
+            <span className="kicker-tick" aria-hidden="true" />
+            เริ่มเล็ก ขยายตามร้าน
+          </span>
           <h2>แพ็กเกจตรงไปตรงมา</h2>
           <p>
             ทดลองใช้ฟรี 30 วัน หลังจากนั้นเลือกแพ็กเกจตามจำนวนสต็อกและทีมของคุณ
+            ปรับขึ้น–ลงได้ทุกเดือน
           </p>
         </Reveal>
         <div className="price-wrap">
-          <Reveal>
-            <PriceCard
-              name="Starter"
-              amount="299"
-              inventory="1,000"
-              members="3"
-            />
-          </Reveal>
-          <Reveal delay={90}>
-            <PriceCard
-              name="Growth"
-              amount="699"
-              inventory="5,000"
-              members="8"
-              recommended
-            />
-          </Reveal>
+          {PLANS.map((plan, i) => (
+            <Reveal key={plan.name} delay={i * 90}>
+              <PriceCard {...plan} />
+            </Reveal>
+          ))}
         </div>
       </section>
+
       <Reveal className="container cta">
-        <div>
+        <div className="cta-copy">
           <h2>พร้อมจัดร้านให้เป็นระบบหรือยัง?</h2>
           <p>เริ่มนำเข้าสต็อก ค้นหา และบันทึกขายได้วันนี้</p>
-          <div className="hero-actions">
-            <a href={merchantRegisterUrl} className="btn orange btn-lg">
-              เริ่มทดลองใช้ฟรี <ArrowRight size={17} />
-            </a>
-          </div>
+          <a href={merchantRegisterUrl} className="btn orange btn-lg">
+            เริ่มทดลองใช้ฟรี <ArrowRight size={17} />
+          </a>
         </div>
-        <img src="/mascot/gammy-hello.png" alt="Gammy กล่าวต้อนรับ" />
+        <Mascot pose="hello" alt="Gammy ชวนเปิดร้าน" width={185} className="cta-mascot" />
       </Reveal>
     </>
   );
@@ -57,19 +60,17 @@ function PriceCard({
   recommended = false,
 }: {
   name: string;
-  amount: string;
+  amount: number;
   inventory: string;
   members: string;
   recommended?: boolean;
 }) {
   return (
     <article className={`price ${recommended ? "recommended" : ""}`}>
-      {recommended && (
-        <span className="price-label">เหมาะกับร้านที่กำลังโต</span>
-      )}
+      {recommended && <span className="price-label">เหมาะกับร้านที่กำลังโต</span>}
       <h3>{name}</h3>
       <div className="amount">
-        ฿{amount} <small>/ 30 วัน</small>
+        ฿<CountUp value={amount} /> <small>/ 30 วัน</small>
       </div>
       <ul>
         <li>
@@ -79,10 +80,10 @@ function PriceCard({
           <Check size={17} /> สมาชิกในร้าน {members} คน
         </li>
         <li>
-          <Check size={17} /> นำเข้า CSV และ export ข้อมูล
+          <Check size={17} /> นำเข้า Excel/CSV และส่งออกข้อมูล
         </li>
         <li>
-          <Check size={17} /> ประวัติกิจกรรมและการแบ่งสิทธิ์
+          <Check size={17} /> บันทึกกิจกรรมและการแบ่งสิทธิ์รายคน
         </li>
       </ul>
       <a

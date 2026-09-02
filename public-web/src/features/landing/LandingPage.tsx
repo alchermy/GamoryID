@@ -1,6 +1,6 @@
 import { FeaturesSection, WorkflowSection } from "./FeatureSections";
-import { HeroSection } from "./HeroSection";
-import { BackToTop } from "./Motion";
+import { HeroSection, SpecBand } from "./HeroSection";
+import { BackToTop, ScrollRail } from "./Motion";
 import { PricingSection } from "./PricingSection";
 import { SiteFooter } from "./SiteFooter";
 import { SiteHeader } from "./SiteHeader";
@@ -13,9 +13,11 @@ export function LandingPage() {
         <span className="ambient-orb ambient-orb-two" />
         <span className="ambient-grid" />
       </div>
+      <ScrollRail />
       <SiteHeader />
       <main id="top">
         <HeroSection />
+        <SpecBand />
         <FeaturesSection />
         <WorkflowSection />
         <PricingSection />

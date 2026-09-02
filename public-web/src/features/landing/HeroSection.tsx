@@ -1,124 +1,136 @@
-import {
-  ArrowRight,
-  FileSpreadsheet,
-  KeyRound,
-  Play,
-  Search,
-  ShieldCheck,
-} from "lucide-react";
+import type { CSSProperties } from "react";
+import { ArrowRight, PlayCircle } from "lucide-react";
 import { merchantRegisterUrl } from "../../config/links";
-import { Reveal } from "./Motion";
+import { specs } from "./content";
+import { CountUp, Reveal } from "./Motion";
+import { Mascot } from "./Mascot";
 
 export function HeroSection() {
   return (
-    <>
-      <section className="container hero">
-        <Reveal className="hero-copy">
-          <span className="badge">
-            <ShieldCheck size={15} />
-            ระบบจัดการสต็อกสำหรับร้านดิจิทัล
-          </span>
-          <h1>
-            หาไอดีให้เจอ
-            <br />
-            <em>ปิดการขายให้ไว</em>
-          </h1>
-          <p>
-            GamoryID รวมสต็อก การจอง ลูกค้า และประวัติการขายไว้ในที่เดียว
-            ให้ทีมร้านทำงานกับข้อมูลจำนวนมากได้ง่ายขึ้น
-          </p>
-          <div className="hero-actions">
-            <a className="btn orange btn-lg" href={merchantRegisterUrl}>
-              ทดลองใช้ฟรี 30 วัน <ArrowRight size={17} />
-            </a>
-            <a className="btn btn-lg btn-secondary" href="#workflow">
-              <Play size={16} fill="currentColor" />
-              ดูวิธีทำงาน
-            </a>
-          </div>
-          <p className="small-note">
-            ไม่ต้องใส่บัตรเครดิต · ส่งออกข้อมูลของร้านได้
-          </p>
-        </Reveal>
-        <Reveal className="hero-visual" delay={120}>
-          <ProductPreview />
-        </Reveal>
-      </section>
-      <TrustStrip />
-    </>
+    <section className="container hero">
+      <div className="hero-copy hero-enter">
+        <span className="badge">
+          <span className="badge-dot" aria-hidden="true" />
+          ระบบจัดการสต็อกไอดีเกม
+        </span>
+        <h1>
+          ค้นด้วย <span className="code">#23DX5</span>
+          <br />
+          จองไม่ชน
+          <br />
+          ปิดการขายไว
+        </h1>
+        <p>
+          GamoryID รวมคลังไอดี การจอง ลูกค้า และประวัติการขายไว้ในที่เดียว
+          ให้ทีมร้านทำงานกับข้อมูลหลักหมื่นรายการได้โดยไม่พลาด
+        </p>
+        <div className="hero-actions">
+          <a className="btn orange btn-lg" href={merchantRegisterUrl}>
+            ทดลองใช้ฟรี 30 วัน <ArrowRight size={17} />
+          </a>
+          <a className="btn btn-lg btn-secondary" href="#workflow">
+            <PlayCircle size={17} />
+            ดูวิธีทำงาน
+          </a>
+        </div>
+        <p className="small-note">ไม่ต้องใส่บัตรเครดิต · ส่งออกข้อมูลของร้านได้ทุกเมื่อ</p>
+      </div>
+
+      <div
+        className="hero-visual hero-enter"
+        style={{ "--reveal-delay": "140ms" } as CSSProperties}
+      >
+        <ProductDemo />
+      </div>
+    </section>
   );
 }
 
-function ProductPreview() {
+function ProductDemo() {
   return (
-    <div className="product-shot" aria-label="ตัวอย่างหน้าระบบ GamoryID">
-      <div className="signal-node signal-node-top" />
-      <div className="signal-node signal-node-bottom" />
-      <div className="mock">
-        <div className="mock-top">
-          <span className="dot" />
-          <span className="dot" />
-          <span className="dot" />
-        </div>
-        <div className="mock-body">
-          <div className="mock-side">
-            <div className="mock-line active" />
-            <div className="mock-line" />
-            <div className="mock-line" />
-            <div className="mock-line" />
+    <div className="demo" role="img" aria-label="ตัวอย่างการค้นหาไอดีด้วยแท็กและปิดการขายในระบบ GamoryID">
+      <span className="signal-node signal-node-top" aria-hidden="true" />
+      <div className="demo-frame">
+        <div className="demo-bar">
+          <span className="demo-dot" />
+          <span className="demo-dot" />
+          <span className="demo-dot" />
+          <div className="demo-search">
+            <span className="demo-search-typed" />
+            <span className="demo-caret" aria-hidden="true" />
           </div>
-          <div className="mock-main">
-            <div className="mock-title" />
-            <div className="mock-kpis">
-              <i />
-              <i />
-              <i />
+        </div>
+        <div className="demo-body">
+          <nav className="demo-side" aria-hidden="true">
+            <span className="demo-nav is-active" />
+            <span className="demo-nav" />
+            <span className="demo-nav" />
+            <span className="demo-nav" />
+            <span className="demo-side-rail" />
+          </nav>
+          <div className="demo-main" aria-hidden="true">
+            <div className="demo-kpis">
+              <span>
+                <b>128</b>พร้อมขาย
+              </span>
+              <span>
+                <b>9</b>ถูกจอง
+              </span>
+              <span>
+                <b>฿82K</b>ยอดวันนี้
+              </span>
             </div>
-            <div className="mock-table">
-              {[1, 2, 3, 4, 5].map((row) => (
-                <div className="mock-row" key={row}>
-                  <b />
-                  <i />
-                  <i />
-                  <i />
+            <div className="demo-rows">
+              {[0, 1, 2, 3].map((i) => (
+                <div className={`demo-row${i === 1 ? " is-focus" : ""}`} key={i}>
+                  <span className="demo-tag">
+                    {i === 1 ? "#23DX5" : ["#7K9PM", "#Q4RTX", "#M2WZ8"][i > 1 ? i - 1 : i]}
+                  </span>
+                  <span className="demo-cell" />
+                  {i === 1 ? (
+                    <span className="demo-status">
+                      <b className="s-ready">พร้อมขาย</b>
+                      <b className="s-hold">จอง</b>
+                      <b className="s-sold">ขายแล้ว</b>
+                    </span>
+                  ) : (
+                    <span className="demo-cell demo-cell-sm" />
+                  )}
                 </div>
               ))}
             </div>
           </div>
         </div>
       </div>
-      <img
-        className="hero-mascot"
-        src="/mascot/gammy-secure.png"
-        alt="Gammy ดูแลความปลอดภัย"
+      <div className="demo-chip demo-chip-search">
+        ค้นด้วยแท็ก · <b>1 รายการ</b>
+      </div>
+      <Mascot
+        pose="secure"
+        alt="Gammy มาสคอตของ GamoryID"
+        width={168}
+        className="demo-mascot"
+        priority
       />
-      <div className="floating-tag floating-tag-search">
-        <Search size={14} /> ค้นหา #23DX5
-      </div>
-      <div className="floating-tag floating-tag-status">
-        <ShieldCheck size={14} /> พร้อมขาย
-      </div>
     </div>
   );
 }
 
-function TrustStrip() {
+export function SpecBand() {
   return (
-    <section className="trust" aria-label="จุดเด่นด้านการจัดการข้อมูล">
-      <div className="container">
-        <div className="trust-item">
-          <KeyRound size={18} /> ข้อมูลร้านแยกเป็นสัดส่วน
-        </div>
-        <div className="trust-item">
-          <Search size={18} /> Exact tag search
-        </div>
-        <div className="trust-item">
-          <ShieldCheck size={18} /> สิทธิ์แยกตามคน
-        </div>
-        <div className="trust-item">
-          <FileSpreadsheet size={18} /> นำเข้าและส่งออก CSV
-        </div>
+    <Reveal as="section" className="spec-band" aria-label="ข้อมูลจำเพาะของระบบ">
+      <div className="container spec-grid">
+        {specs.map((spec) => (
+          <div className="spec" key={spec.label}>
+            <div className="spec-value">
+              {"prefix" in spec && spec.prefix ? spec.prefix : ""}
+              <CountUp value={spec.value} />
+              {"suffix" in spec && spec.suffix ? spec.suffix : ""}
+            </div>
+            <div className="spec-label">{spec.label}</div>
+          </div>
+        ))}
       </div>
-    </section>
+    </Reveal>
   );
 }

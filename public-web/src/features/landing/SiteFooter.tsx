@@ -1,18 +1,23 @@
 import { ArrowRight } from "lucide-react";
 import { merchantLoginUrl, merchantRegisterUrl } from "../../config/links";
+import { Mascot } from "./Mascot";
 
 export function SiteFooter() {
   return (
     <footer className="footer">
       <div className="container footer-grid">
         <div className="footer-brand">
-          <a className="logo footer-logo" href="#top" aria-label="GamoryID หน้าแรก">
-            <img src="/mascot/gammy-hello.png" alt="" />
-            <span>Gamory<span>ID</span></span>
+          <a
+            className="logo footer-logo"
+            href="#top"
+            aria-label="GamoryID หน้าแรก"
+          >
+            <Mascot pose="main" alt="" width={34} />
+            <span>
+              Gamory<span>ID</span>
+            </span>
           </a>
-          <p>
-            จัดการสต็อก การจอง ลูกค้า และประวัติการขายของร้านไว้ในที่เดียว
-          </p>
+          <p>จัดการสต็อกไอดี การจอง ลูกค้า และประวัติการขายของร้านไว้ในที่เดียว</p>
         </div>
         <div className="footer-column">
           <strong>ผลิตภัณฑ์</strong>

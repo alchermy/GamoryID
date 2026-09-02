@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "optimize:images": "node scripts/optimize-images.mjs",
+    "og": "node scripts/make-og.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.34.0",
@@ -21,6 +23,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "oxlint": "^1.79.0",
+    "sharp": "^0.35.4",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }

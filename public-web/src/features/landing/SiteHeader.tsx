@@ -1,14 +1,12 @@
-import {
-  merchantLoginUrl,
-  merchantRegisterUrl,
-} from "../../config/links";
+import { merchantLoginUrl, merchantRegisterUrl } from "../../config/links";
+import { Mascot } from "./Mascot";
 
 export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="container nav">
         <a className="logo" href="#top" aria-label="GamoryID หน้าแรก">
-          <img src="/mascot/gammy-hello.png" alt="" />
+          <Mascot pose="main" alt="" width={36} priority />
           <span>
             Gamory<span>ID</span>
           </span>

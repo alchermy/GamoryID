@@ -4,6 +4,8 @@
   background: #f7faff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
   --ink: #071a33;
   --ink-soft: #17324f;
   --primary: #0b6bff;
@@ -14,28 +16,73 @@
   --surface: #ffffff;
   --border: #d8e3f0;
   --muted: #64758b;
+
   --font-sans: "Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif;
-  --font-data: Inter, "Noto Sans Thai", "Segoe UI", sans-serif;
+  --font-display: "IBM Plex Sans Thai", "Noto Sans Thai", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, Menlo, monospace;
+
   scrollbar-color: #9ab5cf #eef5fb;
   scrollbar-width: thin;
 }
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 92px; }
-body { margin: 0; min-width: 320px; background: var(--background); }
-button, input { font: inherit; }
-a, button { -webkit-tap-highlight-color: transparent; }
-:focus-visible { outline: 3px solid #70caff; outline-offset: 3px; }
-::selection { background: #cdeeff; color: var(--ink); }
-::-webkit-scrollbar { width: 11px; height: 11px; }
-::-webkit-scrollbar-track { background: #eef5fb; }
-::-webkit-scrollbar-thumb { min-height: 40px; border: 3px solid #eef5fb; border-radius: 999px; background: #9ab5cf; }
-::-webkit-scrollbar-thumb:hover { background: #6688a8; }
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 96px;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--background);
+}
+button,
+input {
+  font: inherit;
+}
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+:focus-visible {
+  outline: 3px solid #70caff;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+::selection {
+  background: #cdeeff;
+  color: var(--ink);
+}
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: #eef5fb;
+}
+::-webkit-scrollbar-thumb {
+  min-height: 40px;
+  border: 3px solid #eef5fb;
+  border-radius: 999px;
+  background: #9ab5cf;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6688a8;
+}
 
-@media (forced-colors: active) { :root { scrollbar-color: auto; } }
+@media (forced-colors: active) {
+  :root {
+    scrollbar-color: auto;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
