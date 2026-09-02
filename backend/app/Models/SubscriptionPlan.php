@@ -109,32 +109,38 @@ class SubscriptionPlan extends Model
             ],
             [
                 'code' => 'starter', 'name' => 'Starter', 'sort_order' => 1,
-                'price_monthly' => 199, 'price_yearly' => 1990,
-                'active_inventory_limit' => 1000, 'member_limit' => 2,
+                'price_monthly' => 299, 'price_yearly' => 2990,
+                'active_inventory_limit' => 1000, 'member_limit' => 3,
                 'features' => $feat('bulk_import', 'activity_log'),
             ],
             [
                 'code' => 'growth', 'name' => 'Growth', 'sort_order' => 2,
-                'price_monthly' => 499, 'price_yearly' => 4990,
-                'active_inventory_limit' => 5000, 'member_limit' => 6,
+                'price_monthly' => 690, 'price_yearly' => 6900,
+                'active_inventory_limit' => 5000, 'member_limit' => 8,
                 'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access'),
             ],
             [
                 'code' => 'pro', 'name' => 'Pro', 'sort_order' => 3,
-                'price_monthly' => 990, 'price_yearly' => 9900,
+                'price_monthly' => 1490, 'price_yearly' => 14900,
                 'active_inventory_limit' => 50000, 'member_limit' => null,
                 'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access', 'priority_support'),
             ],
         ];
     }
 
-    public static function syncDefaults(): void
+    public static function syncDefaults(bool $resetSales = false): void
     {
         foreach (self::defaults() as $plan) {
-            static::query()->updateOrCreate(
-                ['code' => $plan['code']],
-                array_merge($plan, ['is_active' => true, 'monthly_days' => 30, 'yearly_days' => 365]),
-            );
+            $attributes = array_merge($plan, ['is_active' => true, 'monthly_days' => 30, 'yearly_days' => 365]);
+            if ($resetSales) {
+                $attributes = array_merge($attributes, [
+                    'sale_price_monthly' => null,
+                    'sale_price_yearly' => null,
+                    'sale_label' => null,
+                    'sale_ends_at' => null,
+                ]);
+            }
+            static::query()->updateOrCreate(['code' => $plan['code']], $attributes);
         }
     }
 
