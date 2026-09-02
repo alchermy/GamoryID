@@ -6,7 +6,7 @@ export function SiteHeader() {
     <header className="site-header">
       <div className="container nav">
         <a className="logo" href="#top" aria-label="GamoryID หน้าแรก">
-          <Mascot pose="main" alt="" width={36} priority />
+          <Mascot pose="main" alt="" width={44} priority />
           <span>
             Gamory<span>ID</span>
           </span>
