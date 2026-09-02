@@ -53,10 +53,16 @@ export function SpecStrip() {
       <div className="container spec-grid">
         {specs.map((spec) => (
           <div className="spec" key={spec.label}>
-            <div className="spec-value">
-              {"prefix" in spec && spec.prefix ? spec.prefix : ""}
-              <CountUp value={spec.value} />
-              {"suffix" in spec && spec.suffix ? spec.suffix : ""}
+            <div className={`spec-value${"text" in spec ? " is-text" : ""}`}>
+              {"text" in spec ? (
+                spec.text
+              ) : (
+                <>
+                  {"prefix" in spec && spec.prefix ? spec.prefix : ""}
+                  <CountUp value={spec.value} />
+                  {"suffix" in spec && spec.suffix ? spec.suffix : ""}
+                </>
+              )}
             </div>
             <div className="spec-label">{spec.label}</div>
           </div>
