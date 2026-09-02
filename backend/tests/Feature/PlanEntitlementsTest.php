@@ -42,7 +42,7 @@ class PlanEntitlementsTest extends TestCase
         $shop = $this->shop('active');
 
         $this->assertSame('free', $ent->effectivePlan($shop)->code);
-        $this->assertSame(50, $ent->inventoryLimit($shop));
+        $this->assertSame(150, $ent->inventoryLimit($shop));
         $this->assertSame(1, $ent->memberLimit($shop));
         $this->assertFalse($ent->can($shop, 'discord'));
         $this->assertFalse($ent->can($shop, 'activity_log'));
@@ -90,10 +90,10 @@ class PlanEntitlementsTest extends TestCase
     public function test_ensure_inventory_capacity_aborts_422_over_the_limit(): void
     {
         $ent = app(PlanEntitlements::class);
-        $shop = $this->shop('active'); // free → limit 50
+        $shop = $this->shop('active'); // free → limit 150
 
-        for ($i = 0; $i < 50; $i++) {
-            InventoryItem::create(['shop_id' => $shop->id, 'tag' => str_pad((string) $i, 5, 'A', STR_PAD_LEFT), 'title' => 't', 'cost' => 0, 'list_price' => 0, 'status' => 'available']);
+        for ($i = 0; $i < 150; $i++) {
+            InventoryItem::create(['shop_id' => $shop->id, 'tag' => str_pad(base_convert((string) $i, 10, 36), 5, 'A', STR_PAD_LEFT), 'title' => 't', 'cost' => 0, 'list_price' => 0, 'status' => 'available']);
         }
 
         try {
