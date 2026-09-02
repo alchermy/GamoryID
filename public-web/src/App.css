@@ -50,7 +50,6 @@
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 11px;
   color: var(--ink);
   text-decoration: none;
   font: 700 24px/1 var(--font-display);
@@ -59,8 +58,8 @@
 }
 .logo picture img {
   display: block;
-  width: 44px;
-  height: 44px;
+  width: 80px;
+  height: 80px;
   object-fit: contain;
 }
 .logo span span {
