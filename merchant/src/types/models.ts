@@ -187,15 +187,6 @@ export type TeamMember = {
   user: { id: number; name: string; email: string };
 };
 
-export type TeamInvitation = {
-  id: number;
-  name: string;
-  email: string;
-  permissions: string[];
-  expires_at: string;
-  inviter?: { id: number; name: string };
-};
-
 export type Payment = {
   id: number;
   status: string;

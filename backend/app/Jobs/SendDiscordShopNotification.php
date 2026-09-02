@@ -9,6 +9,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class SendDiscordShopNotification implements ShouldQueue
 {
@@ -32,9 +34,26 @@ class SendDiscordShopNotification implements ShouldQueue
     {
         $shop = Shop::query()->find($this->shopId);
         if (! $shop) {
+            Log::channel('discord')->warning('ข้ามการแจ้งเตือน Discord: ไม่พบร้าน', [
+                'shop_id' => $this->shopId,
+                'purpose' => $this->purpose,
+                'title' => $this->title,
+            ]);
+
             return;
         }
 
         $notifications->send($shop, $this->purpose, $this->title, $this->description);
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        Log::channel('discord')->error('งานแจ้งเตือน Discord ล้มเหลวหลังพยายามครบทุกครั้ง', [
+            'shop_id' => $this->shopId,
+            'purpose' => $this->purpose,
+            'title' => $this->title,
+            'exception' => $exception::class,
+            'message' => $exception->getMessage(),
+        ]);
     }
 }

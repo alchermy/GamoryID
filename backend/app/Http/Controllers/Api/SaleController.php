@@ -13,6 +13,7 @@ use App\Models\Sale;
 use App\Services\AuditLogger;
 use App\Services\CurrentShop;
 use App\Services\Discord\DiscordNotificationMessageBuilder;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -96,19 +97,25 @@ class SaleController extends Controller
             }
             $soldPrice = (float) $request->validated('sold_price');
             $cost = (float) $item->cost;
-            $sale = Sale::create([
-                'shop_id' => $shop->id,
-                'inventory_item_id' => $item->id,
-                'customer_id' => $customerId,
-                'created_by' => $request->user()->id,
-                'sold_price' => $soldPrice,
-                'cost_snapshot' => $cost,
-                'profit' => $soldPrice - $cost,
-                'has_warranty' => (bool) $request->validated('has_warranty'),
-                'warranty_ends_at' => $request->validated('has_warranty') ? $request->validated('warranty_ends_at') : null,
-                'notes' => $request->validated('notes'),
-                'sold_at' => now(),
-            ]);
+            try {
+                $sale = Sale::create([
+                    'shop_id' => $shop->id,
+                    'inventory_item_id' => $item->id,
+                    'customer_id' => $customerId,
+                    'created_by' => $request->user()->id,
+                    'sold_price' => $soldPrice,
+                    'cost_snapshot' => $cost,
+                    'profit' => $soldPrice - $cost,
+                    'has_warranty' => (bool) $request->validated('has_warranty'),
+                    'warranty_ends_at' => $request->validated('has_warranty') ? $request->validated('warranty_ends_at') : null,
+                    'notes' => $request->validated('notes'),
+                    'sold_at' => now(),
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                // Belt-and-braces: the unique index on sales.inventory_item_id is the final guard
+                // against a double sell if two transactions somehow raced past the checks above.
+                abort(409, 'รายการนี้ถูกขายไปแล้ว');
+            }
             Reservation::where('inventory_item_id', $item->id)->whereNull('released_at')->update(['released_at' => now()]);
             $item->update(['status' => InventoryStatus::Sold, 'lock_version' => $item->lock_version + 1]);
 

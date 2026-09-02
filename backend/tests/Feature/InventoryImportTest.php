@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessInventoryImport;
+use App\Models\ImportError;
 use App\Models\ImportJob;
+use App\Models\InventoryItem;
 use App\Models\Shop;
 use App\Models\ShopMember;
 use App\Models\User;
@@ -144,6 +146,132 @@ class InventoryImportTest extends TestCase
             'status' => 'completed',
             'imported_rows' => 1,
         ]);
+    }
+
+    public function test_a_large_batch_rolls_back_entirely_when_the_last_row_is_invalid(): void
+    {
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        $rows = "title,list_price,username\n";
+        for ($i = 1; $i <= 299; $i++) {
+            $rows .= "ไอดีที่ {$i},5000,user{$i}@example.test\n";
+        }
+        $rows .= "ไอดีราคาผิด,abc,user300@example.test\n";
+        $path = "imports/{$shop->id}/large-batch.csv";
+        Storage::disk('private')->put($path, $rows);
+        $job = ImportJob::create([
+            'shop_id' => $shop->id,
+            'user_id' => $user->id,
+            'status' => 'queued',
+            'disk' => 'private',
+            'path' => $path,
+            'mapping' => ['title' => 'title', 'list_price' => 'list_price', 'username' => 'username'],
+            'total_rows' => 300,
+        ]);
+
+        (new ProcessInventoryImport($job->id))->handle(
+            app(TagGenerator::class),
+            app(CredentialCipher::class),
+            app(InventoryImportReader::class),
+        );
+
+        $this->assertDatabaseCount('inventory_items', 0);
+        $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'failed', 'imported_rows' => 0, 'failed_rows' => 1]);
+        $this->assertDatabaseHas('import_errors', ['import_job_id' => $job->id, 'row_number' => 301]);
+        Storage::disk('private')->assertMissing($path);
+    }
+
+    public function test_a_duplicate_username_within_the_file_fails_the_whole_batch(): void
+    {
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        $path = "imports/{$shop->id}/duplicate-username.csv";
+        Storage::disk('private')->put($path, "title,list_price,username\nไอดีที่หนึ่ง,5000,same.user@example.test\nไอดีที่สอง,6000,same.user@example.test\n");
+        $job = ImportJob::create([
+            'shop_id' => $shop->id,
+            'user_id' => $user->id,
+            'status' => 'queued',
+            'disk' => 'private',
+            'path' => $path,
+            'mapping' => ['title' => 'title', 'list_price' => 'list_price', 'username' => 'username'],
+            'total_rows' => 2,
+        ]);
+
+        (new ProcessInventoryImport($job->id))->handle(
+            app(TagGenerator::class),
+            app(CredentialCipher::class),
+            app(InventoryImportReader::class),
+        );
+
+        $this->assertDatabaseCount('inventory_items', 0);
+        $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'failed', 'imported_rows' => 0]);
+        $error = ImportError::where('import_job_id', $job->id)->firstOrFail();
+        $this->assertStringContainsString('พบ Username ซ้ำกับแถว', $error->message);
+    }
+
+    public function test_a_whole_batch_database_failure_is_recorded_and_nothing_is_left_partially_imported(): void
+    {
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        InventoryItem::create(['shop_id' => $shop->id, 'tag' => 'DUP01', 'title' => 'มีอยู่แล้ว', 'cost' => 0, 'list_price' => 0, 'status' => 'available']);
+        $this->app->bind(TagGenerator::class, fn () => new class extends TagGenerator
+        {
+            public function generate(): string
+            {
+                return 'DUP01';
+            }
+        });
+        $path = "imports/{$shop->id}/tag-collision.csv";
+        Storage::disk('private')->put($path, "title,list_price\nไอดีใหม่,5000\n");
+        $job = ImportJob::create([
+            'shop_id' => $shop->id,
+            'user_id' => $user->id,
+            'status' => 'queued',
+            'disk' => 'private',
+            'path' => $path,
+            'mapping' => ['title' => 'title', 'list_price' => 'list_price'],
+            'total_rows' => 1,
+        ]);
+
+        (new ProcessInventoryImport($job->id))->handle(
+            app(TagGenerator::class),
+            app(CredentialCipher::class),
+            app(InventoryImportReader::class),
+        );
+
+        $this->assertDatabaseCount('inventory_items', 1);
+        $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'failed', 'imported_rows' => 0, 'failed_rows' => 1]);
+        $error = ImportError::where('import_job_id', $job->id)->firstOrFail();
+        $this->assertSame(0, $error->row_number);
+        $this->assertStringStartsWith('นำเข้าทั้งชุดไม่สำเร็จ', $error->message);
+    }
+
+    public function test_a_valid_csv_batch_is_imported_end_to_end(): void
+    {
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        $path = "imports/{$shop->id}/happy-path.csv";
+        Storage::disk('private')->put($path, "title,list_price,username\nไอดีที่ถูกต้อง 1,5000,csv.user01@example.test\nไอดีที่ถูกต้อง 2,6200,csv.user02@example.test\n");
+        $job = ImportJob::create([
+            'shop_id' => $shop->id,
+            'user_id' => $user->id,
+            'status' => 'queued',
+            'disk' => 'private',
+            'path' => $path,
+            'mapping' => ['title' => 'title', 'list_price' => 'list_price', 'username' => 'username'],
+            'total_rows' => 2,
+        ]);
+
+        (new ProcessInventoryImport($job->id))->handle(
+            app(TagGenerator::class),
+            app(CredentialCipher::class),
+            app(InventoryImportReader::class),
+        );
+
+        $this->assertDatabaseCount('inventory_items', 2);
+        $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'completed', 'imported_rows' => 2, 'failed_rows' => 0]);
+        $this->assertDatabaseHas('inventory_credentials', ['inventory_item_id' => InventoryItem::where('title', 'ไอดีที่ถูกต้อง 1')->firstOrFail()->id]);
+        Storage::disk('private')->assertMissing($path);
     }
 
     /** @return array{User, Shop} */

@@ -1,17 +1,17 @@
 import type { FormEvent } from "react";
 import {
-  Copy,
   Crown,
+  KeyRound,
   MessagesSquare,
+  Pencil,
   ShieldCheck,
   Trash2,
   UserPlus,
   X,
 } from "lucide-react";
 import { permissionOptions } from "../../config/navigation";
-import { formatDate } from "../../shared/lib/format";
-import { DialogHead, Field } from "../../shared/ui/form-controls";
-import type { TeamInvitation, TeamMember } from "../../types/models";
+import { DialogHead, Field, PasswordInput } from "../../shared/ui/form-controls";
+import type { TeamMember } from "../../types/models";
 
 function ManagementError({
   error,
@@ -30,27 +30,129 @@ function ManagementError({
     </div>
   );
 }
+
+function MemberPermissions({
+  member,
+  canManage,
+  onPermissionsChange,
+}: {
+  member: TeamMember;
+  canManage: boolean;
+  onPermissionsChange: (member: TeamMember, permissions: string[]) => void;
+}) {
+  return (
+    <>
+      {permissionOptions.map(([key, label]) => (
+        <label key={key} className="permission-item">
+          <input
+            type="checkbox"
+            checked={
+              member.role === "owner" ||
+              (member.permissions ?? []).includes(key)
+            }
+            disabled={!canManage || member.role === "owner"}
+            onChange={(event) => {
+              const next = new Set(member.permissions ?? []);
+              if (event.target.checked) {
+                next.add(key);
+              } else {
+                next.delete(key);
+              }
+              onPermissionsChange(member, [...next]);
+            }}
+          />
+          <span>{label}</span>
+        </label>
+      ))}
+    </>
+  );
+}
+
+function MemberRowActions({
+  member,
+  canManage,
+  onEdit,
+  onResetPassword,
+  onRemove,
+  mobile = false,
+}: {
+  member: TeamMember;
+  canManage: boolean;
+  onEdit: (member: TeamMember) => void;
+  onResetPassword: (member: TeamMember) => void;
+  onRemove: (member: TeamMember) => void;
+  mobile?: boolean;
+}) {
+  if (!canManage || member.role !== "staff") return null;
+  if (mobile) {
+    return (
+      <div className="member-mobile-actions">
+        <button className="button" onClick={() => onEdit(member)}>
+          <Pencil size={16} />
+          แก้ไข
+        </button>
+        <button className="button" onClick={() => onResetPassword(member)}>
+          <KeyRound size={16} />
+          รีเซ็ตรหัสผ่าน
+        </button>
+        <button
+          className="button danger member-remove-button"
+          onClick={() => onRemove(member)}
+        >
+          <Trash2 size={16} />
+          นำออกจากร้าน
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="member-row-actions">
+      <button
+        className="icon-button"
+        aria-label={`แก้ไข ${member.user.name}`}
+        onClick={() => onEdit(member)}
+      >
+        <Pencil size={17} />
+      </button>
+      <button
+        className="icon-button"
+        aria-label={`รีเซ็ตรหัสผ่านของ ${member.user.name}`}
+        onClick={() => onResetPassword(member)}
+      >
+        <KeyRound size={17} />
+      </button>
+      <button
+        className="icon-button danger-icon"
+        aria-label={`นำ ${member.user.name} ออกจากร้าน`}
+        onClick={() => onRemove(member)}
+      >
+        <Trash2 size={17} />
+      </button>
+    </div>
+  );
+}
+
 export function TeamPanel({
   members,
-  invitations,
   loading,
   error,
   canManage,
-  invite,
+  createStaff,
   onPermissionsChange,
+  onEdit,
+  onResetPassword,
   onRemove,
-  onRevokeInvitation,
   retry,
 }: {
   members: TeamMember[];
-  invitations: TeamInvitation[];
   loading: boolean;
   error: string;
   canManage: boolean;
-  invite: () => void;
+  createStaff: () => void;
   onPermissionsChange: (member: TeamMember, permissions: string[]) => void;
+  onEdit: (member: TeamMember) => void;
+  onResetPassword: (member: TeamMember) => void;
   onRemove: (member: TeamMember) => void;
-  onRevokeInvitation: (invitation: TeamInvitation) => void;
   retry: () => void;
 }) {
   return (
@@ -63,9 +165,9 @@ export function TeamPanel({
           </small>
         </div>
         {canManage && (
-          <button className="button primary" onClick={invite}>
+          <button className="button primary" onClick={createStaff}>
             <UserPlus size={17} />
-            เชิญพนักงาน
+            เพิ่มพนักงาน
           </button>
         )}
       </div>
@@ -117,40 +219,21 @@ export function TeamPanel({
                     </td>
                     <td>
                       <div className="permission-list">
-                        {permissionOptions.map(([key, label]) => (
-                          <label key={key} className="permission-item">
-                            <input
-                              type="checkbox"
-                              checked={
-                                member.role === "owner" ||
-                                (member.permissions ?? []).includes(key)
-                              }
-                              disabled={!canManage || member.role === "owner"}
-                              onChange={(event) => {
-                                const next = new Set(member.permissions ?? []);
-                                if (event.target.checked) {
-                                  next.add(key);
-                                } else {
-                                  next.delete(key);
-                                }
-                                onPermissionsChange(member, [...next]);
-                              }}
-                            />
-                            <span>{label}</span>
-                          </label>
-                        ))}
+                        <MemberPermissions
+                          member={member}
+                          canManage={canManage}
+                          onPermissionsChange={onPermissionsChange}
+                        />
                       </div>
                     </td>
                     <td>
-                      {canManage && member.role === "staff" && (
-                        <button
-                          className="icon-button danger-icon"
-                          aria-label={`นำ ${member.user.name} ออกจากร้าน`}
-                          onClick={() => onRemove(member)}
-                        >
-                          <Trash2 size={17} />
-                        </button>
-                      )}
+                      <MemberRowActions
+                        member={member}
+                        canManage={canManage}
+                        onEdit={onEdit}
+                        onResetPassword={onResetPassword}
+                        onRemove={onRemove}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -176,81 +259,36 @@ export function TeamPanel({
                 </header>
                 <fieldset className="member-mobile-permissions">
                   <legend>สิทธิ์การใช้งาน</legend>
-                  {permissionOptions.map(([key, label]) => (
-                    <label key={key} className="permission-item">
-                      <input
-                        type="checkbox"
-                        checked={
-                          member.role === "owner" ||
-                          (member.permissions ?? []).includes(key)
-                        }
-                        disabled={!canManage || member.role === "owner"}
-                        onChange={(event) => {
-                          const next = new Set(member.permissions ?? []);
-                          if (event.target.checked) {
-                            next.add(key);
-                          } else {
-                            next.delete(key);
-                          }
-                          onPermissionsChange(member, [...next]);
-                        }}
-                      />
-                      <span>{label}</span>
-                    </label>
-                  ))}
+                  <MemberPermissions
+                    member={member}
+                    canManage={canManage}
+                    onPermissionsChange={onPermissionsChange}
+                  />
                 </fieldset>
-                {canManage && member.role === "staff" && (
-                  <button
-                    className="button danger member-remove-button"
-                    onClick={() => onRemove(member)}
-                  >
-                    <Trash2 size={16} />
-                    นำออกจากร้าน
-                  </button>
-                )}
+                <MemberRowActions
+                  member={member}
+                  canManage={canManage}
+                  onEdit={onEdit}
+                  onResetPassword={onResetPassword}
+                  onRemove={onRemove}
+                  mobile
+                />
               </article>
             ))}
           </div>
           {members.length === 0 && (
             <div className="empty">
               <strong>ยังไม่มีพนักงานในร้าน</strong>
-              <p>สร้างคำเชิญเพื่อเพิ่มผู้ช่วยจัดการคลังและรายการขาย</p>
+              <p>เพิ่มพนักงานเพื่อช่วยจัดการคลังและรายการขาย</p>
             </div>
-          )}
-          {invitations.length > 0 && (
-            <section
-              className="pending-invitations"
-              aria-labelledby="pending-invitations-title"
-            >
-              <h3 id="pending-invitations-title">คำเชิญที่รอรับ</h3>
-              {invitations.map((invitation) => (
-                <div className="pending-invitation" key={invitation.id}>
-                  <div>
-                    <strong>{invitation.name}</strong>
-                    <small>
-                      {invitation.email} · หมดอายุ{" "}
-                      {formatDate(invitation.expires_at)}
-                    </small>
-                  </div>
-                  {canManage && (
-                    <button
-                      className="button danger"
-                      onClick={() => onRevokeInvitation(invitation)}
-                    >
-                      <Trash2 size={16} />
-                      ยกเลิกคำเชิญ
-                    </button>
-                  )}
-                </div>
-              ))}
-            </section>
           )}
         </>
       )}
     </section>
   );
 }
-export function InviteDialog({
+
+export function CreateStaffDialog({
   close,
   submit,
 }: {
@@ -268,14 +306,14 @@ export function InviteDialog({
         className="dialog management-dialog"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="invite-title"
+        aria-labelledby="create-staff-title"
         onSubmit={submit}
         noValidate
       >
         <DialogHead
-          id="invite-title"
-          title="เชิญพนักงาน"
-          subtitle="สมาชิกใหม่จะเริ่มต้นด้วยสิทธิ์ที่คุณเลือก"
+          id="create-staff-title"
+          title="เพิ่มพนักงาน"
+          subtitle="กำหนดอีเมลและรหัสผ่านให้พนักงานใช้เข้าสู่ระบบ"
           close={close}
         />
         <div className="dialog-body">
@@ -285,6 +323,24 @@ export function InviteDialog({
             </Field>
             <Field label="อีเมล">
               <input name="email" type="email" required autoComplete="email" />
+            </Field>
+            <Field label="รหัสผ่าน" htmlFor="create-staff-password">
+              <PasswordInput
+                id="create-staff-password"
+                name="password"
+                minLength={10}
+                required
+                autoComplete="new-password"
+              />
+            </Field>
+            <Field label="ยืนยันรหัสผ่าน" htmlFor="create-staff-password-confirmation">
+              <PasswordInput
+                id="create-staff-password-confirmation"
+                name="password_confirmation"
+                minLength={10}
+                required
+                autoComplete="new-password"
+              />
             </Field>
           </div>
           <fieldset className="permission-fieldset">
@@ -303,6 +359,9 @@ export function InviteDialog({
               </label>
             ))}
           </fieldset>
+          <p className="field-help">
+            แจ้งอีเมลและรหัสผ่านนี้ให้พนักงานเพื่อเข้าสู่ระบบ Merchant
+          </p>
         </div>
         <div className="dialog-actions">
           <button type="button" className="button" onClick={close}>
@@ -310,30 +369,23 @@ export function InviteDialog({
           </button>
           <button className="button primary">
             <UserPlus size={17} />
-            ส่งคำเชิญ
+            เพิ่มพนักงาน
           </button>
         </div>
       </form>
     </div>
   );
 }
-export function InviteLinkDialog({
-  url,
+
+export function EditStaffDialog({
+  member,
   close,
-  notify,
+  submit,
 }: {
-  url: string;
+  member: TeamMember;
   close: () => void;
-  notify: (message: string) => void;
+  submit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard?.writeText(url);
-      notify("คัดลอกลิงก์คำเชิญแล้ว");
-    } catch {
-      notify("คัดลอกลิงก์ไม่สำเร็จ");
-    }
-  };
   return (
     <div
       className="dialog-backdrop"
@@ -341,48 +393,119 @@ export function InviteLinkDialog({
         if (event.target === event.currentTarget) close();
       }}
     >
-      <section
+      <form
         className="dialog management-dialog"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="invite-link-title"
+        aria-labelledby="edit-staff-title"
+        onSubmit={submit}
+        noValidate
       >
         <DialogHead
-          id="invite-link-title"
-          title="ส่งคำเชิญให้พนักงาน"
-          subtitle="ลิงก์นี้ใช้ได้ 7 วันและใช้ได้เพียงครั้งเดียว"
+          id="edit-staff-title"
+          title={`แก้ไข ${member.user.name}`}
+          subtitle="เปลี่ยนชื่อและสิทธิ์การใช้งาน"
           close={close}
         />
         <div className="dialog-body">
-          <label className="field">
-            <span className="field-label">ลิงก์คำเชิญ</span>
-            <span className="invite-link">
-              <input readOnly value={url} aria-label="ลิงก์คำเชิญ" />
-              <button
-                type="button"
-                className="button"
-                onClick={() => void copyLink()}
-              >
-                <Copy size={17} />
-                คัดลอก
-              </button>
-            </span>
-          </label>
+          <Field label="ชื่อพนักงาน">
+            <input name="name" required autoFocus defaultValue={member.user.name} />
+          </Field>
+          <fieldset className="permission-fieldset">
+            <legend>สิทธิ์การใช้งาน</legend>
+            {permissionOptions.map(([key, label, description]) => (
+              <label key={key} className="permission-item">
+                <input
+                  type="checkbox"
+                  name={`permission-${key}`}
+                  defaultChecked={(member.permissions ?? []).includes(key)}
+                />
+                <span className="permission-copy">
+                  <strong>{label}</strong>
+                  <small>{description}</small>
+                </span>
+              </label>
+            ))}
+          </fieldset>
         </div>
         <div className="dialog-actions">
-          <button
-            type="button"
-            className="button primary"
-            autoFocus
-            onClick={close}
-          >
-            เสร็จสิ้น
+          <button type="button" className="button" onClick={close}>
+            ยกเลิก
+          </button>
+          <button className="button primary">
+            <ShieldCheck size={17} />
+            บันทึก
           </button>
         </div>
-      </section>
+      </form>
     </div>
   );
 }
+
+export function ResetPasswordDialog({
+  member,
+  close,
+  submit,
+}: {
+  member: TeamMember;
+  close: () => void;
+  submit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <div
+      className="dialog-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
+    >
+      <form
+        className="dialog management-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reset-password-title"
+        onSubmit={submit}
+        noValidate
+      >
+        <DialogHead
+          id="reset-password-title"
+          title={`รีเซ็ตรหัสผ่านของ ${member.user.name}`}
+          subtitle="พนักงานจะถูกออกจากระบบทุกอุปกรณ์และต้องใช้รหัสผ่านใหม่"
+          close={close}
+        />
+        <div className="dialog-body">
+          <Field label="รหัสผ่านใหม่" htmlFor="reset-password-new">
+            <PasswordInput
+              id="reset-password-new"
+              name="password"
+              minLength={10}
+              required
+              autoComplete="new-password"
+            />
+          </Field>
+          <Field label="ยืนยันรหัสผ่านใหม่" htmlFor="reset-password-confirmation">
+            <PasswordInput
+              id="reset-password-confirmation"
+              name="password_confirmation"
+              minLength={10}
+              required
+              autoComplete="new-password"
+            />
+          </Field>
+        </div>
+        <div className="dialog-actions">
+          <button type="button" className="button" onClick={close}>
+            ยกเลิก
+          </button>
+          <button className="button primary">
+            <KeyRound size={17} />
+            ตั้งรหัสผ่านใหม่
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export function PermissionDialog({
   member,
   permissions,
@@ -437,6 +560,7 @@ export function PermissionDialog({
     </div>
   );
 }
+
 export function RemoveMemberDialog({
   member,
   close,

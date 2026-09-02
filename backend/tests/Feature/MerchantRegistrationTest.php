@@ -6,7 +6,7 @@ use App\Enums\SubscriptionStatus;
 use App\Models\ShopMember;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Notifications\VerifyEmailNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
@@ -65,7 +65,34 @@ class MerchantRegistrationTest extends TestCase
             'status' => SubscriptionStatus::Trialing->value,
         ]);
         $this->assertSame([], ShopMember::query()->where('user_id', $user->id)->firstOrFail()->permissions);
-        Notification::assertSentTo($user, VerifyEmail::class);
+        Notification::assertSentTo($user, VerifyEmailNotification::class);
+    }
+
+    public function test_unverified_merchant_cannot_reach_the_app(): void
+    {
+        $user = User::create([
+            'name' => 'ผู้ใช้รอยืนยัน',
+            'email' => 'unverified@example.test',
+            'password' => 'strong-pass-123',
+        ]);
+
+        $this->actingAs($user)->getJson('/api/v1/dashboard')->assertForbidden();
+    }
+
+    public function test_unverified_merchant_can_request_another_verification_email(): void
+    {
+        Notification::fake();
+        $user = User::create([
+            'name' => 'ผู้ใช้รอยืนยัน',
+            'email' => 'resend@example.test',
+            'password' => 'strong-pass-123',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson('/api/v1/email/verification-notification')
+            ->assertOk();
+
+        Notification::assertSentTo($user, VerifyEmailNotification::class);
     }
 
     public function test_registration_explains_the_ten_character_password_rule_in_thai(): void
@@ -82,7 +109,7 @@ class MerchantRegistrationTest extends TestCase
             ->assertJsonPath('errors.password.0', 'รหัสผ่านต้องมีอย่างน้อย 10 ตัวอักษร');
     }
 
-    public function test_verified_email_link_returns_the_merchant_to_the_app(): void
+    public function test_verified_email_link_works_without_an_authenticated_session(): void
     {
         $user = User::create([
             'name' => 'ผู้ใช้รอยืนยัน',
@@ -95,10 +122,28 @@ class MerchantRegistrationTest extends TestCase
             ['id' => $user->id, 'hash' => sha1($user->email)],
         );
 
-        $this->actingAs($user)
-            ->get($verificationUrl)
+        // No actingAs(): the link is opened straight from an email, in a browser
+        // that has no session for this user.
+        $this->get($verificationUrl)
             ->assertRedirect('http://localhost:5173/verify-email?verified=1');
 
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_verification_link_with_a_wrong_hash_is_rejected(): void
+    {
+        $user = User::create([
+            'name' => 'ผู้ใช้รอยืนยัน',
+            'email' => 'wrong-hash@example.test',
+            'password' => 'strong-pass-123',
+        ]);
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1('someone-else@example.test')],
+        );
+
+        $this->get($verificationUrl)->assertForbidden();
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
     }
 }

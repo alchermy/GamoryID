@@ -54,7 +54,7 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'channels' => explode(',', (string) env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
         ],
 
@@ -65,9 +65,54 @@ return [
             'replace_placeholders' => true,
         ],
 
+        /*
+        | Main application log, rotated into one file per day
+        | (storage/logs/gamoryid-YYYY-MM-DD.log). Catches uncaught exceptions
+        | and anything not routed to a dedicated channel below.
+        */
         'daily' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/laravel.log'),
+            'path' => storage_path('logs/gamoryid.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        /*
+        | Dedicated per-concern channels. Each writes its own daily file so a
+        | single area of the system can be followed without noise from the rest:
+        |   storage/logs/discord-YYYY-MM-DD.log
+        |   storage/logs/billing-YYYY-MM-DD.log
+        |   storage/logs/imports-YYYY-MM-DD.log
+        |   storage/logs/scheduler-YYYY-MM-DD.log
+        */
+        'discord' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/discord.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        'billing' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/billing.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
+        'imports' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/imports.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        'scheduler' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/scheduler.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,

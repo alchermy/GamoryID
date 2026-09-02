@@ -59,7 +59,7 @@ class AuthController extends Controller
             return [$user, $shop];
         });
 
-        Auth::login($user);
+        Auth::guard('web')->login($user);
         $request->session()->regenerate();
         $user->sendEmailVerificationNotification();
 
@@ -69,12 +69,12 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+        if (! Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
             throw ValidationException::withMessages(['email' => ['อีเมลหรือรหัสผ่านไม่ถูกต้อง']]);
         }
         $request->session()->regenerate();
 
-        return response()->json(['user' => $this->userPayload($request->user())]);
+        return response()->json(['user' => $this->userPayload(Auth::guard('web')->user())]);
     }
 
     public function me(Request $request): JsonResponse

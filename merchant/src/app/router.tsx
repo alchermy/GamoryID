@@ -1,14 +1,7 @@
-import {
-  BrowserRouter,
-  MemoryRouter,
-  Route,
-  Routes,
-  useParams,
-} from "react-router-dom";
+import { BrowserRouter, MemoryRouter, Route, Routes } from "react-router-dom";
 import {
   AuthGate,
   AuthScreen,
-  InviteScreen,
   StatePage,
   VerifyEmailScreen,
 } from "../features/auth/auth-pages";
@@ -27,21 +20,11 @@ const merchantPaths = [
   "/settings",
 ];
 
-function InviteRoute() {
-  const { token } = useParams();
-  return token ? (
-    <InviteScreen token={token} />
-  ) : (
-    <StatePage code="404" title="ไม่พบคำเชิญ" text="ลิงก์คำเชิญนี้ไม่ถูกต้อง" />
-  );
-}
-
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<AuthScreen mode="login" />} />
       <Route path="/register" element={<AuthScreen mode="register" />} />
-      <Route path="/invite/:token" element={<InviteRoute />} />
       <Route
         path="/403"
         element={

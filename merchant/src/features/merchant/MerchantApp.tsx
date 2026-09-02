@@ -48,14 +48,14 @@ import type {
   SaleRecord,
   SessionUser,
   ShopDetails,
-  TeamInvitation,
   TeamMember,
 } from "../../types/models";
 import { ImportPanel } from "../imports/ImportPanel";
 import {
   TeamPanel,
-  InviteDialog,
-  InviteLinkDialog,
+  CreateStaffDialog,
+  EditStaffDialog,
+  ResetPasswordDialog,
   PermissionDialog,
   RemoveMemberDialog,
 } from "../team/team-components";
@@ -162,16 +162,16 @@ export function MerchantApp() {
     [historyRevision, setHistoryRevision] = useState(0);
   const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null),
     [team, setTeam] = useState<TeamMember[]>([]),
-    [invitations, setInvitations] = useState<TeamInvitation[]>([]),
     [plans, setPlans] = useState<Plan[]>([]),
     [paymentBusy, setPaymentBusy] = useState(false),
     [managementLoading, setManagementLoading] = useState(false),
     [managementError, setManagementError] = useState(""),
     [managementRevision, setManagementRevision] = useState(0),
     [managementDialog, setManagementDialog] = useState<
-      | "invite"
+      | "createStaff"
+      | "editStaff"
+      | "resetPassword"
       | "remove"
-      | "inviteLink"
       | "permissions"
       | "purchase"
       | "autoRenew"
@@ -182,8 +182,7 @@ export function MerchantApp() {
       member: TeamMember;
       permissions: string[];
     } | null>(null),
-    [pendingPlan, setPendingPlan] = useState<Plan | null>(null),
-    [inviteLink, setInviteLink] = useState("");
+    [pendingPlan, setPendingPlan] = useState<Plan | null>(null);
   const [billingHistory, setBillingHistory] = useState<BillingHistory | null>(
       null,
     ),
@@ -362,12 +361,11 @@ export function MerchantApp() {
       );
       setShopDetails(shopResult.data);
       if (page === "team") {
-        const [teamResult, invitationResult] = await Promise.all([
-          shopRequest<{ data: TeamMember[] }>("/team", shop.id),
-          shopRequest<{ data: TeamInvitation[] }>("/team/invitations", shop.id),
-        ]);
+        const teamResult = await shopRequest<{ data: TeamMember[] }>(
+          "/team",
+          shop.id,
+        );
         setTeam(teamResult.data);
-        setInvitations(invitationResult.data);
       }
       if (page === "billing") {
         const planResult = await apiRequest<{ data: Plan[] }>("/plans");
@@ -806,7 +804,7 @@ export function MerchantApp() {
       notify("ไม่สามารถคัดลอกรายละเอียดไอดีได้");
     }
   };
-  const inviteMember = async (e: FormEvent<HTMLFormElement>) => {
+  const createStaff = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!shop) return;
     const data = new FormData(e.currentTarget);
@@ -814,24 +812,60 @@ export function MerchantApp() {
       .map(([key]) => key)
       .filter((key) => data.get(`permission-${key}`) === "on");
     try {
-      const result = await shopRequest<{ invite_url: string }>(
-        "/team",
-        shop.id,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            name: data.get("name"),
-            email: data.get("email"),
-            permissions,
-          }),
-        },
-      );
-      setInviteLink(result.invite_url);
-      setManagementDialog("inviteLink");
+      await shopRequest("/team", shop.id, {
+        method: "POST",
+        body: JSON.stringify({
+          name: data.get("name"),
+          email: data.get("email"),
+          password: data.get("password"),
+          password_confirmation: data.get("password_confirmation"),
+          permissions,
+        }),
+      });
+      setManagementDialog(null);
       setManagementRevision((value) => value + 1);
-      notify("สร้างลิงก์คำเชิญแล้ว");
+      notify("เพิ่มพนักงานแล้ว");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "สร้างคำเชิญไม่สำเร็จ");
+      notify(error instanceof Error ? error.message : "เพิ่มพนักงานไม่สำเร็จ");
+    }
+  };
+  const editStaff = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!shop || !selectedMember) return;
+    const data = new FormData(e.currentTarget);
+    const permissions = permissionOptions
+      .map(([key]) => key)
+      .filter((key) => data.get(`permission-${key}`) === "on");
+    try {
+      await shopRequest(`/team/${selectedMember.id}`, shop.id, {
+        method: "PUT",
+        body: JSON.stringify({ name: data.get("name"), permissions }),
+      });
+      setManagementDialog(null);
+      setSelectedMember(null);
+      setManagementRevision((value) => value + 1);
+      notify("บันทึกข้อมูลพนักงานแล้ว");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ");
+    }
+  };
+  const resetStaffPassword = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!shop || !selectedMember) return;
+    const data = new FormData(e.currentTarget);
+    try {
+      await shopRequest(`/team/${selectedMember.id}/password`, shop.id, {
+        method: "PUT",
+        body: JSON.stringify({
+          password: data.get("password"),
+          password_confirmation: data.get("password_confirmation"),
+        }),
+      });
+      setManagementDialog(null);
+      setSelectedMember(null);
+      notify("ตั้งรหัสผ่านใหม่แล้ว");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "ตั้งรหัสผ่านใหม่ไม่สำเร็จ");
     }
   };
   const updatePermissions = async () => {
@@ -861,18 +895,6 @@ export function MerchantApp() {
       notify("นำสมาชิกออกจากร้านแล้ว");
     } catch (error) {
       notify(error instanceof Error ? error.message : "นำสมาชิกออกไม่สำเร็จ");
-    }
-  };
-  const revokeInvitation = async (invitation: TeamInvitation) => {
-    if (!shop) return;
-    try {
-      await shopRequest(`/team/invitations/${invitation.id}`, shop.id, {
-        method: "DELETE",
-      });
-      setManagementRevision((value) => value + 1);
-      notify("ยกเลิกคำเชิญแล้ว");
-    } catch (error) {
-      notify(error instanceof Error ? error.message : "ยกเลิกคำเชิญไม่สำเร็จ");
     }
   };
   const saveShopSettings = async (e: FormEvent<HTMLFormElement>) => {
@@ -1249,20 +1271,26 @@ export function MerchantApp() {
         {page === "team" && (
           <TeamPanel
             members={team}
-            invitations={invitations}
             loading={managementLoading}
             error={managementError}
             canManage={hasShopPermission("team.manage")}
-            invite={() => setManagementDialog("invite")}
+            createStaff={() => setManagementDialog("createStaff")}
             onPermissionsChange={(member, permissions) => {
               setPendingPermissions({ member, permissions });
               setManagementDialog("permissions");
+            }}
+            onEdit={(member) => {
+              setSelectedMember(member);
+              setManagementDialog("editStaff");
+            }}
+            onResetPassword={(member) => {
+              setSelectedMember(member);
+              setManagementDialog("resetPassword");
             }}
             onRemove={(member) => {
               setSelectedMember(member);
               setManagementDialog("remove");
             }}
-            onRevokeInvitation={revokeInvitation}
             retry={() => setManagementRevision((value) => value + 1)}
           />
         )}{" "}
@@ -1577,20 +1605,30 @@ export function MerchantApp() {
           busy={inventoryBusy}
         />
       )}{" "}
-      {managementDialog === "invite" && (
-        <InviteDialog
+      {managementDialog === "createStaff" && (
+        <CreateStaffDialog
           close={() => setManagementDialog(null)}
-          submit={inviteMember}
+          submit={createStaff}
         />
       )}{" "}
-      {managementDialog === "inviteLink" && (
-        <InviteLinkDialog
-          url={inviteLink}
+      {managementDialog === "editStaff" && selectedMember && (
+        <EditStaffDialog
+          member={selectedMember}
           close={() => {
-            setInviteLink("");
             setManagementDialog(null);
+            setSelectedMember(null);
           }}
-          notify={notify}
+          submit={editStaff}
+        />
+      )}{" "}
+      {managementDialog === "resetPassword" && selectedMember && (
+        <ResetPasswordDialog
+          member={selectedMember}
+          close={() => {
+            setManagementDialog(null);
+            setSelectedMember(null);
+          }}
+          submit={resetStaffPassword}
         />
       )}{" "}
       {managementDialog === "permissions" && pendingPermissions && (

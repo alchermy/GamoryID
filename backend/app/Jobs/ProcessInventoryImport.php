@@ -12,6 +12,7 @@ use App\Services\TagGenerator;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -28,6 +29,12 @@ class ProcessInventoryImport implements ShouldQueue
     public function handle(TagGenerator $tags, CredentialCipher $cipher, InventoryImportReader $reader): void
     {
         $import = ImportJob::findOrFail($this->importJobId);
+        $log = Log::channel('imports')->withContext([
+            'import_job_id' => $import->id,
+            'shop_id' => $import->shop_id,
+            'user_id' => $import->user_id,
+        ]);
+        $log->info('เริ่มประมวลผลไฟล์นำเข้า', ['file' => $import->path, 'total_rows' => $import->total_rows]);
         $import->update(['status' => 'processing']);
         $sheet = $reader->read($import->disk, $import->path);
         $records = [];
@@ -71,6 +78,14 @@ class ProcessInventoryImport implements ShouldQueue
                 'imported_rows' => 0, 'failed_rows' => count($errors), 'completed_at' => $now,
             ]);
             Storage::disk($import->disk)->delete($import->path);
+            $log->warning('ยกเลิกการนำเข้าทั้งชุดเพราะข้อมูลบางแถวไม่ผ่านการตรวจสอบ', [
+                'invalid_rows' => count($errors),
+                'valid_rows' => count($records),
+                'first_errors' => array_map(
+                    fn (array $error) => "แถวที่ {$error['row_number']}: {$error['message']}",
+                    array_slice($errors, 0, 5),
+                ),
+            ]);
 
             return;
         }
@@ -112,6 +127,7 @@ class ProcessInventoryImport implements ShouldQueue
                 'status' => 'completed', 'processed_rows' => count($records),
                 'imported_rows' => count($records), 'failed_rows' => 0, 'completed_at' => now(),
             ]);
+            $log->info('นำเข้าสำเร็จ', ['imported_rows' => count($records)]);
         } catch (Throwable $exception) {
             ImportError::create([
                 'import_job_id' => $import->id, 'row_number' => 0,
@@ -121,6 +137,12 @@ class ProcessInventoryImport implements ShouldQueue
                 'status' => 'failed', 'processed_rows' => count($records),
                 'imported_rows' => 0, 'failed_rows' => 1, 'completed_at' => now(),
             ]);
+            $log->error('นำเข้าทั้งชุดไม่สำเร็จระหว่างบันทึกลงฐานข้อมูล (rollback แล้ว)', [
+                'valid_rows' => count($records),
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+                'at' => $exception->getFile().':'.$exception->getLine(),
+            ]);
         } finally {
             Storage::disk($import->disk)->delete($import->path);
         }
@@ -129,6 +151,11 @@ class ProcessInventoryImport implements ShouldQueue
     public function failed(Throwable $exception): void
     {
         ImportJob::whereKey($this->importJobId)->update(['status' => 'failed']);
+        Log::channel('imports')->error('งานนำเข้าล้มเหลวและไม่สามารถลองใหม่ได้', [
+            'import_job_id' => $this->importJobId,
+            'exception' => $exception::class,
+            'message' => $exception->getMessage(),
+        ]);
     }
 
     /** @return array<string, mixed> */

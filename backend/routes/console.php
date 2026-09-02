@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\ReservationLifecycle;
 use App\Services\SubscriptionLifecycle;
 use App\Services\Totp;
 use Illuminate\Foundation\Inspiring;
@@ -21,3 +22,6 @@ Artisan::command('gamoryid:admin-2fa {email}', function (Totp $totp) {
 
 Schedule::call(fn (SubscriptionLifecycle $lifecycle) => $lifecycle->run())
     ->hourly()->name('subscriptions.lifecycle')->withoutOverlapping();
+
+Schedule::call(fn (ReservationLifecycle $lifecycle) => $lifecycle->run())
+    ->everyFiveMinutes()->name('reservations.lifecycle')->withoutOverlapping();

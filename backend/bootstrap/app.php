@@ -25,5 +25,18 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Attach request/actor context to every reported exception so the log
+        // line points at exactly which request, user and shop hit the failure.
+        $exceptions->context(function (): array {
+            $request = request();
+
+            return array_filter([
+                'url' => $request?->fullUrl(),
+                'method' => $request?->method(),
+                'route' => $request?->route()?->getName() ?: optional($request?->route())->uri(),
+                'ip' => $request?->ip(),
+                'user_id' => optional($request?->user())->id,
+                'shop_id' => $request?->header('X-Shop-Id'),
+            ], fn ($value) => $value !== null && $value !== '');
+        });
     })->create();

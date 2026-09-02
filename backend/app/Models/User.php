@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ShopPermission;
+use App\Notifications\VerifyEmailNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
@@ -62,6 +63,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return $this->belongsToMany(Shop::class, 'shop_members')
             ->withPivot(['role', 'permissions', 'joined_at'])
             ->withTimestamps();
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNotification);
     }
 
     public function hasShopPermission(Shop $shop, ShopPermission|string $permission): bool

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import {
   Navigate,
   Outlet,
@@ -8,7 +8,6 @@ import {
   useOutletContext,
 } from "react-router-dom";
 import { apiRequest, prepareCsrf } from "../../api";
-import { formatDate } from "../../shared/lib/format";
 import { Field, PasswordInput } from "../../shared/ui/form-controls";
 import type { SessionUser } from "../../types/models";
 import { RegistrationJourney } from "./registration-journey";
@@ -248,160 +247,6 @@ export function AuthScreen({ mode }: { mode: "login" | "register" }) {
   );
 }
 
-export function InviteScreen({ token }: { token: string }) {
-  const [invite, setInvite] = useState<{
-      shop_name: string;
-      email: string;
-      expires_at: string;
-    } | null>(null),
-    [loading, setLoading] = useState(true),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    void apiRequest<{
-      data: { shop_name: string; email: string; expires_at: string };
-    }>(`/team-invitations/${encodeURIComponent(token)}`)
-      .then((result) => {
-        if (active) setInvite(result.data);
-      })
-      .catch((reason) => {
-        if (active)
-          setError(
-            reason instanceof Error
-              ? reason.message
-              : "ลิงก์คำเชิญไม่พร้อมใช้งาน",
-          );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [token]);
-  useEffect(() => {
-    document.title = "เข้าร่วมร้าน — GamoryID";
-  }, []);
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    const data = new FormData(event.currentTarget);
-    try {
-      const csrf = await prepareCsrf();
-      await apiRequest(
-        `/team-invitations/${encodeURIComponent(token)}/accept`,
-        {
-          method: "POST",
-          headers: csrf,
-          body: JSON.stringify({
-            name: data.get("name"),
-            password: data.get("password"),
-            password_confirmation: data.get("password_confirmation"),
-          }),
-        },
-      );
-      window.location.href = "/";
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "ไม่สามารถเข้าร่วมร้านได้",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <main className="auth-page">
-      <section className="auth-panel">
-        <a className="auth-brand" href="/">
-          <img src="/mascot/gammy-main.png" alt="Gammy" />
-          Gamory<span>ID</span>
-        </a>
-        {loading ? (
-          <div className="management-loading" aria-live="polite">
-            กำลังตรวจสอบคำเชิญ…
-          </div>
-        ) : error && !invite ? (
-          <>
-            <h1>ลิงก์คำเชิญใช้ไม่ได้</h1>
-            <p>{error}</p>
-            <a className="button" href="/login">
-              กลับไปเข้าสู่ระบบ
-            </a>
-          </>
-        ) : (
-          <>
-            <h1>เข้าร่วม {invite?.shop_name}</h1>
-            <p>
-              คำเชิญนี้ส่งถึง {invite?.email} และหมดอายุ{" "}
-              {invite ? formatDate(invite.expires_at) : "–"}
-            </p>
-            {error && (
-              <div className="auth-error" role="alert">
-                {error}
-              </div>
-            )}
-            <form onSubmit={submit} noValidate>
-              <Field label="ชื่อที่แสดง">
-                <input name="name" required autoComplete="name" autoFocus />
-              </Field>
-              <Field label="รหัสผ่าน">
-                <PasswordInput
-                  name="password"
-                  minLength={8}
-                  required
-                  autoComplete="new-password"
-                />
-              </Field>
-              <Field label="ยืนยันรหัสผ่าน">
-                <PasswordInput
-                  name="password_confirmation"
-                  minLength={8}
-                  required
-                  autoComplete="new-password"
-                />
-              </Field>
-              <p className="field-help">
-                หากมีบัญชี GamoryID ด้วยอีเมลนี้แล้ว
-                ให้ใช้รหัสผ่านเดิมเพื่อเข้าร่วมร้าน
-              </p>
-              <button className="button primary auth-submit" disabled={busy}>
-                {busy ? "กำลังเข้าร่วม…" : "เข้าร่วมร้าน"}
-              </button>
-            </form>
-          </>
-        )}
-      </section>
-      <aside className="auth-art">
-        <div>
-          <span className="eyebrow">GAMMY TEAM ACCESS</span>
-          <h2>
-            เริ่มช่วยร้าน
-            <br />
-            อย่างเป็นระบบ
-          </h2>
-          <ul>
-            <li>
-              <Check />
-              สิทธิ์ตามที่เจ้าของร้านกำหนด
-            </li>
-            <li>
-              <Check />
-              เข้าร่วมผ่านลิงก์ครั้งเดียว
-            </li>
-            <li>
-              <Check />
-              เริ่มงานได้ตามสิทธิ์ที่ได้รับ
-            </li>
-          </ul>
-        </div>
-        <img src="/mascot/gammy-secure.png" alt="Gammy ช่วยจัดการทีม" />
-      </aside>
-    </main>
-  );
-}
-
 export function StatePage({
   code,
   title,
@@ -431,6 +276,9 @@ export function AuthGate() {
   const [checking, setChecking] = useState(import.meta.env.MODE !== "test");
   const [error, setError] = useState("");
   const location = useLocation();
+  const justVerified =
+    location.pathname === "/verify-email" &&
+    new URLSearchParams(location.search).get("verified") === "1";
   const checkSession = useCallback(async () => {
     setChecking(true);
     setError("");
@@ -456,14 +304,16 @@ export function AuthGate() {
     }
   }, []);
   useEffect(() => {
-    if (import.meta.env.MODE !== "test") void checkSession();
-  }, [checkSession]);
+    if (import.meta.env.MODE !== "test" && !justVerified) void checkSession();
+  }, [checkSession, justVerified]);
   useEffect(() => {
+    if (justVerified) return;
     document.title = checking
       ? "กำลังตรวจสอบสิทธิ์ — GamoryID"
       : "เชื่อมต่อระบบไม่สำเร็จ — GamoryID";
-  }, [checking]);
+  }, [checking, justVerified]);
   if (import.meta.env.MODE === "test") return <Outlet context={undefined} />;
+  if (justVerified) return <EmailVerifiedScreen />;
   if (checking)
     return (
       <main className="auth-gate" aria-busy="true" aria-live="polite">
@@ -498,6 +348,50 @@ export function AuthGate() {
           <a className="button" href="/login">
             ไปหน้าเข้าสู่ระบบ
           </a>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function EmailVerifiedScreen() {
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    document.title = "ยืนยันอีเมลสำเร็จ — GamoryID";
+  }, []);
+
+  const goToLogin = async () => {
+    setBusy(true);
+    try {
+      const csrf = await prepareCsrf();
+      await apiRequest("/auth/logout", { method: "POST", headers: csrf });
+    } catch {
+      // No active session to end (e.g. link opened on another device) — carry on.
+    }
+    window.location.href = "/login";
+  };
+
+  return (
+    <main className="auth-gate">
+      <section>
+        <img src="/mascot/gammy-sold.png" alt="Gammy" />
+        <p className="eyebrow">ยืนยันอีเมลสำเร็จ</p>
+        <h1>ยืนยันอีเมลเรียบร้อยแล้ว</h1>
+        <p>
+          บัญชีร้านของคุณพร้อมใช้งานแล้ว
+          <br />
+          กรุณาเข้าสู่ระบบอีกครั้งเพื่อเริ่มต้นใช้งาน
+        </p>
+        <div className="auth-gate-actions">
+          <button
+            className="button blue"
+            type="button"
+            disabled={busy}
+            onClick={() => void goToLogin()}
+          >
+            {busy ? "กำลังพาไปหน้าเข้าสู่ระบบ…" : "เข้าสู่ระบบ"}
+          </button>
         </div>
       </section>
     </main>
@@ -543,7 +437,7 @@ export function VerifyEmailScreen() {
         <p>
           เราส่งลิงก์ยืนยันไปที่ <strong>{session.email}</strong>
           <br />
-          เปิดลิงก์ในอีเมลแล้วระบบจะพากลับเข้าร้านโดยอัตโนมัติ
+          เปิดลิงก์ในอีเมลเพื่อยืนยัน จากนั้นเข้าสู่ระบบอีกครั้ง
         </p>
         {message ? (
           <div className="notice" role="status">

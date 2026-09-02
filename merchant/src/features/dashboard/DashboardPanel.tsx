@@ -48,6 +48,7 @@ export function DashboardPanel({
     "inventory.note_updated": "อัปเดตโน้ตช่วยจำของไอดี",
     "inventory.reserved": "จองไอดีให้ลูกค้า",
     "inventory.reservation_released": "ยกเลิกการจองไอดี",
+    "inventory.reservation_expired": "การจองหมดเวลาอัตโนมัติ",
     "inventory.sold": "บันทึกการขายไอดี",
     "inventory.archived": "เก็บไอดีถาวร",
     "inventory.exported": "ส่งออกข้อมูลคลัง",
@@ -55,8 +56,10 @@ export function DashboardPanel({
     "credit.top_up_submitted": "ส่งสลิปเติมเครดิต",
     "subscription.purchased_with_credits": "ใช้เครดิตซื้อแพ็กเกจ",
     "subscription.auto_renew_updated": "ปรับต่ออายุอัตโนมัติ",
-    "team.invitation_created": "สร้างคำเชิญพนักงาน",
+    "team.member_created": "เพิ่มพนักงานใหม่",
     "team.permissions_updated": "ปรับสิทธิ์พนักงาน",
+    "team.member_password_reset": "รีเซ็ตรหัสผ่านพนักงาน",
+    "team.member_removed": "นำพนักงานออกจากร้าน",
     "shop.updated": "อัปเดตข้อมูลร้าน",
   };
   const activityIcon = (event: string) =>

@@ -4,7 +4,9 @@ namespace App\Services\Discord;
 
 use App\Models\DiscordChannelBinding;
 use App\Models\Shop;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 class DiscordNotificationService
 {
@@ -12,8 +14,12 @@ class DiscordNotificationService
 
     public function send(Shop $shop, string $purpose, string $title, string $description): bool
     {
+        $log = Log::channel('discord')->withContext(['shop_id' => $shop->id, 'purpose' => $purpose]);
+
         $installation = $shop->discordInstallation()->where('status', 'connected')->first();
         if (! $installation) {
+            $log->debug('ข้ามการแจ้งเตือน Discord: ร้านยังไม่ได้เชื่อมต่อ', ['title' => $title]);
+
             return false;
         }
 
@@ -23,22 +29,39 @@ class DiscordNotificationService
             ->where('enabled', true)
             ->first();
         if (! $binding) {
+            $log->warning('ข้ามการแจ้งเตือน Discord: ยังไม่ได้ตั้งค่าห้องสำหรับหมวดนี้', ['title' => $title]);
+
             return false;
         }
 
         if ($this->client->isTestMode()) {
+            $log->debug('โหมดทดสอบ: จำลองการส่งแจ้งเตือน Discord', ['channel_id' => $binding->channel_id, 'title' => $title]);
+
             return true;
         }
 
-        $this->client->sendMessage($binding->channel_id, [
-            'embeds' => [[
+        try {
+            $this->client->sendMessage($binding->channel_id, [
+                'embeds' => [[
+                    'title' => $title,
+                    'description' => $description,
+                    'color' => 748543,
+                    'footer' => ['text' => 'GamoryID · ไม่ส่งชื่อผู้ใช้ รหัสผ่าน ต้นทุน หรือโน้ตภายใน'],
+                    'timestamp' => now()->toIso8601String(),
+                ]],
+            ]);
+        } catch (Throwable $exception) {
+            $log->error('ส่งแจ้งเตือน Discord ไม่สำเร็จ', [
+                'channel_id' => $binding->channel_id,
                 'title' => $title,
-                'description' => $description,
-                'color' => 748543,
-                'footer' => ['text' => 'GamoryID · ไม่ส่งชื่อผู้ใช้ รหัสผ่าน ต้นทุน หรือโน้ตภายใน'],
-                'timestamp' => now()->toIso8601String(),
-            ]],
-        ]);
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            throw $exception;
+        }
+
+        $log->info('ส่งแจ้งเตือน Discord แล้ว', ['channel_id' => $binding->channel_id, 'title' => $title]);
 
         return true;
     }

@@ -18,9 +18,9 @@ use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SensitiveAccessController;
 use App\Http\Controllers\Api\ShopController;
-use App\Http\Controllers\Api\ShopInvitationController;
 use App\Http\Controllers\Api\TeamController;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use App\Models\User;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -28,8 +28,29 @@ Route::prefix('v1')->group(function () {
     Route::post('/discord/interactions', DiscordInteractionController::class)->middleware('throttle:120,1');
     Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
-    Route::get('/team-invitations/{token}', [ShopInvitationController::class, 'show'])->middleware('throttle:20,1');
-    Route::post('/team-invitations/{token}/accept', [ShopInvitationController::class, 'accept'])->middleware('throttle:6,1');
+
+    // The verification link is opened straight from an email, in any browser or
+    // device, so it must NOT require an authenticated session. It is protected
+    // by the signed URL (APP_KEY) plus the per-user email hash.
+    Route::get('/email/verify/{id}/{hash}', function (string $id, string $hash) {
+        $user = User::findOrFail($id);
+        abort_unless(hash_equals(sha1($user->getEmailForVerification()), (string) $hash), 403, 'ลิงก์ยืนยันไม่ถูกต้อง');
+
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+            event(new Verified($user));
+        }
+
+        return redirect()->away(rtrim(config('app.frontend_url'), '/').'/verify-email?verified=1');
+    })->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+
+    Route::get('/email/verify', fn () => redirect()->away(rtrim(config('app.frontend_url'), '/').'/verify-email'))
+        ->name('verification.notice');
+
+    // Safety net: framework auth middleware redirects unauthenticated browser
+    // requests to route('login'); send them to the SPA instead of a 500.
+    Route::get('/login', fn () => redirect()->away(rtrim(config('app.frontend_url'), '/').'/login'))
+        ->name('login');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
@@ -41,11 +62,6 @@ Route::prefix('v1')->group(function () {
 
             return response()->json(['message' => 'ส่งอีเมลยืนยันแล้ว']);
         })->middleware('throttle:6,1');
-        Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-            $request->fulfill();
-
-            return redirect()->away(rtrim(config('app.frontend_url'), '/').'/verify-email?verified=1');
-        })->middleware('signed')->name('verification.verify');
         Route::post('/security/2fa/begin', [SensitiveAccessController::class, 'beginTwoFactor']);
         Route::post('/security/2fa/confirm', [SensitiveAccessController::class, 'confirmTwoFactor']);
         Route::post('/security/reauth', [SensitiveAccessController::class, 'confirmReauth'])->middleware('throttle:5,1');
@@ -89,11 +105,10 @@ Route::prefix('v1')->group(function () {
                 ->middleware(['shop.permission:credentials.reveal', 'sensitive', 'throttle:10,1']);
 
             Route::get('/team', [TeamController::class, 'index'])->middleware('shop.permission:team.manage');
-            Route::get('/team/invitations', [TeamController::class, 'invitations'])->middleware('shop.permission:team.manage');
             Route::post('/team', [TeamController::class, 'store'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::put('/team/{member}', [TeamController::class, 'update'])->middleware(['shop.writable', 'shop.permission:team.manage']);
+            Route::put('/team/{member}/password', [TeamController::class, 'resetPassword'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::delete('/team/{member}', [TeamController::class, 'destroy'])->middleware(['shop.writable', 'shop.permission:team.manage']);
-            Route::delete('/team/invitations/{invitation}', [TeamController::class, 'revokeInvitation'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::put('/shop', [ShopController::class, 'update'])->middleware(['shop.writable', 'shop.permission:team.manage']);
 
             Route::get('/plans', [PaymentController::class, 'plans']);

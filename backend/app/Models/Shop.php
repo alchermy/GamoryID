@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class Shop extends Model
 {
@@ -59,5 +60,22 @@ class Shop extends Model
     public function isWritable(): bool
     {
         return in_array($this->status, [SubscriptionStatus::Trialing->value, SubscriptionStatus::Active->value], true);
+    }
+
+    /**
+     * Members who should receive billing/expiry notices: the owner and anyone with billing.manage.
+     *
+     * @return Collection<int, User>
+     */
+    public function billingRecipients(): Collection
+    {
+        return ShopMember::query()
+            ->where('shop_id', $this->id)
+            ->with('user')
+            ->get()
+            ->filter(fn (ShopMember $member) => $member->role === 'owner' || in_array('billing.manage', $member->permissions ?? [], true))
+            ->pluck('user')
+            ->filter()
+            ->values();
     }
 }
