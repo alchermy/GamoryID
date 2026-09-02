@@ -2,18 +2,16 @@ import type { ReactNode } from "react";
 import {
   BarChart3,
   Box,
-  Check,
   ChevronRight,
   ClipboardCheck,
   Clock3,
-  CreditCard,
-  FileUp,
   PackagePlus,
   RefreshCw,
   TrendingUp,
   WalletCards,
 } from "lucide-react";
 import { formatDate, money } from "../../shared/lib/format";
+import { activityIcon, activityLabel } from "../../shared/lib/activity";
 import type { DashboardData } from "../../types/models";
 
 export function DashboardPanel({
@@ -42,40 +40,6 @@ export function DashboardPanel({
   const trend = dashboard?.sales_last_7_days ?? [];
   const maxRevenue = Math.max(1, ...trend.map((point) => point.revenue));
   const stockTotal = summary.available + summary.reserved + summary.soldTotal;
-  const activityLabels: Record<string, string> = {
-    "inventory.created": "เพิ่มไอดีในคลัง",
-    "inventory.updated": "อัปเดตรายละเอียดไอดี",
-    "inventory.note_updated": "อัปเดตโน้ตช่วยจำของไอดี",
-    "inventory.reserved": "จองไอดีให้ลูกค้า",
-    "inventory.reservation_released": "ยกเลิกการจองไอดี",
-    "inventory.reservation_expired": "การจองหมดเวลาอัตโนมัติ",
-    "inventory.sold": "บันทึกการขายไอดี",
-    "inventory.archived": "เก็บไอดีถาวร",
-    "inventory.exported": "ส่งออกข้อมูลคลัง",
-    "import.queued": "เริ่มนำเข้าข้อมูล",
-    "credit.top_up_submitted": "ส่งสลิปเติมเครดิต",
-    "credit.top_up_approved": "อนุมัติการเติมเครดิต",
-    "credit.top_up_rejected": "ไม่อนุมัติการเติมเครดิต",
-    "subscription.purchased_with_credits": "ใช้เครดิตซื้อแพ็กเกจ",
-    "subscription.auto_renew_updated": "ปรับต่ออายุอัตโนมัติ",
-    "team.member_created": "เพิ่มพนักงานใหม่",
-    "team.permissions_updated": "ปรับสิทธิ์พนักงาน",
-    "team.member_password_reset": "รีเซ็ตรหัสผ่านพนักงาน",
-    "team.member_removed": "นำพนักงานออกจากร้าน",
-    "shop.updated": "อัปเดตข้อมูลร้าน",
-  };
-  const activityIcon = (event: string) =>
-    event.includes("sold") ? (
-      <Check size={15} />
-    ) : event.includes("reserved") ? (
-      <Clock3 size={15} />
-    ) : event.includes("import") ? (
-      <FileUp size={15} />
-    ) : event.includes("credit") || event.includes("subscription") ? (
-      <CreditCard size={15} />
-    ) : (
-      <PackagePlus size={15} />
-    );
   const daysUntilTrial = dashboard?.subscription.trial_ends_at
     ? Math.max(
         0,
@@ -313,10 +277,7 @@ export function DashboardPanel({
                 <Activity
                   key={activity.id}
                   icon={activityIcon(activity.event)}
-                  text={
-                    activityLabels[activity.event] ??
-                    activity.event.replace(/[._]/g, " ")
-                  }
+                  text={activityLabel(activity.event)}
                   time={formatDate(activity.created_at)}
                 />
               ))

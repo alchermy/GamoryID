@@ -10,6 +10,7 @@ use App\Models\ShopMember;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -62,17 +63,19 @@ class AuthController extends Controller
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
         $user->sendEmailVerificationNotification();
+        app(AuditLogger::class)->recordAuth($request, 'auth.registered', ['role' => 'owner']);
 
         return response()->json(['user' => $this->userPayload($user), 'shop' => $shop], 201);
     }
 
-    public function login(Request $request): JsonResponse
+    public function login(Request $request, AuditLogger $audit): JsonResponse
     {
         $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
         if (! Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
             throw ValidationException::withMessages(['email' => ['อีเมลหรือรหัสผ่านไม่ถูกต้อง']]);
         }
         $request->session()->regenerate();
+        $audit->recordAuth($request, 'auth.logged_in');
 
         return response()->json(['user' => $this->userPayload(Auth::guard('web')->user())]);
     }
@@ -82,8 +85,9 @@ class AuthController extends Controller
         return response()->json(['user' => $this->userPayload($request->user())]);
     }
 
-    public function logout(Request $request): JsonResponse
+    public function logout(Request $request, AuditLogger $audit): JsonResponse
     {
+        $audit->recordAuth($request, 'auth.logged_out');
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -104,12 +108,14 @@ class AuthController extends Controller
         return response()->json(['data' => $sessions]);
     }
 
-    public function revokeSession(Request $request, string $session): JsonResponse
+    public function revokeSession(Request $request, string $session, AuditLogger $audit): JsonResponse
     {
         $record = DB::table('sessions')->where('id', $session)->where('user_id', $request->user()->id);
         abort_unless($record->exists(), 404);
+        $isCurrent = hash_equals($request->session()->getId(), $session);
+        $audit->recordAuth($request, 'auth.session_revoked', ['current_device' => $isCurrent]);
         $record->delete();
-        if (hash_equals($request->session()->getId(), $session)) {
+        if ($isCurrent) {
             Auth::guard('web')->logout();
         }
 

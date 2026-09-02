@@ -6,6 +6,7 @@ use App\Models\ImportError;
 use App\Models\ImportJob;
 use App\Models\InventoryCredential;
 use App\Models\InventoryItem;
+use App\Services\AuditLogger;
 use App\Services\CredentialCipher;
 use App\Services\InventoryImportReader;
 use App\Services\TagGenerator;
@@ -86,6 +87,7 @@ class ProcessInventoryImport implements ShouldQueue
                     array_slice($errors, 0, 5),
                 ),
             ]);
+            $this->audit($import, 'import.failed', ['invalid_rows' => count($errors), 'reason' => 'validation']);
 
             return;
         }
@@ -128,6 +130,7 @@ class ProcessInventoryImport implements ShouldQueue
                 'imported_rows' => count($records), 'failed_rows' => 0, 'completed_at' => now(),
             ]);
             $log->info('นำเข้าสำเร็จ', ['imported_rows' => count($records)]);
+            $this->audit($import, 'import.completed', ['imported_rows' => count($records)]);
         } catch (Throwable $exception) {
             ImportError::create([
                 'import_job_id' => $import->id, 'row_number' => 0,
@@ -143,9 +146,15 @@ class ProcessInventoryImport implements ShouldQueue
                 'message' => $exception->getMessage(),
                 'at' => $exception->getFile().':'.$exception->getLine(),
             ]);
+            $this->audit($import, 'import.failed', ['reason' => 'database']);
         } finally {
             Storage::disk($import->disk)->delete($import->path);
         }
+    }
+
+    private function audit(ImportJob $import, string $event, array $metadata): void
+    {
+        app(AuditLogger::class)->recordSystem($import->shop_id, $event, $import, $metadata, $import->user_id);
     }
 
     public function failed(Throwable $exception): void

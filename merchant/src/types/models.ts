@@ -17,10 +17,31 @@ export type MerchantPage =
   | "customers"
   | "imports"
   | "team"
+  | "activity"
   | "billing"
   | "transactions"
   | "discord"
   | "settings";
+
+export type ActivityEntry = {
+  id: number;
+  event: string;
+  actor: { id: number; name: string } | null;
+  subject_type: string | null;
+  subject_id: number | null;
+  metadata: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+};
+
+export type ActivityResponse = {
+  data: ActivityEntry[];
+  meta: { current_page: number; last_page: number; per_page: number; total: number };
+  filters: {
+    events: string[];
+    actors: { id: number; name: string; role: string }[];
+  };
+};
 
 export type InventoryItem = {
   id: number;

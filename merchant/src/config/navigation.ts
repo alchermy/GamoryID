@@ -4,6 +4,7 @@ import {
   FileUp,
   ReceiptText,
   MessagesSquare,
+  ScrollText,
   Settings,
   ShieldCheck,
   ShoppingBag,
@@ -19,6 +20,7 @@ export const PAGE_PATHS: Record<MerchantPage, string> = {
   customers: "/customers",
   imports: "/imports",
   team: "/team",
+  activity: "/activity",
   billing: "/billing",
   transactions: "/transactions",
   discord: "/discord",
@@ -42,6 +44,7 @@ export const mainNavigation = [
 
 export const managementNavigation = [
   ["team", "ทีมและสิทธิ์", ShieldCheck],
+  ["activity", "บันทึกกิจกรรม", ScrollText],
   ["billing", "แพ็กเกจ", CreditCard],
   ["transactions", "ประวัติธุรกรรม", ReceiptText],
   ["discord", "Discord", MessagesSquare],

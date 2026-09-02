@@ -65,6 +65,7 @@ import {
   AutoRenewDialog,
 } from "../billing/billing-components";
 import { TransactionsPanel } from "../transactions/TransactionsPanel";
+import { ActivityPanel } from "../activity/ActivityPanel";
 import { SettingsPanel } from "../settings/SettingsPanel";
 import { DashboardPanel, Kpi, Activity } from "../dashboard/DashboardPanel";
 import {
@@ -202,7 +203,7 @@ export function MerchantApp() {
     shop.role === "owner" ||
     shop.permissions.includes(permission) === true;
   const canAccessManagementPage = (key: MerchantPage) => {
-    if (key === "team" || key === "settings")
+    if (key === "team" || key === "settings" || key === "activity")
       return hasShopPermission("team.manage");
     if (key === "billing" || key === "transactions")
       return hasShopPermission("billing.manage");
@@ -1322,6 +1323,7 @@ export function MerchantApp() {
             retry={() => setTransactionsRevision((value) => value + 1)}
           />
         )}{" "}
+        {page === "activity" && shop && <ActivityPanel shopId={shop.id} />}{" "}
         {page === "discord" && (
           <DiscordSettingsPanel
             shopId={shop?.id}

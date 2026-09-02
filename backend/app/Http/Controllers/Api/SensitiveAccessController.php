@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditLogger;
 use App\Services\Totp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,15 +30,18 @@ class SensitiveAccessController extends Controller
         return response()->json(['message' => 'เปิดใช้ 2FA แล้ว']);
     }
 
-    public function confirmReauth(Request $request, Totp $totp): JsonResponse
+    public function confirmReauth(Request $request, Totp $totp, AuditLogger $audit): JsonResponse
     {
         $data = $request->validate(['password' => ['required', 'string'], 'code' => ['required', 'digits:6']]);
         if (! Hash::check($data['password'], $request->user()->password)
             || ! $request->user()->two_factor_secret
             || ! $totp->verify($request->user()->two_factor_secret, $data['code'])) {
+            $audit->recordAuth($request, 'security.reauth_failed');
+
             return response()->json(['message' => 'รหัสผ่านหรือรหัส 2FA ไม่ถูกต้อง'], 422);
         }
         $request->session()->put('auth.password_confirmed_at', time());
+        $audit->recordAuth($request, 'security.reauthenticated');
 
         return response()->json(['message' => 'ยืนยันตัวตนแล้ว', 'valid_for_seconds' => config('credentials.reauth_minutes') * 60]);
     }

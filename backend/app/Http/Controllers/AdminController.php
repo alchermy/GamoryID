@@ -33,10 +33,13 @@ class AdminController extends Controller
         $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required']]);
         $user = User::where('email', $data['email'])->where('is_super_admin', true)->first();
         if (! $user || ! Hash::check($data['password'], $user->password)) {
+            $this->recordAdminLog($request, null, 'admin.login_failed', null, ['email' => $data['email']]);
+
             return back()->withErrors(['email' => 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'])->onlyInput('email');
         }
         $request->session()->regenerate();
         $request->session()->put('admin_user_id', $user->id);
+        $this->recordAdminLog($request, null, 'admin.logged_in', $user, ['email' => $user->email]);
 
         return redirect()->route('admin.dashboard');
     }
@@ -298,15 +301,17 @@ class AdminController extends Controller
         return redirect()->route('admin.top-ups.show', $payment)->with('message', $message);
     }
 
-    public function slip(PaymentSubmission $payment)
+    public function slip(Request $request, PaymentSubmission $payment)
     {
         abort_unless($payment->credit_amount && Storage::disk($payment->slip_disk)->exists($payment->slip_path), 404);
+        $this->recordAdminLog($request, $payment->shop, 'admin.slip_viewed', $payment, ['credits' => $payment->credit_amount]);
 
         return Storage::disk($payment->slip_disk)->response($payment->slip_path);
     }
 
     public function logout(Request $request)
     {
+        $this->recordAdminLog($request, null, 'admin.logged_out', null);
         $request->session()->forget('admin_user_id');
         $request->session()->regenerateToken();
 

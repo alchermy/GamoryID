@@ -271,6 +271,7 @@ class InventoryImportTest extends TestCase
         $this->assertDatabaseCount('inventory_items', 2);
         $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'completed', 'imported_rows' => 2, 'failed_rows' => 0]);
         $this->assertDatabaseHas('inventory_credentials', ['inventory_item_id' => InventoryItem::where('title', 'ไอดีที่ถูกต้อง 1')->firstOrFail()->id]);
+        $this->assertDatabaseHas('activity_logs', ['shop_id' => $shop->id, 'event' => 'import.completed']);
         Storage::disk('private')->assertMissing($path);
     }
 

@@ -14,6 +14,7 @@ const merchantPaths = [
   "/customers",
   "/imports",
   "/team",
+  "/activity",
   "/billing",
   "/transactions",
   "/discord",

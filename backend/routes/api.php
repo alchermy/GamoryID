@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CredentialController;
 use App\Http\Controllers\Api\CreditController;
@@ -104,6 +105,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/inventory/{inventory}/credentials', [CredentialController::class, 'reveal'])
                 ->middleware(['shop.permission:credentials.reveal', 'sensitive', 'throttle:10,1']);
 
+            Route::get('/activity', [ActivityController::class, 'index'])->middleware('shop.permission:team.manage');
             Route::get('/team', [TeamController::class, 'index'])->middleware('shop.permission:team.manage');
             Route::post('/team', [TeamController::class, 'store'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::put('/team/{member}', [TeamController::class, 'update'])->middleware(['shop.writable', 'shop.permission:team.manage']);
