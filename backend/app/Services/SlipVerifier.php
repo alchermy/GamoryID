@@ -41,7 +41,7 @@ class SlipVerifier
         if ($response->json('success') !== true) {
             $code = $response->json('code');
             $message = (string) ($response->json('message') ?? 'สลิปไม่ผ่านการตรวจสอบของ SlipOK');
-            $accountIssue = in_array((int) $code, [1003, 1004, 1005], true);
+            $accountIssue = in_array((int) $code, [1003, 1004], true);
 
             return [
                 'status' => 'pending_review',
