@@ -183,7 +183,8 @@ export function MerchantApp() {
       member: TeamMember;
       permissions: string[];
     } | null>(null),
-    [pendingPlan, setPendingPlan] = useState<Plan | null>(null);
+    [pendingPlan, setPendingPlan] = useState<Plan | null>(null),
+    [pendingCycle, setPendingCycle] = useState<"monthly" | "yearly">("monthly");
   const [billingHistory, setBillingHistory] = useState<BillingHistory | null>(
       null,
     ),
@@ -202,16 +203,23 @@ export function MerchantApp() {
     !shop ||
     shop.role === "owner" ||
     shop.permissions.includes(permission) === true;
+  const planFeature = (key: string) =>
+    shopDetails?.entitlements?.effective_plan.features[
+      key as keyof typeof shopDetails.entitlements.effective_plan.features
+    ] ?? true;
   const canAccessManagementPage = (key: MerchantPage) => {
-    if (key === "team" || key === "settings" || key === "activity")
+    if (key === "activity")
+      return hasShopPermission("team.manage") && planFeature("activity_log");
+    if (key === "team" || key === "settings")
       return hasShopPermission("team.manage");
     if (key === "billing" || key === "transactions")
       return hasShopPermission("billing.manage");
     if (key === "discord")
       return (
-        hasShopPermission("discord.manage") ||
-        hasShopPermission("inventory.manage") ||
-        hasShopPermission("inventory.sell")
+        planFeature("discord") &&
+        (hasShopPermission("discord.manage") ||
+          hasShopPermission("inventory.manage") ||
+          hasShopPermission("inventory.sell"))
       );
     return true;
   };
@@ -1002,7 +1010,11 @@ export function MerchantApp() {
       }>("/subscriptions/purchase", shop.id, {
         method: "POST",
         headers: { ...csrf, "Idempotency-Key": createIdempotencyKey() },
-        body: JSON.stringify({ plan_id: pendingPlan.id, auto_renew: false }),
+        body: JSON.stringify({
+          plan_id: pendingPlan.id,
+          billing_cycle: pendingCycle,
+          auto_renew: false,
+        }),
       });
       setShopDetails((current) =>
         current
@@ -1320,8 +1332,9 @@ export function MerchantApp() {
             canManage={hasShopPermission("billing.manage")}
             busy={paymentBusy}
             onTopUp={submitTopUp}
-            onPurchase={(plan) => {
+            onPurchase={(plan, cycle) => {
               setPendingPlan(plan);
+              setPendingCycle(cycle);
               setManagementDialog("purchase");
             }}
             onAutoRenewChange={(autoRenew) => {
@@ -1673,6 +1686,7 @@ export function MerchantApp() {
       {managementDialog === "purchase" && pendingPlan && (
         <PurchasePlanDialog
           plan={pendingPlan}
+          cycle={pendingCycle}
           balance={shopDetails?.credit_balance ?? 0}
           busy={paymentBusy}
           close={() => {

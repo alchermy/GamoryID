@@ -82,13 +82,13 @@ class AdminManagementTest extends TestCase
     public function test_plan_index_uses_cards_and_edit_form_has_its_own_page(): void
     {
         $admin = $this->admin();
-        $plan = SubscriptionPlan::create(['name' => 'Growth', 'code' => 'growth', 'active_inventory_limit' => 5000, 'member_limit' => 8, 'price_thb' => 699, 'duration_days' => 30, 'is_active' => true]);
+        $plan = SubscriptionPlan::query()->where('code', 'growth')->firstOrFail();
 
         $this->withSession(['admin_user_id' => $admin->id])->get(route('admin.plans.index'))
             ->assertOk()->assertSee('plan-card', false)->assertSee(route('admin.plans.edit', $plan), false)
             ->assertDontSee('name="price_thb"', false);
         $this->withSession(['admin_user_id' => $admin->id])->get(route('admin.plans.edit', $plan))
-            ->assertOk()->assertSee('name="price_thb"', false)->assertSee('บันทึกแพ็กเกจ');
+            ->assertOk()->assertSee('name="price_monthly"', false)->assertSee('name="features[]"', false)->assertSee('บันทึกแพ็กเกจ');
     }
 
     public function test_top_up_review_requires_a_reason_and_records_rejection(): void
@@ -181,7 +181,7 @@ class AdminManagementTest extends TestCase
         $shop = Shop::create(['name' => 'ร้านทดสอบ', 'slug' => uniqid('shop-'), 'status' => 'active', 'credit_balance' => 800]);
         $owner = User::create(['name' => 'เจ้าของร้าน', 'email' => uniqid('owner-').'@example.test', 'password' => 'password', 'current_shop_id' => $shop->id]);
         ShopMember::create(['shop_id' => $shop->id, 'user_id' => $owner->id, 'role' => 'owner', 'permissions' => [], 'joined_at' => now()]);
-        $plan = SubscriptionPlan::create(['name' => 'Starter', 'code' => uniqid('starter-'), 'active_inventory_limit' => 1000, 'member_limit' => 3, 'price_thb' => 299, 'duration_days' => 30, 'is_active' => true]);
+        $plan = SubscriptionPlan::create(['name' => 'Starter', 'code' => uniqid('starter-'), 'active_inventory_limit' => 1000, 'member_limit' => 3, 'price_monthly' => 299, 'price_yearly' => 2990, 'monthly_days' => 30, 'yearly_days' => 365, 'is_active' => true]);
         $subscription = Subscription::create(['shop_id' => $shop->id, 'subscription_plan_id' => $plan->id, 'status' => 'active', 'starts_at' => now(), 'ends_at' => now()->addDays(30)]);
 
         return [$shop, $plan, $subscription];

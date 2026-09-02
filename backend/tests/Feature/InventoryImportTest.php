@@ -278,7 +278,7 @@ class InventoryImportTest extends TestCase
     /** @return array{User, Shop} */
     private function verifiedMerchant(): array
     {
-        $shop = Shop::create(['name' => 'ร้านนำเข้า Excel', 'slug' => 'excel-import-'.uniqid(), 'status' => 'trialing']);
+        $shop = Shop::create(['name' => 'ร้านนำเข้า Excel', 'slug' => 'excel-import-'.uniqid(), 'status' => 'trialing', 'trial_ends_at' => now()->addMonth()]);
         $user = User::create([
             'name' => 'เจ้าของร้าน',
             'email' => 'excel-'.uniqid().'@example.test',

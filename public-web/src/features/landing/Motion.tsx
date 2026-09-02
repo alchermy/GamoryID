@@ -102,7 +102,7 @@ export function ScrollProgress() {
 export function CountUp({
   value,
   duration = 1100,
-  format = (n) => n.toLocaleString("th-TH"),
+  format = (n) => (Number.isFinite(n) ? n : 0).toLocaleString("th-TH"),
   className,
 }: {
   value: number;

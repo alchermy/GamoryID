@@ -16,18 +16,12 @@ class MerchantRegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_merchant_registration_creates_an_owner_shop_and_starter_trial(): void
+    public function test_merchant_registration_creates_an_owner_shop_and_growth_trial(): void
     {
         Notification::fake();
-        $starter = SubscriptionPlan::create([
-            'name' => 'Starter',
-            'code' => 'starter',
-            'active_inventory_limit' => 1000,
-            'member_limit' => 3,
-            'price_thb' => 299,
-            'duration_days' => 30,
-            'is_active' => true,
-        ]);
+        // Plans are provisioned by the default-plans data migration; the trial
+        // mirrors the Growth tier so new owners get the full feature set.
+        $trialPlan = SubscriptionPlan::query()->where('code', 'growth')->firstOrFail();
 
         $response = $this
             ->withHeaders([
@@ -61,7 +55,7 @@ class MerchantRegistrationTest extends TestCase
         ]);
         $this->assertDatabaseHas('subscriptions', [
             'shop_id' => $user->current_shop_id,
-            'subscription_plan_id' => $starter->id,
+            'subscription_plan_id' => $trialPlan->id,
             'status' => SubscriptionStatus::Trialing->value,
         ]);
         $this->assertSame([], ShopMember::query()->where('user_id', $user->id)->firstOrFail()->permissions);

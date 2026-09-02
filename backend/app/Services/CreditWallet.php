@@ -42,9 +42,11 @@ class CreditWallet
         });
     }
 
-    public function purchase(Shop $shop, SubscriptionPlan $plan, bool $autoRenew, string $idempotencyKey, string $type = 'subscription_purchase'): Subscription
+    public function purchase(Shop $shop, SubscriptionPlan $plan, string $cycle, bool $autoRenew, string $idempotencyKey, string $type = 'subscription_purchase'): Subscription
     {
-        return DB::transaction(function () use ($shop, $plan, $autoRenew, $idempotencyKey, $type) {
+        $cycle = $cycle === 'yearly' ? 'yearly' : 'monthly';
+
+        return DB::transaction(function () use ($shop, $plan, $cycle, $autoRenew, $idempotencyKey, $type) {
             $existing = CreditTransaction::where('shop_id', $shop->id)->where('idempotency_key', $idempotencyKey)->with('subscription.plan')->first();
             if ($existing?->subscription) {
                 return $existing->subscription;
@@ -52,9 +54,13 @@ class CreditWallet
 
             $lockedShop = Shop::lockForUpdate()->findOrFail($shop->id);
             $lockedPlan = SubscriptionPlan::where('is_active', true)->lockForUpdate()->findOrFail($plan->id);
-            $cost = (int) $lockedPlan->price_thb;
-            if ((float) $cost !== (float) $lockedPlan->price_thb) {
-                throw ValidationException::withMessages(['plan_id' => 'ราคาแพ็กเกจต้องเป็นจำนวนเครดิตเต็มจำนวน']);
+
+            if ($lockedPlan->isFree()) {
+                throw ValidationException::withMessages(['plan_id' => 'แพ็กนี้ใช้ได้ฟรีอยู่แล้ว ไม่ต้องซื้อ']);
+            }
+            $cost = $lockedPlan->effectivePriceFor($cycle);
+            if ($cost === null) {
+                throw ValidationException::withMessages(['billing_cycle' => 'แพ็กเกจนี้ไม่เปิดขายรอบที่เลือก']);
             }
             if ($lockedShop->credit_balance < $cost) {
                 throw new InsufficientCreditsException("เครดิตไม่เพียงพอ ต้องการ {$cost} เครดิต");
@@ -66,10 +72,12 @@ class CreditWallet
                 'auto_renew' => false,
             ]);
             $startsAt = now();
-            $endsAt = $startsAt->copy()->addDays($lockedPlan->duration_days);
+            $endsAt = $startsAt->copy()->addDays($lockedPlan->daysFor($cycle));
             $subscription = Subscription::create([
                 'shop_id' => $lockedShop->id,
                 'subscription_plan_id' => $lockedPlan->id,
+                'billing_cycle' => $cycle,
+                'price_paid' => $cost,
                 'status' => SubscriptionStatus::Active,
                 'starts_at' => $startsAt,
                 'ends_at' => $endsAt,
@@ -90,7 +98,7 @@ class CreditWallet
                 'credits' => -$cost,
                 'balance_after' => $balance,
                 'idempotency_key' => $idempotencyKey,
-                'metadata' => ['plan_code' => $lockedPlan->code, 'auto_renew' => $autoRenew],
+                'metadata' => ['plan_code' => $lockedPlan->code, 'billing_cycle' => $cycle, 'auto_renew' => $autoRenew],
             ]);
 
             return $subscription->load('plan');

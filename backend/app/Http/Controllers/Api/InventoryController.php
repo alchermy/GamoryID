@@ -15,7 +15,7 @@ use App\Services\AuditLogger;
 use App\Services\CredentialCipher;
 use App\Services\CurrentShop;
 use App\Services\Discord\DiscordNotificationMessageBuilder;
-use App\Services\PlanGate;
+use App\Services\PlanEntitlements;
 use App\Services\TagGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -54,7 +54,7 @@ class InventoryController extends Controller
         return InventoryItemResource::collection($query->paginate($validated['per_page'] ?? 25)->withQueryString());
     }
 
-    public function store(StoreInventoryRequest $request, CurrentShop $currentShop, TagGenerator $tags, CredentialCipher $cipher, AuditLogger $audit, PlanGate $planGate, DiscordNotificationMessageBuilder $discordMessages)
+    public function store(StoreInventoryRequest $request, CurrentShop $currentShop, TagGenerator $tags, CredentialCipher $cipher, AuditLogger $audit, PlanEntitlements $planGate, DiscordNotificationMessageBuilder $discordMessages)
     {
         $shop = $currentShop->from($request);
         $planGate->ensureInventoryCapacity($shop);

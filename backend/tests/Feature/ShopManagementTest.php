@@ -112,7 +112,15 @@ class ShopManagementTest extends TestCase
     public function test_the_team_seat_limit_blocks_creating_more_staff_than_the_plan_allows(): void
     {
         [$user, $shop] = $this->owner('seats@example.test', 'ร้านที่นั่งเต็ม');
-        // owner() already creates the owner ShopMember; the default plan limit is 3.
+        // Pin the shop to an active plan capped at 3 total members so the trial
+        // fallback (Growth-tier) does not apply.
+        $plan = SubscriptionPlan::updateOrCreate(
+            ['code' => 'starter'],
+            ['name' => 'Starter', 'active_inventory_limit' => 1000, 'member_limit' => 3, 'price_monthly' => 299, 'monthly_days' => 30, 'yearly_days' => 365, 'is_active' => true],
+        );
+        $shop->update(['status' => 'active', 'trial_ends_at' => null]);
+        $shop->subscriptions()->create(['subscription_plan_id' => $plan->id, 'status' => 'active', 'starts_at' => now(), 'ends_at' => now()->addDays(30)]);
+
         foreach (['seat-a@example.test', 'seat-b@example.test'] as $email) {
             $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
                 ->postJson('/api/v1/team', ['name' => 'พนักงาน', 'email' => $email, 'password' => 'a-strong-password', 'password_confirmation' => 'a-strong-password'])
@@ -122,7 +130,7 @@ class ShopManagementTest extends TestCase
         $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
             ->postJson('/api/v1/team', ['name' => 'พนักงานเกินโควตา', 'email' => 'seat-c@example.test', 'password' => 'a-strong-password', 'password_confirmation' => 'a-strong-password'])
             ->assertUnprocessable()
-            ->assertJsonPath('message', 'จำนวนสมาชิกเต็มตามแพ็กเกจ');
+            ->assertJsonPath('message', 'จำนวนสมาชิกเต็มตามแพ็กเกจ (3 คน)');
     }
 
     public function test_the_old_invitation_endpoints_no_longer_exist(): void
@@ -144,7 +152,6 @@ class ShopManagementTest extends TestCase
         $shop = Shop::create(['name' => $name, 'slug' => 'shop-'.uniqid(), 'status' => 'trialing', 'trial_ends_at' => now()->addMonth()]);
         $user = User::create(['name' => 'เจ้าของร้าน', 'email' => $email, 'password' => 'password', 'current_shop_id' => $shop->id, 'email_verified_at' => now()]);
         ShopMember::create(['shop_id' => $shop->id, 'user_id' => $user->id, 'role' => 'owner', 'permissions' => [], 'joined_at' => now()]);
-        SubscriptionPlan::create(['name' => 'Starter', 'code' => 'starter-'.uniqid(), 'active_inventory_limit' => 1000, 'member_limit' => 3, 'price_thb' => 299, 'duration_days' => 30, 'is_active' => true]);
 
         return [$user, $shop];
     }

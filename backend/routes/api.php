@@ -91,8 +91,10 @@ Route::prefix('v1')->group(function () {
                 Route::post('/custom-fields', [CustomFieldController::class, 'store']);
                 Route::put('/custom-fields/{field}', [CustomFieldController::class, 'update']);
                 Route::delete('/custom-fields/{field}', [CustomFieldController::class, 'destroy']);
-                Route::post('/imports/preview', [ImportController::class, 'preview']);
-                Route::post('/imports/{import}/confirm', [ImportController::class, 'confirm']);
+                Route::middleware('plan.feature:bulk_import')->group(function () {
+                    Route::post('/imports/preview', [ImportController::class, 'preview']);
+                    Route::post('/imports/{import}/confirm', [ImportController::class, 'confirm']);
+                });
             });
             Route::get('/imports/template', [ImportController::class, 'template'])->middleware('shop.permission:inventory.manage');
             Route::get('/imports/{import}', [ImportController::class, 'show'])->middleware('shop.permission:inventory.manage');
@@ -106,7 +108,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/inventory/{inventory}/credentials', [CredentialController::class, 'reveal'])
                 ->middleware(['shop.permission:credentials.reveal', 'sensitive', 'throttle:10,1']);
 
-            Route::get('/activity', [ActivityController::class, 'index'])->middleware('shop.permission:team.manage');
+            Route::get('/activity', [ActivityController::class, 'index'])->middleware(['shop.permission:team.manage', 'plan.feature:activity_log']);
             Route::get('/team', [TeamController::class, 'index'])->middleware('shop.permission:team.manage');
             Route::post('/team', [TeamController::class, 'store'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::put('/team/{member}', [TeamController::class, 'update'])->middleware(['shop.writable', 'shop.permission:team.manage']);
@@ -120,17 +122,19 @@ Route::prefix('v1')->group(function () {
             Route::post('/credits/top-ups', [CreditController::class, 'topUp'])->middleware('shop.permission:billing.manage');
             Route::post('/subscriptions/purchase', [CreditController::class, 'purchase'])->middleware('shop.permission:billing.manage');
             Route::put('/subscriptions/auto-renew', [CreditController::class, 'updateAutoRenew'])->middleware('shop.permission:billing.manage');
-            Route::get('/export/inventory.csv', ExportController::class)->middleware('shop.permission:data.export');
+            Route::get('/export/inventory.csv', ExportController::class)->middleware(['shop.permission:data.export', 'plan.feature:advanced_export']);
 
-            Route::get('/discord/settings', [DiscordSettingsController::class, 'show']);
-            Route::post('/discord/link-code', [DiscordSettingsController::class, 'linkCode'])->middleware('throttle:10,1');
-            Route::middleware(['shop.writable', 'shop.permission:discord.manage'])->group(function () {
-                Route::post('/discord/setup-code', [DiscordSettingsController::class, 'setupCode'])->middleware('throttle:5,1');
-                Route::post('/discord/demo-connect', [DiscordSettingsController::class, 'demoConnect'])->middleware('throttle:5,1');
-                Route::post('/discord/channels/auto-create', [DiscordSettingsController::class, 'autoCreateChannels'])->middleware('throttle:5,1');
-                Route::put('/discord/channels', [DiscordSettingsController::class, 'updateChannels']);
-                Route::post('/discord/test-notification', [DiscordSettingsController::class, 'testNotification'])->middleware('throttle:10,1');
-                Route::delete('/discord/disconnect', [DiscordSettingsController::class, 'disconnect'])->middleware('throttle:5,1');
+            Route::middleware('plan.feature:discord')->group(function () {
+                Route::get('/discord/settings', [DiscordSettingsController::class, 'show']);
+                Route::post('/discord/link-code', [DiscordSettingsController::class, 'linkCode'])->middleware('throttle:10,1');
+                Route::middleware(['shop.writable', 'shop.permission:discord.manage'])->group(function () {
+                    Route::post('/discord/setup-code', [DiscordSettingsController::class, 'setupCode'])->middleware('throttle:5,1');
+                    Route::post('/discord/demo-connect', [DiscordSettingsController::class, 'demoConnect'])->middleware('throttle:5,1');
+                    Route::post('/discord/channels/auto-create', [DiscordSettingsController::class, 'autoCreateChannels'])->middleware('throttle:5,1');
+                    Route::put('/discord/channels', [DiscordSettingsController::class, 'updateChannels']);
+                    Route::post('/discord/test-notification', [DiscordSettingsController::class, 'testNotification'])->middleware('throttle:10,1');
+                    Route::delete('/discord/disconnect', [DiscordSettingsController::class, 'disconnect'])->middleware('throttle:5,1');
+                });
             });
         });
     });

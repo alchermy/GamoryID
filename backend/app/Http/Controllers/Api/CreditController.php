@@ -30,7 +30,7 @@ class CreditController extends Controller
     public function history(Request $request, CurrentShop $currentShop)
     {
         $shop = $currentShop->from($request);
-        $subscriptionsQuery = $shop->subscriptions()->with('plan:id,name,code,price_thb,duration_days');
+        $subscriptionsQuery = $shop->subscriptions()->with('plan:id,name,code,price_monthly,price_yearly,monthly_days,yearly_days');
         $topUpsQuery = $shop->paymentSubmissions()->whereNotNull('credit_amount')->with('submittedBy:id,name');
 
         return response()->json(['data' => [
@@ -42,11 +42,13 @@ class CreditController extends Controller
                     'ends_at' => $subscription->ends_at,
                     'created_at' => $subscription->created_at,
                     'auto_renew' => $subscription->auto_renew,
+                    'billing_cycle' => $subscription->billing_cycle,
+                    'price_paid' => $subscription->price_paid,
                     'plan' => $subscription->plan ? [
                         'name' => $subscription->plan->name,
                         'code' => $subscription->plan->code,
-                        'price_thb' => (int) $subscription->plan->price_thb,
-                        'duration_days' => $subscription->plan->duration_days,
+                        'price_monthly' => (int) $subscription->plan->price_monthly,
+                        'price_yearly' => $subscription->plan->price_yearly,
                     ] : null,
                 ]),
                 'total' => (clone $subscriptionsQuery)->count(),
@@ -102,17 +104,19 @@ class CreditController extends Controller
         $shop = $currentShop->from($request);
         $data = $request->validate([
             'plan_id' => ['required', 'integer', 'exists:subscription_plans,id'],
+            'billing_cycle' => ['required', 'in:monthly,yearly'],
             'auto_renew' => ['required', 'boolean'],
         ]);
         $plan = SubscriptionPlan::where('is_active', true)->findOrFail($data['plan_id']);
         try {
-            $subscription = $wallet->purchase($shop, $plan, (bool) $data['auto_renew'], $this->idempotencyKey($request));
+            $subscription = $wallet->purchase($shop, $plan, $data['billing_cycle'], (bool) $data['auto_renew'], $this->idempotencyKey($request));
         } catch (InsufficientCreditsException $exception) {
             throw ValidationException::withMessages(['credits' => $exception->getMessage()]);
         }
         $audit->record($request, $shop, 'subscription.purchased_with_credits', $subscription, [
             'plan' => $plan->code,
-            'credits' => (int) $plan->price_thb,
+            'billing_cycle' => $data['billing_cycle'],
+            'credits' => (int) $subscription->price_paid,
             'auto_renew' => (bool) $data['auto_renew'],
         ]);
 

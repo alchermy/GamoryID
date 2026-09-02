@@ -23,6 +23,8 @@ class ShopLifecycleNotification extends Notification implements ShouldQueue
 
     public const STAGE_RENEWED = 'renewed';
 
+    public const STAGE_DOWNGRADED_FREE = 'downgraded_free';
+
     public function __construct(
         private readonly Shop $shop,
         private readonly string $stage,
@@ -58,6 +60,13 @@ class ShopLifecycleNotification extends Notification implements ShouldQueue
                 ->line('ร้าน '.$name.' ถูกระงับการใช้งานเนื่องจากไม่ได้ต่ออายุแพ็กเกจ')
                 ->line('ตอนนี้เหลือเพียงการชำระเงินและส่งออกข้อมูลเท่านั้น ข้อมูลทั้งหมดยังอยู่ครบ')
                 ->action('ต่ออายุเพื่อเปิดร้านอีกครั้ง', $billingUrl),
+
+            self::STAGE_DOWNGRADED_FREE => (new MailMessage)
+                ->subject('ร้าน '.$name.' ย้ายไปแพ็ก Free แล้ว · GamoryID')
+                ->greeting('สวัสดี')
+                ->line('แพ็กเกจของร้าน '.$name.' สิ้นสุดลงแล้ว ร้านย้ายมาอยู่แพ็ก Free โดยอัตโนมัติ')
+                ->line('ยังใช้งานและแก้ไขข้อมูลได้ แต่โควตาและฟีเจอร์บางอย่าง (นำเข้าชุด, Discord, รายงานกำไร ฯลฯ) จะถูกจำกัด ข้อมูลเดิมที่เกินโควตาไม่ถูกลบ เพียงเพิ่มใหม่ไม่ได้จนกว่าจะอัปเกรด')
+                ->action('เลือกแพ็กเกจ', $billingUrl),
 
             default => (new MailMessage)
                 ->subject('ต่ออายุแพ็กเกจร้าน '.$name.' อัตโนมัติแล้ว · GamoryID')

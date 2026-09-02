@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsurePlanFeature;
 use App\Http\Middleware\EnsureSensitiveAccess;
 use App\Http\Middleware\EnsureShopPermission;
 use App\Http\Middleware\EnsureShopWritable;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'shop.permission' => EnsureShopPermission::class,
             'shop.writable' => EnsureShopWritable::class,
+            'plan.feature' => EnsurePlanFeature::class,
             'sensitive' => EnsureSensitiveAccess::class,
             'admin.session' => EnsureSuperAdminSession::class,
         ]);

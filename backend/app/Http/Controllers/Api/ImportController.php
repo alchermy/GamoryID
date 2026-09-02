@@ -9,7 +9,7 @@ use App\Models\ImportJob;
 use App\Services\AuditLogger;
 use App\Services\CurrentShop;
 use App\Services\InventoryImportReader;
-use App\Services\PlanGate;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -86,7 +86,7 @@ class ImportController extends Controller
         ]], 201);
     }
 
-    public function confirm(Request $request, int $import, CurrentShop $currentShop, AuditLogger $audit, PlanGate $planGate, InventoryImportReader $reader)
+    public function confirm(Request $request, int $import, CurrentShop $currentShop, AuditLogger $audit, PlanEntitlements $planGate, InventoryImportReader $reader)
     {
         $shop = $currentShop->from($request);
         $data = $request->validate([

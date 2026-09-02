@@ -101,12 +101,35 @@ export type DashboardData = {
     metadata?: Record<string, unknown>;
   }>;
   sales_last_7_days: Array<{ date: string; sales: number; revenue: number }>;
-  subscription: {
-    status: string;
-    trial_ends_at: string | null;
-    grace_ends_at?: string | null;
-    writable: boolean;
+  subscription: PlanEntitlementSummary;
+};
+
+export type PlanFeatureKey =
+  | "bulk_import"
+  | "advanced_export"
+  | "activity_log"
+  | "discord"
+  | "analytics"
+  | "priority_support";
+
+export type PlanFeatures = Record<PlanFeatureKey, boolean>;
+
+export type PlanEntitlementSummary = {
+  status: string;
+  trial_ends_at: string | null;
+  grace_ends_at?: string | null;
+  writable: boolean;
+  billing_cycle?: "monthly" | "yearly" | null;
+  current_period_ends_at?: string | null;
+  effective_plan: {
+    code: string;
+    name: string;
+    is_free: boolean;
+    active_inventory_limit: number | null;
+    member_limit: number | null;
+    features: PlanFeatures;
   };
+  usage: { inventory_active: number; members: number };
 };
 
 export type InventoryResponse = {
@@ -227,26 +250,37 @@ export type ShopDetails = Shop & {
     status: string;
     auto_renew: boolean;
     ends_at: string | null;
+    billing_cycle?: "monthly" | "yearly" | null;
     plan?: {
       name: string;
       code: string;
-      active_inventory_limit: number;
-      member_limit: number;
-      price_thb: number;
-      duration_days: number;
+      active_inventory_limit: number | null;
+      member_limit: number | null;
     };
   } | null;
+  entitlements: PlanEntitlementSummary;
   latest_top_up?: Payment | null;
 };
+
+export type BillingCycle = "monthly" | "yearly";
 
 export type Plan = {
   id: number;
   name: string;
   code: string;
-  active_inventory_limit: number;
-  member_limit: number;
-  price_thb: number;
-  duration_days: number;
+  sort_order: number;
+  is_free: boolean;
+  active_inventory_limit: number | null;
+  member_limit: number | null;
+  price_monthly: number;
+  price_yearly: number | null;
+  sale_price_monthly: number | null;
+  sale_price_yearly: number | null;
+  sale_label: string | null;
+  sale_ends_at: string | null;
+  monthly_days: number;
+  yearly_days: number;
+  features: PlanFeatures;
 };
 
 export type SubscriptionHistoryRecord = {
@@ -256,11 +290,13 @@ export type SubscriptionHistoryRecord = {
   ends_at: string | null;
   created_at: string;
   auto_renew: boolean;
+  billing_cycle?: "monthly" | "yearly" | null;
+  price_paid?: number | null;
   plan: {
     name: string;
     code: string;
-    price_thb: number;
-    duration_days: number;
+    price_monthly: number;
+    price_yearly: number | null;
   } | null;
 };
 

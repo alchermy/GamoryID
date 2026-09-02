@@ -8,6 +8,7 @@ use App\Models\ShopMember;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\CurrentShop;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -23,7 +24,7 @@ class TeamController extends Controller
         return response()->json(['data' => $members]);
     }
 
-    public function store(Request $request, CurrentShop $currentShop, AuditLogger $audit)
+    public function store(Request $request, CurrentShop $currentShop, AuditLogger $audit, PlanEntitlements $entitlements)
     {
         $shop = $currentShop->from($request);
         $data = $request->validate([
@@ -38,10 +39,7 @@ class TeamController extends Controller
             'password.confirmed' => 'การยืนยันรหัสผ่านไม่ตรงกัน',
         ]);
 
-        $subscription = $shop->subscriptions()->latest()->with('plan')->first();
-        $limit = $subscription?->plan?->member_limit ?? 3;
-        $memberCount = ShopMember::where('shop_id', $shop->id)->count();
-        abort_if($memberCount >= $limit, 422, 'จำนวนสมาชิกเต็มตามแพ็กเกจ');
+        $entitlements->ensureMemberCapacity($shop);
 
         $member = DB::transaction(function () use ($shop, $data) {
             $user = User::create([

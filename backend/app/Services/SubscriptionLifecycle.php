@@ -32,9 +32,9 @@ class SubscriptionLifecycle
                     return;
                 }
 
-                if ($subscription->auto_renew && $subscription->plan) {
+                if ($subscription->auto_renew && $subscription->plan && ! $subscription->plan->isFree()) {
                     try {
-                        $this->wallet->purchase($subscription->shop, $subscription->plan, true, (string) Str::uuid(), 'subscription_renewal');
+                        $this->wallet->purchase($subscription->shop, $subscription->plan, $subscription->billing_cycle ?? 'monthly', true, (string) Str::uuid(), 'subscription_renewal');
                         $log->info('ต่ออายุแพ็กเกจอัตโนมัติด้วยเครดิตสำเร็จ', [
                             'shop_id' => $subscription->shop_id,
                             'plan_code' => $subscription->plan->code,
@@ -63,21 +63,28 @@ class SubscriptionLifecycle
                 $this->notify($subscription->shop->fresh(), ShopLifecycleNotification::STAGE_GRACE, $log, $graceEndsAt->timezone('Asia/Bangkok')->format('d/m/Y H:i'));
             });
 
-        Shop::whereIn('status', [SubscriptionStatus::Trialing->value, SubscriptionStatus::Active->value])
+        // Trial ended: the shop keeps working but drops to Free entitlements.
+        Shop::whereIn('status', [SubscriptionStatus::Trialing->value])
             ->whereNotNull('trial_ends_at')->where('trial_ends_at', '<', now())
             ->orderBy('id')->each(function (Shop $shop) use ($log) {
-                $shop->update(['status' => SubscriptionStatus::GraceReadOnly->value]);
-                $log->info('ทดลองใช้หมดอายุ: เปลี่ยนสถานะร้านเป็นโหมดอ่านอย่างเดียว', ['shop_id' => $shop->id]);
-                $graceLabel = $shop->grace_ends_at?->timezone('Asia/Bangkok')->format('d/m/Y H:i');
-                $this->notify($shop, ShopLifecycleNotification::STAGE_GRACE, $log, $graceLabel);
+                $shop->subscriptions()
+                    ->where('status', SubscriptionStatus::Trialing->value)
+                    ->update(['status' => SubscriptionStatus::Expired->value, 'auto_renew' => false]);
+                $shop->update(['status' => SubscriptionStatus::Active->value, 'trial_ends_at' => null]);
+                $log->info('ทดลองใช้หมดอายุ: ร้านย้ายไปแพ็ก Free (ยังเขียนได้ โควตาจำกัด)', ['shop_id' => $shop->id]);
+                $this->notify($shop->fresh(), ShopLifecycleNotification::STAGE_DOWNGRADED_FREE, $log);
             });
 
+        // Grace window ended: drop to Free instead of full suspension.
         Shop::where('status', SubscriptionStatus::GraceReadOnly->value)
             ->whereNotNull('grace_ends_at')->where('grace_ends_at', '<', now())
             ->orderBy('id')->each(function (Shop $shop) use ($log) {
-                $shop->update(['status' => SubscriptionStatus::Suspended->value]);
-                $log->info('พ้นช่วงผ่อนผัน: ระงับการใช้งานร้าน', ['shop_id' => $shop->id]);
-                $this->notify($shop, ShopLifecycleNotification::STAGE_SUSPENDED, $log);
+                $shop->subscriptions()
+                    ->whereIn('status', [SubscriptionStatus::GraceReadOnly->value, SubscriptionStatus::Active->value])
+                    ->update(['status' => SubscriptionStatus::Expired->value, 'auto_renew' => false]);
+                $shop->update(['status' => SubscriptionStatus::Active->value]);
+                $log->info('พ้นช่วงผ่อนผัน: ร้านย้ายไปแพ็ก Free', ['shop_id' => $shop->id]);
+                $this->notify($shop->fresh(), ShopLifecycleNotification::STAGE_DOWNGRADED_FREE, $log);
             });
     }
 
@@ -96,6 +103,10 @@ class SubscriptionLifecycle
             ShopLifecycleNotification::STAGE_SUSPENDED => [
                 'ร้านถูกระงับการใช้งาน',
                 "ร้าน **{$shop->name}** ถูกระงับเนื่องจากไม่ได้ต่ออายุแพ็กเกจ\nเหลือเพียงการชำระเงินและส่งออกข้อมูล",
+            ],
+            ShopLifecycleNotification::STAGE_DOWNGRADED_FREE => [
+                'ร้านย้ายไปแพ็ก Free',
+                "ร้าน **{$shop->name}** สิ้นสุดแพ็กเกจแล้ว ย้ายมาแพ็ก Free อัตโนมัติ\nยังใช้งานได้ แต่โควตา/ฟีเจอร์ถูกจำกัด อัปเกรดได้ที่หน้าแพ็กเกจ",
             ],
             default => [
                 'ต่ออายุแพ็กเกจอัตโนมัติแล้ว',

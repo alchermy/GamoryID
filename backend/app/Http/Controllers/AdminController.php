@@ -139,7 +139,7 @@ class AdminController extends Controller
 
     public function plans()
     {
-        return $this->page('plans', 'จัดการแพ็กเกจ', ['plans' => SubscriptionPlan::orderBy('price_thb')->get()]);
+        return $this->page('plans', 'จัดการแพ็กเกจ', ['plans' => SubscriptionPlan::orderBy('sort_order')->orderBy('price_monthly')->get()]);
     }
 
     public function createPlan()
@@ -340,13 +340,27 @@ class AdminController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'code' => ['required', 'string', 'alpha_dash', 'max:40', Rule::unique('subscription_plans', 'code')->ignore($plan?->id)],
-            'active_inventory_limit' => ['required', 'integer', 'min:1'],
-            'member_limit' => ['required', 'integer', 'min:1'],
-            'price_thb' => ['required', 'integer', 'min:0'],
-            'duration_days' => ['required', 'integer', 'min:1', 'max:365'],
+            'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'active_inventory_limit' => ['nullable', 'integer', 'min:1'],
+            'member_limit' => ['nullable', 'integer', 'min:1'],
+            'price_monthly' => ['required', 'integer', 'min:0'],
+            'price_yearly' => ['nullable', 'integer', 'min:0'],
+            'sale_price_monthly' => ['nullable', 'integer', 'min:0'],
+            'sale_price_yearly' => ['nullable', 'integer', 'min:0'],
+            'sale_label' => ['nullable', 'string', 'max:60'],
+            'sale_ends_at' => ['nullable', 'date'],
+            'monthly_days' => ['required', 'integer', 'min:1', 'max:366'],
+            'yearly_days' => ['required', 'integer', 'min:1', 'max:400'],
+            'features' => ['array'],
+            'features.*' => ['in:'.implode(',', SubscriptionPlan::FEATURES)],
             'is_active' => ['nullable', 'boolean'],
         ]);
         $data['is_active'] = $request->boolean('is_active');
+        $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
+        $selected = (array) ($data['features'] ?? []);
+        $data['features'] = collect(SubscriptionPlan::FEATURES)
+            ->mapWithKeys(fn ($key) => [$key => in_array($key, $selected, true)])
+            ->all();
 
         return $data;
     }

@@ -4,21 +4,23 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\PaymentSubmission;
+use App\Models\Shop;
 use App\Services\AuditLogger;
 use App\Services\CurrentShop;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class ShopController extends Controller
 {
-    public function show(Request $request, CurrentShop $currentShop)
+    public function show(Request $request, CurrentShop $currentShop, PlanEntitlements $entitlements)
     {
         $shop = $currentShop->from($request);
 
-        return response()->json(['data' => $this->payload($shop)]);
+        return response()->json(['data' => $this->payload($shop, $entitlements)]);
     }
 
-    public function update(Request $request, CurrentShop $currentShop, AuditLogger $audit)
+    public function update(Request $request, CurrentShop $currentShop, AuditLogger $audit, PlanEntitlements $entitlements)
     {
         $shop = $currentShop->from($request);
         $data = $request->validate([
@@ -33,10 +35,10 @@ class ShopController extends Controller
         $shop->update($data);
         $audit->record($request, $shop, 'shop.updated', $shop, ['fields' => array_keys($data)]);
 
-        return response()->json(['data' => $this->payload($shop->fresh())]);
+        return response()->json(['data' => $this->payload($shop->fresh(), $entitlements)]);
     }
 
-    private function payload($shop): array
+    private function payload(Shop $shop, PlanEntitlements $entitlements): array
     {
         $subscription = $shop->subscriptions()->latest()->with('plan')->first();
         $latestPayment = PaymentSubmission::query()->where('shop_id', $shop->id)->whereNotNull('credit_amount')->latest()->first();
@@ -55,6 +57,7 @@ class ShopController extends Controller
             'grace_ends_at' => $shop->grace_ends_at,
             'credit_balance' => $shop->credit_balance,
             'subscription' => $subscription,
+            'entitlements' => $entitlements->summary($shop),
             'latest_top_up' => $latestPayment ? [
                 'id' => $latestPayment->id,
                 'status' => $latestPayment->status,

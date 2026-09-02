@@ -24,16 +24,20 @@ class AuthController extends Controller
     {
         $data = $request->validated();
         [$user, $shop] = DB::transaction(function () use ($data) {
-            $starterPlan = SubscriptionPlan::query()
-                ->where('code', 'starter')
+            // Trial mirrors the Growth tier so new owners experience the full
+            // feature set for 14 days, then fall back to Free entitlements.
+            $trialPlan = SubscriptionPlan::query()
+                ->whereIn('code', ['growth', 'starter'])
                 ->where('is_active', true)
+                ->orderByRaw("code = 'growth' desc")
                 ->firstOrFail();
+            $trialEndsAt = now()->addDays(14);
             $shop = Shop::create([
                 'name' => $data['shop_name'],
                 'slug' => Str::slug($data['shop_name']).'-'.Str::lower(Str::random(5)),
                 'status' => SubscriptionStatus::Trialing->value,
-                'trial_ends_at' => now()->addDays(30),
-                'grace_ends_at' => now()->addDays(44),
+                'trial_ends_at' => $trialEndsAt,
+                'grace_ends_at' => $trialEndsAt,
             ]);
             $user = User::create([
                 'name' => $data['name'],
@@ -50,11 +54,11 @@ class AuthController extends Controller
             ]);
             Subscription::create([
                 'shop_id' => $shop->id,
-                'subscription_plan_id' => $starterPlan->id,
+                'subscription_plan_id' => $trialPlan->id,
                 'status' => SubscriptionStatus::Trialing->value,
                 'starts_at' => now(),
-                'ends_at' => now()->addDays(30),
-                'grace_ends_at' => now()->addDays(44),
+                'ends_at' => $trialEndsAt,
+                'grace_ends_at' => $trialEndsAt,
             ]);
 
             return [$user, $shop];

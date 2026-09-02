@@ -958,3 +958,98 @@
     flex: 1;
   }
 }
+
+/* ---- plan cycle toggle + usage + feature list (4-tier billing) ---- */
+.cycle-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #e4e7ec;
+  border-radius: 999px;
+  background: #f9fafb;
+  margin-bottom: 4px;
+}
+.cycle-toggle button {
+  border: 0;
+  background: transparent;
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #667085;
+  cursor: pointer;
+}
+.cycle-toggle button.is-on {
+  background: #fff;
+  color: #0b6bff;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
+}
+.plan-usage {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  background: #f9fafb;
+  margin-bottom: 4px;
+}
+.usage-bar span {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #667085;
+}
+.usage-bar span b {
+  color: #101828;
+  font-variant-numeric: tabular-nums;
+}
+.usage-bar i {
+  display: block;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: #e4e7ec;
+  overflow: hidden;
+}
+.usage-bar i span {
+  display: block;
+  height: 100%;
+  background: #0b6bff;
+}
+.usage-bar.is-over i span {
+  background: #f97316;
+}
+.usage-bar.is-over span b {
+  color: #f97316;
+}
+.plan-card.is-top {
+  border-color: #0b6bff;
+  box-shadow: 0 0 0 3px rgba(11, 107, 255, 0.1);
+}
+.plan-card ul li.hasnt {
+  color: #98a2b3;
+}
+.plan-card ul li.has {
+  color: #067647;
+}
+.plan-price s.muted-text {
+  font-size: 15px;
+  margin-right: 4px;
+}
+.sale-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+@media (max-width: 640px) {
+  .plan-usage {
+    grid-template-columns: 1fr;
+  }
+}

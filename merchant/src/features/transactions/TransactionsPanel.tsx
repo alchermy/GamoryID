@@ -74,8 +74,10 @@ export function TransactionsPanel({
                         <strong>{record.plan?.name ?? "ทดลองใช้"}</strong>
                         <br />
                         <small>
-                          {record.plan?.duration_days
-                            ? `${record.plan.duration_days} วัน`
+                          {record.plan
+                            ? record.billing_cycle === "yearly"
+                              ? "รายปี"
+                              : "รายเดือน"
                             : "สิทธิ์เริ่มต้น"}
                         </small>
                       </td>
@@ -86,9 +88,9 @@ export function TransactionsPanel({
                       <td>
                         <strong>
                           {record.plan
-                            ? Number(record.plan.price_thb).toLocaleString(
-                                "th-TH",
-                              )
+                            ? Number(
+                                record.price_paid ?? record.plan.price_monthly,
+                              ).toLocaleString("th-TH")
                             : "0"}
                         </strong>{" "}
                         เครดิต
@@ -138,9 +140,9 @@ export function TransactionsPanel({
                       <dt>เครดิตที่ใช้</dt>
                       <dd>
                         {record.plan
-                          ? Number(record.plan.price_thb).toLocaleString(
-                              "th-TH",
-                            )
+                          ? Number(
+                              record.price_paid ?? record.plan.price_monthly,
+                            ).toLocaleString("th-TH")
                           : "0"}{" "}
                         เครดิต
                       </dd>

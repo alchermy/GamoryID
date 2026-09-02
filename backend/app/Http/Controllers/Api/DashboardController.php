@@ -8,15 +8,17 @@ use App\Models\ActivityLog;
 use App\Models\InventoryItem;
 use App\Models\Sale;
 use App\Services\CurrentShop;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, CurrentShop $currentShop): JsonResponse
+    public function __invoke(Request $request, CurrentShop $currentShop, PlanEntitlements $entitlements): JsonResponse
     {
         $shop = $currentShop->from($request);
+        $showProfit = $request->user()->hasShopPermission($shop, 'profit.view') && $entitlements->can($shop, 'analytics');
         $counts = InventoryItem::forShop($shop)
             ->select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
@@ -38,8 +40,8 @@ class DashboardController extends Controller
                 'sold_this_month' => (clone $monthly)->count(),
                 'sold_total' => (int) ($counts[InventoryStatus::Sold->value] ?? 0),
                 'revenue_this_month' => (float) (clone $monthly)->sum('sold_price'),
-                'profit_this_month' => $request->user()->hasShopPermission($shop, 'profit.view') ? (float) (clone $monthly)->sum('profit') : null,
-                'inventory_value' => $request->user()->hasShopPermission($shop, 'profit.view')
+                'profit_this_month' => $showProfit ? (float) (clone $monthly)->sum('profit') : null,
+                'inventory_value' => $showProfit
                     ? (float) InventoryItem::forShop($shop)->whereIn('status', ['available', 'reserved'])->sum('cost')
                     : null,
             ],
@@ -54,12 +56,7 @@ class DashboardController extends Controller
                     'revenue' => (float) ($record->revenue ?? 0),
                 ];
             })->values(),
-            'subscription' => [
-                'status' => $shop->status,
-                'trial_ends_at' => $shop->trial_ends_at,
-                'grace_ends_at' => $shop->grace_ends_at,
-                'writable' => $shop->isWritable(),
-            ],
+            'subscription' => $entitlements->summary($shop),
         ]);
     }
 }

@@ -105,21 +105,24 @@ class SubscriptionLifecycleTest extends TestCase
         $this->assertSame(3, $subscription->fresh()->expiry_reminder_stage);
     }
 
-    public function test_a_trial_past_expiry_moves_to_grace_and_notifies(): void
+    public function test_a_trial_past_expiry_drops_to_free_but_stays_writable(): void
     {
         Notification::fake();
         Queue::fake();
         [$shop, $subscription, $owner] = $this->trialShop(now()->subDay());
-        $shop->update(['grace_ends_at' => now()->addDays(13)]);
 
         app(SubscriptionLifecycle::class)->run();
 
-        $this->assertSame(SubscriptionStatus::GraceReadOnly->value, $shop->fresh()->status);
+        $fresh = $shop->fresh();
+        $this->assertSame(SubscriptionStatus::Active->value, $fresh->status);
+        $this->assertTrue($fresh->isWritable());
+        $this->assertNull($fresh->trial_ends_at);
+        $this->assertSame(SubscriptionStatus::Expired->value, $subscription->fresh()->status->value);
         Notification::assertSentTo($owner, ShopLifecycleNotification::class);
-        Queue::assertPushed(SendDiscordShopNotification::class, fn (SendDiscordShopNotification $job) => $job->shopId === $shop->id && $job->purpose === 'system' && str_contains($job->title, 'อ่านอย่างเดียว'));
+        Queue::assertPushed(SendDiscordShopNotification::class, fn (SendDiscordShopNotification $job) => $job->shopId === $shop->id && $job->purpose === 'system' && str_contains($job->title, 'Free'));
     }
 
-    public function test_a_shop_past_grace_is_suspended_and_notifies(): void
+    public function test_a_shop_past_grace_drops_to_free_not_suspended(): void
     {
         Notification::fake();
         Queue::fake();
@@ -132,9 +135,9 @@ class SubscriptionLifecycleTest extends TestCase
 
         app(SubscriptionLifecycle::class)->run();
 
-        $this->assertSame(SubscriptionStatus::Suspended->value, $shop->fresh()->status);
+        $this->assertSame(SubscriptionStatus::Active->value, $shop->fresh()->status);
         Notification::assertSentTo($owner, ShopLifecycleNotification::class);
-        Queue::assertPushed(SendDiscordShopNotification::class, fn (SendDiscordShopNotification $job) => $job->purpose === 'system' && str_contains($job->title, 'ระงับ'));
+        Queue::assertPushed(SendDiscordShopNotification::class, fn (SendDiscordShopNotification $job) => $job->purpose === 'system' && str_contains($job->title, 'Free'));
     }
 
     public function test_an_active_subscription_past_ends_at_without_auto_renew_enters_grace_and_notifies(): void

@@ -13,7 +13,7 @@ use App\Models\InventoryItem;
 use App\Models\Reservation;
 use App\Models\Sale;
 use App\Models\ShopMember;
-use App\Services\PlanGate;
+use App\Services\PlanEntitlements;
 use App\Services\TagGenerator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -44,7 +44,7 @@ class DiscordShopCommandHandler
 
     public function __construct(
         private readonly TagGenerator $tags,
-        private readonly PlanGate $planGate,
+        private readonly PlanEntitlements $planGate,
         private readonly DiscordNotificationMessageBuilder $notifications,
     ) {}
 

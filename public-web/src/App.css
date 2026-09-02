@@ -1205,8 +1205,69 @@
   margin-top: 2px;
   color: var(--success);
 }
+.price-card li.is-off {
+  color: #9fb0c4;
+}
+.price-card li.is-off svg {
+  color: #c2cede;
+}
 .price-action {
   width: 100%;
+}
+
+/* ---- 4-tier grid + billing-cycle switch ---- */
+.price-wrap-4 {
+  grid-template-columns: repeat(4, 1fr);
+  max-width: 1120px;
+  gap: 18px;
+}
+.price-wrap-4 .price-card {
+  padding: 26px 22px;
+}
+.price-tag {
+  display: inline-block;
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+.cycle-switch {
+  display: inline-flex;
+  gap: 4px;
+  margin: 22px auto 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+}
+.cycle-switch button {
+  border: 0;
+  background: transparent;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font: 600 13px/1 var(--font-display);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background 160ms ease-out,
+    color 160ms ease-out;
+}
+.cycle-switch button.is-on {
+  background: linear-gradient(135deg, var(--primary), var(--signal));
+  color: #fff;
+}
+@media (max-width: 980px) {
+  .price-wrap-4 {
+    grid-template-columns: 1fr 1fr;
+    max-width: 640px;
+  }
+}
+@media (max-width: 560px) {
+  .price-wrap-4 {
+    grid-template-columns: 1fr;
+    max-width: 380px;
+  }
 }
 
 .cta {

@@ -29,7 +29,7 @@ class CreditWalletTest extends TestCase
 
         $response = $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
             ->withHeader('Idempotency-Key', $key)
-            ->postJson('/api/v1/subscriptions/purchase', ['plan_id' => $plan->id, 'auto_renew' => true]);
+            ->postJson('/api/v1/subscriptions/purchase', ['plan_id' => $plan->id, 'billing_cycle' => 'monthly', 'auto_renew' => true]);
 
         $response->assertOk()
             ->assertJsonPath('data.credit_balance', 201)
@@ -37,7 +37,7 @@ class CreditWalletTest extends TestCase
             ->assertJsonPath('data.subscription.plan.code', 'starter');
         $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
             ->withHeader('Idempotency-Key', $key)
-            ->postJson('/api/v1/subscriptions/purchase', ['plan_id' => $plan->id, 'auto_renew' => true])
+            ->postJson('/api/v1/subscriptions/purchase', ['plan_id' => $plan->id, 'billing_cycle' => 'monthly', 'auto_renew' => true])
             ->assertOk()->assertJsonPath('data.credit_balance', 201);
 
         $this->assertDatabaseHas('shops', ['id' => $shop->id, 'credit_balance' => 201, 'status' => 'active']);
@@ -53,7 +53,7 @@ class CreditWalletTest extends TestCase
 
         $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
             ->withHeader('Idempotency-Key', (string) Str::uuid())
-            ->postJson('/api/v1/subscriptions/purchase', ['plan_id' => $plan->id, 'auto_renew' => false])
+            ->postJson('/api/v1/subscriptions/purchase', ['plan_id' => $plan->id, 'billing_cycle' => 'monthly', 'auto_renew' => false])
             ->assertUnprocessable()->assertJsonValidationErrors('credits');
 
         $this->assertDatabaseHas('shops', ['id' => $shop->id, 'credit_balance' => 100]);
@@ -186,6 +186,66 @@ class CreditWalletTest extends TestCase
         $this->assertDatabaseCount('subscriptions', 2);
     }
 
+    public function test_yearly_purchase_charges_the_yearly_price_and_sets_a_365_day_period(): void
+    {
+        [$user, $shop] = $this->owner();
+        $shop->update(['credit_balance' => 5000]);
+        $plan = $this->plan(299); // yearly = 2990
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson('/api/v1/subscriptions/purchase', ['plan_id' => $plan->id, 'billing_cycle' => 'yearly', 'auto_renew' => false])
+            ->assertOk()
+            ->assertJsonPath('data.credit_balance', 2010)
+            ->assertJsonPath('data.subscription.billing_cycle', 'yearly')
+            ->assertJsonPath('data.subscription.price_paid', 2990);
+
+        $sub = $shop->subscriptions()->latest('id')->first();
+        $this->assertSame(365, (int) $sub->starts_at->diffInDays($sub->ends_at));
+        $this->assertDatabaseHas('credit_transactions', ['shop_id' => $shop->id, 'credits' => -2990]);
+    }
+
+    public function test_a_running_sale_price_is_charged_instead_of_the_list_price(): void
+    {
+        [$user, $shop] = $this->owner();
+        $shop->update(['credit_balance' => 500]);
+        $plan = $this->plan(299);
+        $plan->update(['sale_price_monthly' => 149, 'sale_label' => 'โปรเปิดตัว', 'sale_ends_at' => now()->addDays(7)]);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson('/api/v1/subscriptions/purchase', ['plan_id' => $plan->id, 'billing_cycle' => 'monthly', 'auto_renew' => false])
+            ->assertOk()
+            ->assertJsonPath('data.credit_balance', 351)
+            ->assertJsonPath('data.subscription.price_paid', 149);
+    }
+
+    public function test_an_expired_sale_falls_back_to_the_list_price(): void
+    {
+        [$user, $shop] = $this->owner();
+        $shop->update(['credit_balance' => 500]);
+        $plan = $this->plan(299);
+        $plan->update(['sale_price_monthly' => 149, 'sale_ends_at' => now()->subDay()]);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson('/api/v1/subscriptions/purchase', ['plan_id' => $plan->id, 'billing_cycle' => 'monthly', 'auto_renew' => false])
+            ->assertOk()
+            ->assertJsonPath('data.subscription.price_paid', 299);
+    }
+
+    public function test_the_free_plan_cannot_be_purchased(): void
+    {
+        [$user, $shop] = $this->owner();
+        $shop->update(['credit_balance' => 500]);
+        $free = SubscriptionPlan::query()->where('code', 'free')->firstOrFail();
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson('/api/v1/subscriptions/purchase', ['plan_id' => $free->id, 'billing_cycle' => 'monthly', 'auto_renew' => false])
+            ->assertUnprocessable()->assertJsonValidationErrors('plan_id');
+    }
+
     private function owner(): array
     {
         $shop = Shop::create(['name' => 'ร้านเครดิต', 'slug' => 'credit-'.uniqid(), 'status' => 'trialing', 'trial_ends_at' => now()->addMonth()]);
@@ -197,6 +257,9 @@ class CreditWalletTest extends TestCase
 
     private function plan(int $price): SubscriptionPlan
     {
-        return SubscriptionPlan::create(['name' => 'Starter', 'code' => 'starter', 'active_inventory_limit' => 100, 'member_limit' => 2, 'price_thb' => $price, 'duration_days' => 30, 'is_active' => true]);
+        return SubscriptionPlan::updateOrCreate(
+            ['code' => 'starter'],
+            ['name' => 'Starter', 'active_inventory_limit' => 100, 'member_limit' => 2, 'price_monthly' => $price, 'price_yearly' => $price * 10, 'monthly_days' => 30, 'yearly_days' => 365, 'is_active' => true],
+        );
     }
 }
