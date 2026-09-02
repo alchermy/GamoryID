@@ -7,7 +7,13 @@ const OUT = "public/mascot/opt";
 const WIDTHS = [220, 440];
 
 // Only the poses the landing page actually renders.
-const USED = ["gammy-main.png", "gammy-secure.png", "gammy-hello.png"];
+const USED = [
+  "gammy-main.png",
+  "gammy-secure.png",
+  "gammy-hello.png",
+  "gammy-search.png",
+  "gammy-sold.png",
+];
 
 await mkdir(OUT, { recursive: true });
 const files = (await readdir(SRC)).filter(

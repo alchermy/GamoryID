@@ -17,6 +17,17 @@
   --border: #d8e3f0;
   --muted: #64758b;
 
+  /* product-showcase palette */
+  --deep: #04122b;
+  --deep-2: #0a1f45;
+  --sky: #eaf3ff;
+  --grad-hero: linear-gradient(158deg, #071a3b 0%, #0b52d4 52%, #2f97ff 100%);
+  --grad-cta: linear-gradient(135deg, #0b6bff, #00c2ff);
+  --grad-ink: linear-gradient(180deg, #04122b, #0a1f45);
+  --shadow-blue: 0 30px 70px -18px rgba(11, 107, 255, 0.38);
+  --shadow-card: 0 18px 40px -16px rgba(7, 26, 51, 0.16);
+  --shadow-float: 0 20px 45px -12px rgba(7, 26, 51, 0.24);
+
   --font-sans: "Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif;
   --font-display: "IBM Plex Sans Thai", "Noto Sans Thai", "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", "SFMono-Regular", ui-monospace, Menlo, monospace;

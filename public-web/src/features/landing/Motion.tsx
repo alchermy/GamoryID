@@ -31,6 +31,11 @@ export function Reveal({
       setIsVisible(true);
       return;
     }
+    // Anything already at or above the fold on mount reveals immediately.
+    if (element.getBoundingClientRect().top < window.innerHeight * 0.95) {
+      setIsVisible(true);
+      return;
+    }
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (
@@ -58,23 +63,20 @@ export function Reveal({
   );
 }
 
-/**
- * The cyan signal rail — GamoryID's design-system motif — running down the page's
- * left gutter, its fill and glowing tip tracking scroll progress.
- */
-export function ScrollRail() {
-  const railRef = useRef<HTMLDivElement>(null);
+/** Thin scroll-progress bar pinned to the top edge of the viewport. */
+export function ScrollProgress() {
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const rail = railRef.current;
-    if (!rail) return;
+    const bar = barRef.current;
+    if (!bar) return;
     let frame = 0;
     const update = () => {
       frame = 0;
       const doc = document.documentElement;
       const max = doc.scrollHeight - doc.clientHeight;
       const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
-      rail.style.setProperty("--p", p.toFixed(4));
+      bar.style.setProperty("--p", p.toFixed(4));
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
@@ -90,10 +92,8 @@ export function ScrollRail() {
   }, []);
 
   return (
-    <div className="scroll-rail" ref={railRef} aria-hidden="true">
-      <span className="scroll-rail-track" />
-      <span className="scroll-rail-fill" />
-      <span className="scroll-rail-tip" />
+    <div className="progress-top" ref={barRef} aria-hidden="true">
+      <span className="progress-top-fill" />
     </div>
   );
 }
@@ -121,23 +121,41 @@ export function CountUp({
       setDisplay(value);
       return;
     }
+    let done = false;
+    const run = () => {
+      if (done) return;
+      done = true;
+      observer.disconnect();
+      clearTimeout(safety);
+      const start = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        setDisplay(Math.round(value * eased));
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry.isIntersecting) return;
-        observer.disconnect();
-        const start = performance.now();
-        const tick = (now: number) => {
-          const t = Math.min(1, (now - start) / duration);
-          const eased = 1 - Math.pow(1 - t, 3);
-          setDisplay(Math.round(value * eased));
-          if (t < 1) requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
+        if (entry.isIntersecting) run();
       },
       { threshold: 0.4 },
     );
     observer.observe(el);
-    return () => observer.disconnect();
+    // Safety net: if the observer never fires (odd viewports, no scroll), still
+    // land on the real number rather than a stuck 0.
+    const safety = window.setTimeout(() => {
+      if (!done) {
+        done = true;
+        observer.disconnect();
+        setDisplay(value);
+      }
+    }, 2600);
+    return () => {
+      observer.disconnect();
+      clearTimeout(safety);
+    };
   }, [value, duration]);
 
   return (

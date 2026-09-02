@@ -18,7 +18,7 @@ export function PricingSection() {
   return (
     <>
       <section className="section container" id="pricing">
-        <Reveal className="section-head">
+        <Reveal className="section-head centered">
           <span className="kicker">
             <span className="kicker-tick" aria-hidden="true" />
             เริ่มเล็ก ขยายตามร้าน
@@ -39,14 +39,20 @@ export function PricingSection() {
       </section>
 
       <Reveal className="container cta">
+        <div className="cta-glow" aria-hidden="true" />
         <div className="cta-copy">
           <h2>พร้อมจัดร้านให้เป็นระบบหรือยัง?</h2>
           <p>เริ่มนำเข้าสต็อก ค้นหา และบันทึกขายได้วันนี้</p>
-          <a href={merchantRegisterUrl} className="btn orange btn-lg">
+          <a href={merchantRegisterUrl} className="btn btn-lg btn-on-cta">
             เริ่มทดลองใช้ฟรี <ArrowRight size={17} />
           </a>
         </div>
-        <Mascot pose="hello" alt="Gammy ชวนเปิดร้าน" width={185} className="cta-mascot" />
+        <Mascot
+          pose="hello"
+          alt="Gammy ชวนเปิดร้าน"
+          width={210}
+          className="cta-mascot"
+        />
       </Reveal>
     </>
   );
@@ -66,8 +72,8 @@ function PriceCard({
   recommended?: boolean;
 }) {
   return (
-    <article className={`price ${recommended ? "recommended" : ""}`}>
-      {recommended && <span className="price-label">เหมาะกับร้านที่กำลังโต</span>}
+    <article className={`price-card ${recommended ? "is-top" : ""}`}>
+      {recommended && <span className="price-flag">แนะนำสำหรับร้านที่กำลังโต</span>}
       <h3>{name}</h3>
       <div className="amount">
         ฿<CountUp value={amount} /> <small>/ 30 วัน</small>
