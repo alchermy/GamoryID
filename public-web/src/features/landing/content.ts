@@ -58,7 +58,7 @@ export const workflowSteps = [
 /** Real product specs — not invented traction numbers. */
 export const specs = [
   { value: 5, label: "ตัวอักษรต่อแท็ก ค้นเจอทันที", suffix: "" },
-  { value: 10000, label: "ไอดีต่อร้าน แพ็กสูงสุด", suffix: "" },
+  { value: 10000, label: "ไอดีต่อร้าน ที่ระบบรองรับ", suffix: "" },
   { text: "ทุกการกระทำ", label: "ถูกบันทึกไว้ ใครทำอะไร เมื่อไร ตรวจย้อนหลังได้" },
-  { value: 30, label: "วัน ทดลองใช้ฟรี", suffix: "" },
+  { value: 14, label: "วัน ทดลองใช้ฟรี", suffix: "" },
 ] as const;

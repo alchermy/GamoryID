@@ -42,7 +42,7 @@ class PlanEntitlementsTest extends TestCase
         $shop = $this->shop('active');
 
         $this->assertSame('free', $ent->effectivePlan($shop)->code);
-        $this->assertSame(30, $ent->inventoryLimit($shop));
+        $this->assertSame(10, $ent->inventoryLimit($shop));
         $this->assertSame(1, $ent->memberLimit($shop));
         $this->assertFalse($ent->can($shop, 'discord'));
         $this->assertFalse($ent->can($shop, 'activity_log'));
@@ -80,7 +80,7 @@ class PlanEntitlementsTest extends TestCase
         $this->assertTrue($ent->can($shop, 'activity_log'));
 
         try {
-            $ent->ensureFeature($shop, 'discord');
+            $ent->ensureFeature($shop, 'advanced_export');
             $this->fail('expected a 403');
         } catch (HttpException $e) {
             $this->assertSame(403, $e->getStatusCode());
@@ -90,9 +90,9 @@ class PlanEntitlementsTest extends TestCase
     public function test_ensure_inventory_capacity_aborts_422_over_the_limit(): void
     {
         $ent = app(PlanEntitlements::class);
-        $shop = $this->shop('active'); // free → limit 30
+        $shop = $this->shop('active'); // free → limit 10
 
-        for ($i = 0; $i < 30; $i++) {
+        for ($i = 0; $i < 10; $i++) {
             InventoryItem::create(['shop_id' => $shop->id, 'tag' => str_pad(base_convert((string) $i, 10, 36), 5, 'A', STR_PAD_LEFT), 'title' => 't', 'cost' => 0, 'list_price' => 0, 'status' => 'available']);
         }
 
@@ -117,7 +117,7 @@ class PlanEntitlementsTest extends TestCase
         $this->assertSame('growth', $summary['effective_plan']['code']);
         $this->assertTrue($summary['effective_plan']['features']['discord']);
         $this->assertFalse($summary['effective_plan']['features']['priority_support']);
-        $this->assertSame(1000, $summary['effective_plan']['active_inventory_limit']);
+        $this->assertSame(250, $summary['effective_plan']['active_inventory_limit']);
         $this->assertSame(1, $summary['usage']['inventory_active']);
     }
 }

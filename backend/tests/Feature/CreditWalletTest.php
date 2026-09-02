@@ -259,7 +259,13 @@ class CreditWalletTest extends TestCase
     {
         return SubscriptionPlan::updateOrCreate(
             ['code' => 'starter'],
-            ['name' => 'Starter', 'active_inventory_limit' => 100, 'member_limit' => 2, 'price_monthly' => $price, 'price_yearly' => $price * 10, 'monthly_days' => 30, 'yearly_days' => 365, 'is_active' => true],
+            [
+                'name' => 'Starter', 'active_inventory_limit' => 100, 'member_limit' => 2,
+                'price_monthly' => $price, 'price_yearly' => $price * 10,
+                'sale_price_monthly' => null, 'sale_price_yearly' => null,
+                'sale_label' => null, 'sale_ends_at' => null,
+                'monthly_days' => 30, 'yearly_days' => 365, 'is_active' => true,
+            ],
         );
     }
 }

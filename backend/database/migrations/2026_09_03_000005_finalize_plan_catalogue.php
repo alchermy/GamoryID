@@ -19,7 +19,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        SubscriptionPlan::syncDefaults(resetSales: true);
+        SubscriptionPlan::syncDefaults();
     }
 
     public function down(): void

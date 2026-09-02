@@ -18,8 +18,8 @@ class PublicPlansApiTest extends TestCase
         $this->assertSame(['free', 'starter', 'growth', 'pro'], $codes);
 
         $growth = collect($response->json('data'))->firstWhere('code', 'growth');
-        $this->assertSame(690, $growth['price_monthly']);
-        $this->assertSame(6900, $growth['price_yearly']);
+        $this->assertSame(600, $growth['price_monthly']);
+        $this->assertSame(6000, $growth['price_yearly']);
         $this->assertTrue($growth['features']['discord']);
         $this->assertFalse($growth['features']['priority_support']);
         $this->assertNull(

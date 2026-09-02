@@ -48,12 +48,12 @@ class PlanFeatureGateTest extends TestCase
             ->assertJsonPath('subscription.effective_plan.code', 'free');
     }
 
-    public function test_a_starter_shop_gets_log_and_import_but_not_discord_or_analytics(): void
+    public function test_a_starter_shop_gets_log_import_and_discord_but_not_exports_or_analytics(): void
     {
         [$user, $shop] = $this->ownerOn('starter');
 
         $this->req($user, $shop, 'GET', '/api/v1/activity')->assertOk();
-        $this->req($user, $shop, 'GET', '/api/v1/discord/settings')->assertForbidden();
+        $this->req($user, $shop, 'GET', '/api/v1/discord/settings')->assertOk();
         $this->req($user, $shop, 'GET', '/api/v1/export/inventory.csv')->assertForbidden();
 
         $this->req($user, $shop, 'GET', '/api/v1/dashboard')

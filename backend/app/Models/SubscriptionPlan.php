@@ -100,46 +100,51 @@ class SubscriptionPlan extends Model
             ->mapWithKeys(fn ($key) => [$key => in_array($key, $on, true)])
             ->all();
 
+        $base = [
+            'sale_price_monthly' => null, 'sale_price_yearly' => null,
+            'sale_label' => null, 'sale_ends_at' => null,
+        ];
+        $promo = fn (int $m, int $y) => [
+            'sale_price_monthly' => $m, 'sale_price_yearly' => $y,
+            'sale_label' => 'โปรเปิดตัว', 'sale_ends_at' => null,
+        ];
+
         return [
             [
-                'code' => 'free', 'name' => 'Free', 'sort_order' => 0,
+                'code' => 'free', 'name' => 'Free Trial', 'sort_order' => 0,
                 'price_monthly' => 0, 'price_yearly' => null,
-                'active_inventory_limit' => 30, 'member_limit' => 1,
+                'active_inventory_limit' => 10, 'member_limit' => 1,
                 'features' => $feat(),
+                ...$base,
             ],
             [
                 'code' => 'starter', 'name' => 'Starter', 'sort_order' => 1,
-                'price_monthly' => 299, 'price_yearly' => 2990,
-                'active_inventory_limit' => 150, 'member_limit' => 3,
-                'features' => $feat('bulk_import', 'activity_log'),
+                'price_monthly' => 250, 'price_yearly' => 2500,
+                'active_inventory_limit' => 50, 'member_limit' => 2,
+                'features' => $feat('bulk_import', 'activity_log', 'discord'),
+                ...$promo(199, 1990),
             ],
             [
                 'code' => 'growth', 'name' => 'Growth', 'sort_order' => 2,
-                'price_monthly' => 690, 'price_yearly' => 6900,
-                'active_inventory_limit' => 1000, 'member_limit' => 8,
+                'price_monthly' => 600, 'price_yearly' => 6000,
+                'active_inventory_limit' => 250, 'member_limit' => 4,
                 'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access'),
+                ...$promo(490, 4900),
             ],
             [
                 'code' => 'pro', 'name' => 'Pro', 'sort_order' => 3,
-                'price_monthly' => 1490, 'price_yearly' => 14900,
-                'active_inventory_limit' => 10000, 'member_limit' => null,
+                'price_monthly' => 1190, 'price_yearly' => 11900,
+                'active_inventory_limit' => 500, 'member_limit' => null,
                 'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access', 'priority_support'),
+                ...$promo(890, 8900),
             ],
         ];
     }
 
-    public static function syncDefaults(bool $resetSales = false): void
+    public static function syncDefaults(): void
     {
         foreach (self::defaults() as $plan) {
             $attributes = array_merge($plan, ['is_active' => true, 'monthly_days' => 30, 'yearly_days' => 365]);
-            if ($resetSales) {
-                $attributes = array_merge($attributes, [
-                    'sale_price_monthly' => null,
-                    'sale_price_yearly' => null,
-                    'sale_label' => null,
-                    'sale_ends_at' => null,
-                ]);
-            }
             static::query()->updateOrCreate(['code' => $plan['code']], $attributes);
         }
     }
