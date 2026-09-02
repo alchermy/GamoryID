@@ -104,7 +104,7 @@ export function AppShowcase() {
       <Mascot
         pose="secure"
         alt="Gammy มาสคอตของ GamoryID"
-        width={196}
+        width={210}
         className="showcase-mascot"
         priority
       />

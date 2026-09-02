@@ -698,12 +698,12 @@
 }
 .showcase-mascot {
   position: absolute;
-  z-index: 1;
-  right: 6px;
-  bottom: -38px;
-  width: 178px;
+  z-index: 2;
+  right: -28px;
+  bottom: -46px;
+  width: 210px;
   height: auto;
-  filter: drop-shadow(0 18px 26px rgba(3, 16, 40, 0.4));
+  filter: drop-shadow(-6px 14px 22px rgba(3, 16, 40, 0.38));
   animation: mascot-bob 4.4s ease-in-out infinite;
 }
 
