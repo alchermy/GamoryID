@@ -7,10 +7,23 @@ use App\Models\SubscriptionPlan;
 
 class PaymentController extends Controller
 {
+    /** Authenticated plan list for the merchant billing screen. */
     public function plans()
     {
-        $plans = SubscriptionPlan::where('is_active', true)
+        return response()->json(['data' => $this->activePlans()]);
+    }
+
+    /** Public plan list for the marketing site — no auth, active plans only. */
+    public function publicPlans()
+    {
+        return response()->json(['data' => $this->activePlans()]);
+    }
+
+    private function activePlans()
+    {
+        return SubscriptionPlan::where('is_active', true)
             ->orderBy('sort_order')
+            ->orderBy('price_monthly')
             ->get()
             ->map(fn (SubscriptionPlan $plan) => [
                 'id' => $plan->id,
@@ -20,8 +33,9 @@ class PaymentController extends Controller
                 'is_free' => $plan->isFree(),
                 'price_monthly' => $plan->price_monthly,
                 'price_yearly' => $plan->price_yearly,
-                'sale_price_monthly' => $plan->effectivePriceFor('monthly') !== $plan->price_monthly ? $plan->sale_price_monthly : null,
-                'sale_price_yearly' => $plan->price_yearly !== null && $plan->effectivePriceFor('yearly') !== $plan->price_yearly ? $plan->sale_price_yearly : null,
+                // Only surface a sale price while the sale is actually running.
+                'sale_price_monthly' => $plan->saleIsRunning('monthly') ? $plan->sale_price_monthly : null,
+                'sale_price_yearly' => $plan->price_yearly !== null && $plan->saleIsRunning('yearly') ? $plan->sale_price_yearly : null,
                 'sale_label' => $plan->sale_label,
                 'sale_ends_at' => $plan->sale_ends_at,
                 'monthly_days' => $plan->monthly_days,
@@ -32,7 +46,5 @@ class PaymentController extends Controller
                     ->mapWithKeys(fn ($key) => [$key => $plan->feature($key)])
                     ->all(),
             ]);
-
-        return response()->json(['data' => $plans]);
     }
 }

@@ -209,13 +209,9 @@ export function BillingPanel({
                 cycle === "yearly"
                   ? plan.sale_price_yearly
                   : plan.sale_price_monthly;
-              const saleActive =
-                rawSale != null &&
-                (!plan.sale_ends_at ||
-                  new Date(plan.sale_ends_at).getTime() > Date.now());
-              const price = saleActive ? rawSale! : (listPrice ?? 0);
-              const days =
-                cycle === "yearly" ? plan.yearly_days : plan.monthly_days;
+              // The API only sends a sale price while the sale is running.
+              const saleActive = rawSale != null;
+              const price = saleActive ? rawSale : (listPrice ?? 0);
               const isCurrent = ent?.effective_plan.code === plan.code;
               const unavailable = plan.is_free || listPrice == null;
               const enough = balance >= price;
@@ -247,7 +243,9 @@ export function BillingPanel({
                         </s>
                       )}{" "}
                       {price.toLocaleString("th-TH")}{" "}
-                      <small>เครดิต / {days} วัน</small>
+                      <small>
+                        เครดิต / {cycle === "yearly" ? "ปี" : "เดือน"}
+                      </small>
                       {saleActive && plan.sale_label && (
                         <span className="sale-badge">{plan.sale_label}</span>
                       )}
@@ -384,11 +382,8 @@ export function PurchasePlanDialog({
     cycle === "yearly" ? plan.price_yearly : plan.price_monthly;
   const rawSale =
     cycle === "yearly" ? plan.sale_price_yearly : plan.sale_price_monthly;
-  const saleActive =
-    rawSale != null &&
-    (!plan.sale_ends_at ||
-      new Date(plan.sale_ends_at).getTime() > Date.now());
-  const price = saleActive ? rawSale! : (listPrice ?? 0);
+  const saleActive = rawSale != null;
+  const price = saleActive ? rawSale : (listPrice ?? 0);
   const days = cycle === "yearly" ? plan.yearly_days : plan.monthly_days;
   return (
     <div

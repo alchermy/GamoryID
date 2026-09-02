@@ -1232,6 +1232,21 @@
   color: var(--primary);
   margin-bottom: 8px;
 }
+.price-was {
+  font: 400 15px/1 var(--font-mono);
+  color: #9fb0c4;
+  margin-right: 4px;
+}
+.sale-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff2dc;
+  color: #b45309;
+  font: 700 10px/1 var(--font-display);
+  vertical-align: middle;
+}
 .cycle-switch {
   display: inline-flex;
   gap: 4px;
