@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import {
   Bell,
+  BookOpen,
   Box,
   Check,
   CircleHelp,
@@ -62,8 +63,10 @@ import {
   BillingPanel,
   PurchasePlanDialog,
   AutoRenewDialog,
+  TopUpDialog,
 } from "../billing/billing-components";
 import { TransactionsPanel } from "../transactions/TransactionsPanel";
+import { ManualPanel } from "../manual/ManualPanel";
 import { ActivityPanel } from "../activity/ActivityPanel";
 import { SettingsPanel } from "../settings/SettingsPanel";
 import { DashboardPanel, Kpi } from "../dashboard/DashboardPanel";
@@ -175,6 +178,7 @@ export function MerchantApp() {
       | "permissions"
       | "purchase"
       | "autoRenew"
+      | "topUp"
       | null
     >(null),
     [selectedMember, setSelectedMember] = useState<TeamMember | null>(null),
@@ -987,6 +991,7 @@ export function MerchantApp() {
         body: form,
       });
       notify("ส่งสลิปเติมเครดิตแล้ว รอตรวจสอบ");
+      setManagementDialog(null);
       setManagementRevision((value) => value + 1);
     } catch (error) {
       notify(
@@ -1102,12 +1107,31 @@ export function MerchantApp() {
       ? "ภาพรวมร้าน"
       : page === "inventory"
         ? "คลังไอดี"
-        : (mainNavigation.find((n) => n[0] === page)?.[1] ??
+        : page === "manual"
+          ? "คู่มือการใช้งานระบบ"
+          : (mainNavigation.find((n) => n[0] === page)?.[1] ??
           managementNavigation.find((n) => n[0] === page)?.[1] ??
           "GamoryID");
   useEffect(() => {
     document.title = `${activeTitle} — GamoryID`;
   }, [activeTitle]);
+  const planEnt = shopDetails?.entitlements;
+  const planMeterDays = (() => {
+    const end = planEnt?.current_period_ends_at ?? shopDetails?.trial_ends_at;
+    if (!end) return null;
+    return Math.max(
+      0,
+      Math.ceil((new Date(end).getTime() - Date.now()) / 86_400_000),
+    );
+  })();
+  const planMeterLimit = planEnt?.effective_plan.active_inventory_limit ?? null;
+  const planMeterPct =
+    planEnt && planMeterLimit
+      ? Math.min(
+          100,
+          Math.round((planEnt.usage.inventory_active / planMeterLimit) * 100),
+        )
+      : 0;
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="เมนูหลัก">
@@ -1147,20 +1171,28 @@ export function MerchantApp() {
         </nav>
         <div className="sidebar-bottom">
           <div className="plan-meter">
-            <strong>ทดลองใช้ · เหลือ 24 วัน</strong>
-            <span>สต็อก 8 / 1,000 รายการ</span>
+            <strong>
+              {planEnt?.effective_plan.name ?? "แพ็กเกจร้าน"}
+              {planMeterDays != null
+                ? ` · เหลือ ${planMeterDays.toLocaleString("th-TH")} วัน`
+                : ""}
+            </strong>
+            <span>
+              {planEnt
+                ? `สต็อก ${planEnt.usage.inventory_active.toLocaleString("th-TH")} / ${
+                    planMeterLimit == null
+                      ? "ไม่จำกัด"
+                      : planMeterLimit.toLocaleString("th-TH")
+                  } รายการ`
+                : "กำลังโหลดข้อมูลแพ็กเกจ…"}
+            </span>
             <div className="meter">
-              <i />
+              <i style={{ width: `${planMeterPct}%` }} />
             </div>
           </div>
-          <button
-            className="nav-button"
-            onClick={() =>
-              (window.location.href = "mailto:hello@gamoryid.local")
-            }
-          >
-            <CircleHelp size={18} />
-            ศูนย์ช่วยเหลือ
+          <button className="nav-button" onClick={() => go("manual")}>
+            <BookOpen size={18} />
+            คู่มือการใช้งานระบบ
           </button>
         </div>
       </aside>
@@ -1183,7 +1215,7 @@ export function MerchantApp() {
         </div>
       </header>
       <main
-        className={`page ${page === "dashboard" ? "dashboard-page" : ""} ${page === "inventory" ? "inventory-page" : ""} ${page === "inventory" && selected ? "inventory-detail-page" : ""} ${page === "sales" ? "sales-page" : ""} ${saleDetailId ? "sale-detail-page" : ""} ${page === "customers" ? "customers-page" : ""} ${["team", "billing", "transactions", "discord", "settings"].includes(page) ? "management-page" : ""}`}
+        className={`page ${page === "dashboard" ? "dashboard-page" : ""} ${page === "inventory" ? "inventory-page" : ""} ${page === "inventory" && selected ? "inventory-detail-page" : ""} ${page === "sales" ? "sales-page" : ""} ${saleDetailId ? "sale-detail-page" : ""} ${page === "customers" ? "customers-page" : ""} ${["team", "billing", "transactions", "discord", "settings", "manual"].includes(page) ? "management-page" : ""}`}
       >
         <div className="page-head">
           <div>
@@ -1203,7 +1235,9 @@ export function MerchantApp() {
                   ? "ตรวจสอบประวัติแพ็กเกจและเครดิตของร้านจากรายการล่าสุด"
                   : page === "discord"
                     ? "เชื่อมเซิร์ฟเวอร์ ตั้งค่าห้องแจ้งเตือน และจัดการร้านด้วยคำสั่งภาษาไทย"
-                    : "ค้นหา จอง และขายไอดีได้จากที่เดียว"}
+                    : page === "manual"
+                      ? "สรุปการใช้งานหลักของ GamoryID สำหรับเจ้าของร้านและพนักงาน"
+                      : "ค้นหา จอง และขายไอดีได้จากที่เดียว"}
             </p>
           </div>
           <div className="actions">
@@ -1330,7 +1364,7 @@ export function MerchantApp() {
             error={managementError}
             canManage={hasShopPermission("billing.manage")}
             busy={paymentBusy}
-            onTopUp={submitTopUp}
+            onOpenTopUp={() => setManagementDialog("topUp")}
             onPurchase={(plan, cycle) => {
               setPendingPlan(plan);
               setPendingCycle(cycle);
@@ -1368,6 +1402,7 @@ export function MerchantApp() {
             retry={() => setManagementRevision((value) => value + 1)}
           />
         )}
+        {page === "manual" && <ManualPanel />}
         {page === "dashboard" && (
           <DashboardPanel
             dashboard={dashboard}
@@ -1417,15 +1452,14 @@ export function MerchantApp() {
           <Kpi
             label="ถูกจอง"
             value={`${summary.reserved}`}
-            note="2 รายการใกล้หมดเวลา"
+            note="รายการที่ล็อกให้ลูกค้า"
             icon={<Clock3 size={16} />}
           />
           <Kpi
             label="ขายเดือนนี้"
             value={`${summary.sold}`}
-            note="↑ 12% จากเดือนก่อน"
+            note="รายการที่ปิดการขายแล้ว"
             icon={<Check size={16} />}
-            positive
           />
           <Kpi
             label="มูลค่าสต็อก"
@@ -1647,6 +1681,13 @@ export function MerchantApp() {
         <AutoRenewDialog
           close={() => setManagementDialog(null)}
           confirm={() => void updateAutoRenew(true)}
+        />
+      )}{" "}
+      {managementDialog === "topUp" && (
+        <TopUpDialog
+          busy={paymentBusy}
+          close={() => setManagementDialog(null)}
+          submit={submitTopUp}
         />
       )}{" "}
       {toast && (

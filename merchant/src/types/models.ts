@@ -21,7 +21,8 @@ export type MerchantPage =
   | "billing"
   | "transactions"
   | "discord"
-  | "settings";
+  | "settings"
+  | "manual";
 
 export type ActivityEntry = {
   id: number;

@@ -25,6 +25,7 @@ export const PAGE_PATHS: Record<MerchantPage, string> = {
   transactions: "/transactions",
   discord: "/discord",
   settings: "/settings",
+  manual: "/manual",
 };
 
 export const PATH_PAGES = new Map(

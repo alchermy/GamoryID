@@ -19,6 +19,7 @@ const merchantPaths = [
   "/transactions",
   "/discord",
   "/settings",
+  "/manual",
 ];
 
 function AppRoutes() {

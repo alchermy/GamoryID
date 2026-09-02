@@ -275,29 +275,115 @@
   cursor: not-allowed;
   opacity: 0.55;
 }
-.top-up-form {
-  align-items: end;
+.credit-topup-btn {
+  align-items: center;
+  background: #fff;
+  border: 0;
+  border-radius: 999px;
+  color: #0b6bff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 700;
+  gap: 7px;
+  padding: 10px 18px;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.credit-topup-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 18px rgba(3, 18, 36, 0.28);
+  transform: translateY(-1px);
+}
+.credit-topup-btn:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+.credit-topup-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.topup-dialog {
+  width: min(680px, 100%);
+}
+.topup-body {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+}
+.topup-pay {
   background: #f7faff;
   border: 1px solid #d8e3f0;
-  border-radius: 16px;
-  display: grid;
-  gap: 14px;
-  grid-template-columns: 1.2fr 0.7fr 1fr auto;
-  margin: 20px 0;
-  padding: 18px;
+  border-radius: 14px;
+  padding: 14px;
 }
-.top-up-form h3 {
-  color: #101828;
-  font-size: 16px;
-  margin: 4px 0;
+.topup-qr {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e3ebf5;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
 }
-.top-up-form p {
+.topup-qr img {
+  aspect-ratio: 1;
+  height: auto;
+  width: 100%;
+}
+.topup-qr-fallback {
+  align-items: center;
   color: #667085;
+  display: flex;
   font-size: 12px;
+  height: 200px;
+  justify-content: center;
+}
+.topup-qr-tag {
+  color: #0b6bff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.topup-pay-detail {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+}
+.topup-pay-detail div {
+  display: grid;
+  gap: 2px;
+}
+.topup-pay-detail dt {
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+}
+.topup-pay-detail dd {
+  color: #101828;
+  font-size: 14px;
+  font-weight: 600;
   margin: 0;
 }
-.top-up-form .field {
-  min-width: 0;
+.topup-note {
+  color: #667085;
+  font-size: 11px;
+  margin: 12px 0 0;
+}
+.topup-form {
+  display: grid;
+  gap: 12px;
+}
+.topup-actions {
+  border-top: 0;
+  grid-column: 1 / -1;
+  padding: 0;
+}
+@media (max-width: 640px) {
+  .topup-body {
+    grid-template-columns: 1fr;
+  }
 }
 .top-up-file {
   align-items: center;
@@ -677,12 +763,6 @@
   .billing-summary {
     grid-template-columns: 1fr;
   }
-  .top-up-form {
-    grid-template-columns: 1fr 1fr;
-  }
-  .top-up-form > :first-child {
-    grid-column: 1 / -1;
-  }
   .permission-list {
     min-width: 220px;
   }
@@ -855,21 +935,15 @@
   }
   .credit-hero {
     padding: 18px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
   }
   .credit-hero strong {
     font-size: 29px;
   }
   .auto-renew {
     align-items: flex-start;
-  }
-  .top-up-form {
-    grid-template-columns: 1fr;
-  }
-  .top-up-form > :first-child {
-    grid-column: auto;
-  }
-  .top-up-form .button {
-    justify-content: center;
   }
 }
 
@@ -1060,6 +1134,53 @@
 }
 @media (max-width: 640px) {
   .plan-usage {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── User manual ──────────────────────────────────────────────────── */
+.manual-panel .panel-head h2 {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+.manual-toc {
+  display: grid;
+  gap: 6px 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 16px 0 20px;
+}
+.manual-toc a {
+  color: #0b6bff;
+  font-size: 13px;
+  text-decoration: none;
+}
+.manual-toc a:hover {
+  text-decoration: underline;
+}
+.manual-body {
+  display: grid;
+  gap: 22px;
+}
+.manual-body section {
+  scroll-margin-top: 80px;
+}
+.manual-body h3 {
+  color: #101828;
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+.manual-body ul {
+  color: #344054;
+  display: grid;
+  font-size: 13px;
+  gap: 7px;
+  line-height: 1.6;
+  margin: 0;
+  padding-left: 18px;
+}
+@media (max-width: 640px) {
+  .manual-toc {
     grid-template-columns: 1fr;
   }
 }

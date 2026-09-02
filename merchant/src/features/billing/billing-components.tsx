@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import QRCode from "qrcode";
 import {
   CreditCard,
   FileUp,
   RefreshCw,
   ShieldCheck,
-  WalletCards,
   X,
 } from "lucide-react";
 import { formatDate } from "../../shared/lib/format";
+import { promptPayPayload } from "../../shared/lib/promptpay";
+import { promptPayMobile, promptPayName } from "../../config/payment";
 import { AsyncError } from "../../shared/ui/async-state";
 import type { BillingCycle, Plan, ShopDetails } from "../../types/models";
 
@@ -19,7 +21,7 @@ export function BillingPanel({
   error,
   canManage,
   busy,
-  onTopUp,
+  onOpenTopUp,
   onPurchase,
   onAutoRenewChange,
   retry,
@@ -30,23 +32,14 @@ export function BillingPanel({
   error: string;
   canManage: boolean;
   busy: boolean;
-  onTopUp: (credits: number, file: File) => void;
+  onOpenTopUp: () => void;
   onPurchase: (plan: Plan, cycle: BillingCycle) => void;
   onAutoRenewChange: (autoRenew: boolean) => void;
   retry: () => void;
 }) {
-  const [credits, setCredits] = useState(""),
-    [slip, setSlip] = useState<File | null>(null);
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const balance = shop?.credit_balance ?? 0;
   const ent = shop?.entitlements;
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!slip) {
-      return;
-    }
-    onTopUp(Number(credits), slip);
-  };
   return (
     <section className="panel management-panel" aria-labelledby="billing-title">
       <div className="panel-head">
@@ -73,7 +66,17 @@ export function BillingPanel({
               </strong>
               <p>1 เครดิต = 1 บาท · เครดิตใช้เฉพาะค่าแพ็กเกจของร้านนี้</p>
             </div>
-            <WalletCards size={38} aria-hidden="true" />
+            {canManage && (
+              <button
+                type="button"
+                className="credit-topup-btn"
+                onClick={onOpenTopUp}
+                disabled={busy}
+              >
+                <CreditCard size={17} />
+                เติมเครดิต
+              </button>
+            )}
           </section>
           <div className="billing-summary">
             <div>
@@ -118,52 +121,6 @@ export function BillingPanel({
               </button>
             </section>
           )}
-          <form className="top-up-form" onSubmit={submit} noValidate>
-            <div>
-              <span className="eyebrow">เติมเครดิต</span>
-              <h3>แนบสลิปเพื่อเพิ่มเครดิต</h3>
-              <p>ระบุยอดให้ตรงกับจำนวนเครดิตที่ต้องการเติม</p>
-            </div>
-            <label className="field">
-              <span className="field-label">จำนวนเครดิต</span>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                inputMode="numeric"
-                value={credits}
-                disabled={!canManage || busy}
-                onChange={(event) => setCredits(event.target.value)}
-                placeholder="เช่น 500"
-                required
-              />
-            </label>
-            <label className="top-up-file">
-              <FileUp size={18} />
-              <span>{slip?.name ?? "เลือกสลิป JPEG หรือ PNG"}</span>
-              <input
-                type="file"
-                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-                disabled={!canManage || busy}
-                onChange={(event) => setSlip(event.target.files?.[0] ?? null)}
-                required
-              />
-            </label>
-            {canManage ? (
-              <button
-                className="button primary"
-                disabled={busy || !credits || !slip}
-              >
-                <CreditCard size={17} />
-                {busy ? "กำลังส่ง…" : "ส่งสลิปเติมเครดิต"}
-              </button>
-            ) : (
-              <button className="button" disabled>
-                <ShieldCheck size={17} />
-                ไม่มีสิทธิ์เติมเครดิต
-              </button>
-            )}
-          </form>
           {!canManage && (
             <div className="notice" role="status">
               <ShieldCheck size={18} />
@@ -492,4 +449,161 @@ export function AutoRenewDialog({
       </section>
     </div>
   );
+}
+
+export function TopUpDialog({
+  busy,
+  close,
+  submit,
+}: {
+  busy: boolean;
+  close: () => void;
+  submit: (credits: number, file: File) => void;
+}) {
+  const [credits, setCredits] = useState("");
+  const [slip, setSlip] = useState<File | null>(null);
+  const [qr, setQr] = useState("");
+  const amount = Number(credits);
+  const validAmount = Number.isInteger(amount) && amount > 0;
+
+  useEffect(() => {
+    let cancelled = false;
+    const payload = promptPayPayload(
+      promptPayMobile,
+      validAmount ? amount : undefined,
+    );
+    QRCode.toDataURL(payload, { width: 240, margin: 1 })
+      .then((url) => {
+        if (!cancelled) setQr(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQr("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [amount, validAmount]);
+
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!slip || !validAmount) return;
+    submit(amount, slip);
+  };
+
+  return (
+    <div
+      className="dialog-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
+    >
+      <section
+        className="dialog topup-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="topup-title"
+      >
+        <div className="dialog-head">
+          <div>
+            <h2 id="topup-title">เติมเครดิต</h2>
+            <p>โอนตามยอดที่ต้องการ แล้วแนบสลิปให้ทีมงานตรวจสอบ</p>
+          </div>
+          <button
+            className="icon-button"
+            aria-label="ปิด"
+            disabled={busy}
+            onClick={close}
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <form className="dialog-body topup-body" onSubmit={onSubmit} noValidate>
+          <div className="topup-pay">
+            <div className="topup-qr">
+              {qr ? (
+                <img src={qr} alt="QR พร้อมเพย์สำหรับโอนเติมเครดิต" />
+              ) : (
+                <div className="topup-qr-fallback">กำลังสร้าง QR…</div>
+              )}
+              <span className="topup-qr-tag">PromptPay</span>
+            </div>
+            <dl className="topup-pay-detail">
+              <div>
+                <dt>ชื่อบัญชี</dt>
+                <dd>{promptPayName}</dd>
+              </div>
+              <div>
+                <dt>พร้อมเพย์ (เบอร์)</dt>
+                <dd>{formatMobile(promptPayMobile)}</dd>
+              </div>
+              <div>
+                <dt>ยอดโอน</dt>
+                <dd>
+                  {validAmount
+                    ? `${amount.toLocaleString("th-TH")} บาท`
+                    : "ระบุจำนวนเครดิตก่อน"}
+                </dd>
+              </div>
+            </dl>
+            <p className="topup-note">
+              1 เครดิต = 1 บาท · สแกน QR แล้วยอดจะถูกกรอกให้อัตโนมัติเมื่อระบุ
+              จำนวนเครดิต
+            </p>
+          </div>
+          <div className="topup-form">
+            <label className="field">
+              <span className="field-label">จำนวนเครดิตที่ต้องการเติม</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                value={credits}
+                disabled={busy}
+                onChange={(event) => setCredits(event.target.value)}
+                placeholder="เช่น 500"
+                autoFocus
+                required
+              />
+            </label>
+            <label className="top-up-file">
+              <FileUp size={18} />
+              <span>{slip?.name ?? "เลือกสลิป JPEG หรือ PNG"}</span>
+              <input
+                type="file"
+                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                disabled={busy}
+                onChange={(event) => setSlip(event.target.files?.[0] ?? null)}
+                required
+              />
+            </label>
+          </div>
+          <div className="dialog-actions topup-actions">
+            <button
+              type="button"
+              className="button"
+              disabled={busy}
+              onClick={close}
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              className="button primary"
+              disabled={busy || !validAmount || !slip}
+            >
+              <CreditCard size={17} />
+              {busy ? "กำลังส่ง…" : "ส่งสลิปเติมเครดิต"}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function formatMobile(digits: string): string {
+  return digits.length === 10
+    ? `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
+    : digits;
 }
