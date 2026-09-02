@@ -12,9 +12,8 @@ export const PRIVACY_DOC: LegalDoc = {
         <p>
           นโยบายนี้อธิบายว่า GamoryID เก็บ ใช้ เปิดเผย และคุ้มครองข้อมูลส่วนบุคคล
           อย่างไร ผู้ควบคุมข้อมูลส่วนบุคคล: <strong>{CONTROLLER_NAME}</strong> ·
-          ติดต่อเรื่องข้อมูลส่วนบุคคล: อีเมล <strong>{CONTROLLER_EMAIL}</strong> ·
-          ที่อยู่ <strong>{CONTROLLER_ADDRESS}</strong> · เจ้าหน้าที่คุ้มครองข้อมูล
-          ส่วนบุคคล (DPO): <strong>[ระบุ ถ้ามี]</strong>
+          ติดต่อเรื่องข้อมูลส่วนบุคคล: อีเมล <strong>{CONTROLLER_EMAIL}</strong> · ที่อยู่{" "}
+          <strong>{CONTROLLER_ADDRESS}</strong>
         </p>
       ),
     },

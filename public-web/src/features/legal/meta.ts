@@ -9,9 +9,10 @@ export const PRIVACY_VERSION = "2026-09-03";
 export const EFFECTIVE_DATE = "3 กันยายน 2026";
 
 /** Service provider / data-controller identity shown in both documents. */
-export const CONTROLLER_NAME = "[ระบุชื่อผู้ให้บริการ]";
-export const CONTROLLER_EMAIL = "[ระบุอีเมลติดต่อ]";
-export const CONTROLLER_ADDRESS = "[ระบุที่อยู่ ถ้ามี]";
+export const CONTROLLER_NAME = "นายธนวัฒน์ ว่องประสบโชค";
+export const CONTROLLER_EMAIL = "thanawat.won01@gmail.com";
+export const CONTROLLER_ADDRESS =
+  "62/137 ซ.เสรีไทย72 ถ.เสรีไทย แขวงมีนบุรี เขตมีนบุรี กรุงเทพมหานคร 10510";
 
 /**
  * While true, each legal page shows a "under legal review" notice. Flip to

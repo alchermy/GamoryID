@@ -27,8 +27,8 @@ return [
     |
     */
 
-    'controller_name' => env('LEGAL_CONTROLLER_NAME', 'Art Thanawat'),
-    'controller_email' => env('LEGAL_CONTROLLER_EMAIL', '[ระบุอีเมลติดต่อ]'),
-    'controller_address' => env('LEGAL_CONTROLLER_ADDRESS'),
+    'controller_name' => env('LEGAL_CONTROLLER_NAME', 'นายธนวัฒน์ ว่องประสบโชค'),
+    'controller_email' => env('LEGAL_CONTROLLER_EMAIL', 'thanawat.won01@gmail.com'),
+    'controller_address' => env('LEGAL_CONTROLLER_ADDRESS', '62/137 ซ.เสรีไทย72 ถ.เสรีไทย แขวงมีนบุรี เขตมีนบุรี กรุงเทพมหานคร 10510'),
 
 ];
