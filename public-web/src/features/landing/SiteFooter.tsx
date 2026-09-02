@@ -22,6 +22,7 @@ export function SiteFooter() {
         <div className="footer-column">
           <strong>ผลิตภัณฑ์</strong>
           <a href="#features">ฟีเจอร์</a>
+          <a href="#about">เกี่ยวกับระบบ</a>
           <a href="#workflow">วิธีใช้งาน</a>
           <a href="#pricing">แพ็กเกจ</a>
         </div>
@@ -39,7 +40,9 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="container footer-bottom">
-        <span>© {new Date().getFullYear()} GamoryID</span>
+        <span>
+          © {new Date().getFullYear()} GamoryID · พัฒนาโดย Art Thanawat
+        </span>
         <span>
           GamoryID ไม่มีความเกี่ยวข้องหรือได้รับการรับรองจากผู้พัฒนาเกมรายใด
         </span>

@@ -14,6 +14,7 @@ export function SiteHeader() {
         <nav className="links" aria-label="เมนูเว็บไซต์">
           <div className="nav-links">
             <a href="#features">ฟีเจอร์</a>
+            <a href="#about">เกี่ยวกับระบบ</a>
             <a href="#workflow">วิธีใช้งาน</a>
             <a href="#pricing">แพ็กเกจ</a>
           </div>

@@ -1,3 +1,4 @@
+import { AboutSection } from "./AboutSection";
 import {
   FeaturesSection,
   SpotlightSection,
@@ -18,6 +19,7 @@ export function LandingPage() {
         <HeroSection />
         <SpecStrip />
         <FeaturesSection />
+        <AboutSection />
         <WorkflowSection />
         <SpotlightSection />
         <PricingSection />
