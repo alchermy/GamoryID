@@ -5,7 +5,6 @@ import {
   Bell,
   Box,
   Check,
-  ChevronRight,
   CircleHelp,
   Clock3,
   Download,
@@ -67,7 +66,7 @@ import {
 import { TransactionsPanel } from "../transactions/TransactionsPanel";
 import { ActivityPanel } from "../activity/ActivityPanel";
 import { SettingsPanel } from "../settings/SettingsPanel";
-import { DashboardPanel, Kpi, Activity } from "../dashboard/DashboardPanel";
+import { DashboardPanel, Kpi } from "../dashboard/DashboardPanel";
 import {
   AddDialog,
   ArchiveDialog,
@@ -1504,58 +1503,6 @@ export function MerchantApp() {
             onCopyDetails={copyDetails}
             onNote={openInventoryNote}
           />
-          <aside className="side-column">
-            <section className="panel">
-              <div className="panel-head">
-                <h2>การเคลื่อนไหวล่าสุด</h2>
-                <ChevronRight size={17} />
-              </div>
-              <div className="activity-list">
-                <Activity
-                  icon={<PackagePlus size={14} />}
-                  text="เพิ่มไอดี #23DX5 เข้าคลัง"
-                  time="8 นาทีที่แล้ว"
-                />
-                <Activity
-                  icon={<Clock3 size={14} />}
-                  text="จอง #8KM4R ให้ลูกค้า NiceShop"
-                  time="24 นาทีที่แล้ว"
-                />
-                <Activity
-                  icon={<Check size={14} />}
-                  text="ขาย #M6J3X ราคา ฿7,600"
-                  time="2 ชั่วโมงที่แล้ว"
-                />
-                <Activity
-                  icon={<FileUp size={14} />}
-                  text="นำเข้าข้อมูลสำเร็จ 48 รายการ"
-                  time="เมื่อวาน 18:42"
-                />
-              </div>
-            </section>
-            <section className="panel" style={{ marginTop: 18 }}>
-              <div className="panel-head">
-                <h2>ยอดขาย 7 วัน</h2>
-                <small>฿38,900</small>
-              </div>
-              <div className="chart">
-                <div className="bars">
-                  {[32, 56, 38, 72, 47, 64, 88].map((h, i) => (
-                    <div className="bar" key={i} style={{ height: `${h}%` }} />
-                  ))}
-                </div>
-                <div className="chart-labels">
-                  <span>พ.</span>
-                  <span>พฤ.</span>
-                  <span>ศ.</span>
-                  <span>ส.</span>
-                  <span>อา.</span>
-                  <span>จ.</span>
-                  <span>อ.</span>
-                </div>
-              </div>
-            </section>
-          </aside>
         </div>
       </main>
       <nav className="bottom-nav" aria-label="เมนูมือถือ">

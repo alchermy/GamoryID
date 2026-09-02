@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\SubscriptionStatus;
 use App\Exceptions\InsufficientCreditsException;
 use App\Http\Controllers\Controller;
 use App\Jobs\VerifyPaymentSlip;
@@ -130,7 +131,17 @@ class CreditController extends Controller
     {
         $shop = $currentShop->from($request);
         $data = $request->validate(['auto_renew' => ['required', 'boolean']]);
-        $subscription = $shop->subscriptions()->where('status', 'active')->latest()->firstOrFail();
+        $subscription = $shop->subscriptions()
+            ->whereIn('status', [SubscriptionStatus::Trialing->value, SubscriptionStatus::Active->value])
+            ->latest()
+            ->first();
+
+        if (! $subscription) {
+            return response()->json([
+                'message' => 'ยังไม่มีแพ็กเกจที่ใช้งานอยู่สำหรับตั้งค่าต่ออายุอัตโนมัติ',
+            ], 422);
+        }
+
         $subscription->update(['auto_renew' => (bool) $data['auto_renew']]);
         $audit->record($request, $shop, 'subscription.auto_renew_updated', $subscription, ['auto_renew' => (bool) $data['auto_renew']]);
 

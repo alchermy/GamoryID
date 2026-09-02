@@ -299,7 +299,7 @@ h1 {
 }
 .work-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 310px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
 }
 .panel {
@@ -955,11 +955,6 @@ tbody tr:last-child td {
   .work-grid {
     grid-template-columns: 1fr;
   }
-  .side-column {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-  }
   .kpis {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1056,9 +1051,6 @@ tbody tr:last-child td {
   }
   .work-grid {
     display: block;
-  }
-  .side-column {
-    display: none;
   }
   .panel {
     border-radius: 12px;

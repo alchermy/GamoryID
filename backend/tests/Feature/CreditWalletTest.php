@@ -117,6 +117,30 @@ class CreditWalletTest extends TestCase
         $this->assertDatabaseHas('subscriptions', ['id' => $subscription->id, 'auto_renew' => true]);
     }
 
+    public function test_auto_renew_can_be_set_while_the_shop_is_still_on_the_trial(): void
+    {
+        [$user, $shop] = $this->owner();
+        $plan = $this->plan(299);
+        $subscription = $shop->subscriptions()->create(['subscription_plan_id' => $plan->id, 'status' => 'trialing', 'starts_at' => now(), 'ends_at' => now()->addDays(14)]);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson('/api/v1/subscriptions/auto-renew', ['auto_renew' => true])
+            ->assertOk()->assertJsonPath('data.id', $subscription->id)->assertJsonPath('data.auto_renew', true);
+
+        $this->assertDatabaseHas('subscriptions', ['id' => $subscription->id, 'auto_renew' => true]);
+    }
+
+    public function test_auto_renew_returns_a_clear_error_when_no_live_subscription_exists(): void
+    {
+        [$user, $shop] = $this->owner();
+        $plan = $this->plan(299);
+        $shop->subscriptions()->create(['subscription_plan_id' => $plan->id, 'status' => 'expired', 'starts_at' => now()->subDays(40), 'ends_at' => now()->subDays(10)]);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson('/api/v1/subscriptions/auto-renew', ['auto_renew' => true])
+            ->assertStatus(422);
+    }
+
     public function test_merchant_transaction_history_is_scoped_to_the_current_shop(): void
     {
         [$user, $shop] = $this->owner();
