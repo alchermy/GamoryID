@@ -78,6 +78,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/media/{media}', [InventoryMediaController::class, 'show'])->middleware('signed:relative')->name('api.media.show');
             Route::get('/custom-fields', [CustomFieldController::class, 'index']);
             Route::get('/customers', [CustomerController::class, 'index'])->middleware('shop.permission:inventory.sell');
+            Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->middleware('shop.permission:team.manage');
             Route::get('/sales', [SaleController::class, 'index'])->middleware('shop.permission:inventory.sell');
             Route::get('/sales/{sale}', [SaleController::class, 'show'])->middleware('shop.permission:inventory.sell');
 

@@ -31,6 +31,7 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   "custom_field.created": "เพิ่มฟิลด์ที่กำหนดเอง",
   "custom_field.updated": "แก้ไขฟิลด์ที่กำหนดเอง",
   "custom_field.deleted": "ลบฟิลด์ที่กำหนดเอง",
+  "customer.anonymized": "ลบข้อมูลติดต่อลูกค้า",
   "import.queued": "เริ่มนำเข้าข้อมูล",
   "import.completed": "นำเข้าข้อมูลสำเร็จ",
   "import.failed": "นำเข้าข้อมูลไม่สำเร็จ",

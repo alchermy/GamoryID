@@ -199,6 +199,7 @@ export type CustomerRecord = {
   facebook_url: string | null;
   updated_at: string;
   sales_count: number;
+  anonymized_at: string | null;
 };
 
 export type TeamMember = {

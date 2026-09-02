@@ -1,4 +1,5 @@
-import { Eye } from "lucide-react";
+import { useState } from "react";
+import { Eye, ShieldOff, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatDate, money } from "../../shared/lib/format";
 import { AsyncError } from "../../shared/ui/async-state";
@@ -101,18 +102,26 @@ export function CustomersPanel({
   loading,
   error,
   retry,
+  canManage = false,
+  onAnonymize,
 }: {
   records: CustomerRecord[];
   loading: boolean;
   error: string;
   retry: () => void;
+  canManage?: boolean;
+  onAnonymize?: (customer: CustomerRecord) => void;
 }) {
+  const [pending, setPending] = useState<CustomerRecord | null>(null);
+
   return (
     <section className="panel history-panel" aria-labelledby="customers-title">
       <div className="panel-head">
         <div>
           <h2 id="customers-title">ลูกค้า</h2>
-          <small>ข้อมูลติดต่อลูกค้าที่บันทึกจากการขาย</small>
+          <small>
+            ข้อมูลติดต่อลูกค้าที่บันทึกจากการขาย · ลบข้อมูลติดต่อได้ตามคำขอ
+          </small>
         </div>
       </div>
       {error ? (
@@ -137,6 +146,7 @@ export function CustomersPanel({
                 <th>Facebook</th>
                 <th>จำนวนครั้งที่ซื้อ</th>
                 <th>อัปเดตล่าสุด</th>
+                {canManage ? <th>Action</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -144,12 +154,32 @@ export function CustomersPanel({
                 <tr key={record.id}>
                   <td>
                     <strong>{record.name}</strong>
+                    {record.anonymized_at ? (
+                      <>
+                        <br />
+                        <small className="customer-anon-badge">ลบข้อมูลแล้ว</small>
+                      </>
+                    ) : null}
                   </td>
                   <td>{record.line_id ?? "–"}</td>
                   <td>{record.phone ?? "–"}</td>
                   <td>{record.facebook_url ?? "–"}</td>
                   <td>{record.sales_count.toLocaleString("th-TH")} ครั้ง</td>
                   <td>{formatDate(record.updated_at)}</td>
+                  {canManage ? (
+                    <td>
+                      {!record.anonymized_at ? (
+                        <button
+                          className="button ghost"
+                          onClick={() => setPending(record)}
+                        >
+                          <ShieldOff size={15} /> ลบข้อมูลติดต่อ
+                        </button>
+                      ) : (
+                        <span className="muted-text">–</span>
+                      )}
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
@@ -159,6 +189,59 @@ export function CustomersPanel({
       <div className="pagination">
         <span>{records.length} รายการที่แสดง</span>
       </div>
+
+      {pending && (
+        <div
+          className="dialog-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setPending(null);
+          }}
+        >
+          <section
+            className="dialog archive-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="anon-title"
+          >
+            <div className="dialog-head">
+              <div>
+                <h2 id="anon-title">ลบข้อมูลติดต่อของ {pending.name}?</h2>
+                <p>
+                  ชื่อ เบอร์โทร LINE และ Facebook จะถูกลบถาวรทันที
+                  ประวัติการขาย {pending.sales_count} ครั้งจะยังอยู่แบบไม่ระบุตัวตน
+                </p>
+              </div>
+              <button
+                className="icon-button"
+                aria-label="ปิด"
+                onClick={() => setPending(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="button"
+                autoFocus
+                onClick={() => setPending(null)}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="button danger"
+                onClick={() => {
+                  onAnonymize?.(pending);
+                  setPending(null);
+                }}
+              >
+                <ShieldOff size={16} /> ลบข้อมูลติดต่อ
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </section>
   );
 }

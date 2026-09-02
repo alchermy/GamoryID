@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\DataRetentionLifecycle;
 use App\Services\ReservationLifecycle;
 use App\Services\SubscriptionLifecycle;
 use App\Services\Totp;
@@ -25,3 +26,6 @@ Schedule::call(fn (SubscriptionLifecycle $lifecycle) => $lifecycle->run())
 
 Schedule::call(fn (ReservationLifecycle $lifecycle) => $lifecycle->run())
     ->everyFiveMinutes()->name('reservations.lifecycle')->withoutOverlapping();
+
+Schedule::call(fn (DataRetentionLifecycle $lifecycle) => $lifecycle->run())
+    ->dailyAt('03:20')->name('data.retention')->withoutOverlapping();

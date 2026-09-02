@@ -898,6 +898,20 @@ export function MerchantApp() {
       notify(error instanceof Error ? error.message : "นำสมาชิกออกไม่สำเร็จ");
     }
   };
+  const anonymizeCustomer = async (customer: CustomerRecord) => {
+    if (!shop) return;
+    try {
+      await shopRequest(`/customers/${customer.id}`, shop.id, {
+        method: "DELETE",
+      });
+      setHistoryRevision((value) => value + 1);
+      notify("ลบข้อมูลติดต่อของลูกค้าแล้ว");
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "ลบข้อมูลติดต่อไม่สำเร็จ",
+      );
+    }
+  };
   const saveShopSettings = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!shop) return;
@@ -1267,6 +1281,8 @@ export function MerchantApp() {
             loading={historyLoading}
             error={historyError}
             retry={() => setHistoryRevision((value) => value + 1)}
+            canManage={hasShopPermission("team.manage")}
+            onAnonymize={(customer) => void anonymizeCustomer(customer)}
           />
         )}{" "}
         {page === "team" && (
