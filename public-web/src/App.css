@@ -1179,13 +1179,37 @@
   color: var(--ink);
 }
 .amount {
-  margin: 18px 0;
-  color: var(--ink);
-  font: 600 40px/1.2 var(--font-mono);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 16px 0;
+  min-height: 60px;
+  justify-content: flex-end;
 }
-.amount small {
+.amount-was {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 14px/1 var(--font-mono);
+  color: #9aabbf;
+}
+.amount-was s {
+  text-decoration-thickness: 1px;
+}
+.amount-now {
+  color: var(--ink);
+  font: 600 clamp(28px, 2.6vw, 38px) / 1.1 var(--font-mono);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.amount-now.amount-na {
+  font-size: 15px;
   color: var(--muted);
-  font: 400 13px/1.2 var(--font-sans);
+}
+.amount-now small {
+  color: var(--muted);
+  font: 400 13px/1 var(--font-sans);
+  white-space: nowrap;
 }
 .price-card ul {
   margin: 22px 0;
@@ -1232,20 +1256,14 @@
   color: var(--primary);
   margin-bottom: 8px;
 }
-.price-was {
-  font: 400 15px/1 var(--font-mono);
-  color: #9fb0c4;
-  margin-right: 4px;
-}
 .sale-badge {
   display: inline-block;
-  margin-left: 8px;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 999px;
   background: #fff2dc;
   color: #b45309;
   font: 700 10px/1 var(--font-display);
-  vertical-align: middle;
+  white-space: nowrap;
 }
 .cycle-switch {
   display: inline-flex;

@@ -237,19 +237,23 @@ function PriceCard({ plan, cycle }: { plan: ApiPlan; cycle: Cycle }) {
       <h3>{plan.name}</h3>
       <div className="amount">
         {plan.is_free ? (
-          <>ฟรี</>
+          <span className="amount-now">ฟรี</span>
         ) : listPrice == null ? (
-          <small>ไม่มีรอบรายปี</small>
+          <span className="amount-now amount-na">ไม่มีรอบรายปี</span>
         ) : (
           <>
             {salePrice != null && (
-              <s className="price-was">฿{listPrice.toLocaleString("th-TH")}</s>
-            )}{" "}
-            ฿<CountUp value={amount} />{" "}
-            <small>/ {cycle === "yearly" ? "ปี" : "เดือน"}</small>
-            {salePrice != null && plan.sale_label && (
-              <span className="sale-badge">{plan.sale_label}</span>
+              <span className="amount-was">
+                <s>฿{listPrice.toLocaleString("th-TH")}</s>
+                {plan.sale_label && (
+                  <span className="sale-badge">{plan.sale_label}</span>
+                )}
+              </span>
             )}
+            <span className="amount-now">
+              ฿<CountUp value={amount} />
+              <small> / {cycle === "yearly" ? "ปี" : "เดือน"}</small>
+            </span>
           </>
         )}
       </div>

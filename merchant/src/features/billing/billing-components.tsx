@@ -236,20 +236,23 @@ export function BillingPanel({
                       <small>ไม่มีรอบรายปี</small>
                     </strong>
                   ) : (
-                    <strong className="plan-price">
+                    <div className="plan-price">
                       {saleActive && (
-                        <s className="muted-text">
-                          {listPrice.toLocaleString("th-TH")}
-                        </s>
-                      )}{" "}
-                      {price.toLocaleString("th-TH")}{" "}
-                      <small>
-                        เครดิต / {cycle === "yearly" ? "ปี" : "เดือน"}
-                      </small>
-                      {saleActive && plan.sale_label && (
-                        <span className="sale-badge">{plan.sale_label}</span>
+                        <span className="plan-price-was">
+                          <s>{listPrice.toLocaleString("th-TH")}</s>
+                          {plan.sale_label && (
+                            <span className="sale-badge">{plan.sale_label}</span>
+                          )}
+                        </span>
                       )}
-                    </strong>
+                      <strong className="plan-price-now">
+                        {price.toLocaleString("th-TH")}
+                        <small>
+                          {" "}
+                          เครดิต / {cycle === "yearly" ? "ปี" : "เดือน"}
+                        </small>
+                      </strong>
+                    </div>
                   )}
                   <ul>
                     <li>
