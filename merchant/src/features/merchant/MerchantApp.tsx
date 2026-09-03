@@ -108,6 +108,7 @@ function mapInventoryItem(
     description: record.description,
     notes: record.notes,
     hasCredentials: record.has_credentials,
+    viewCount: record.view_count ?? 0,
     media: (record.media ?? []).map((media) => ({
       id: media.id,
       role: media.role,
@@ -210,6 +211,7 @@ export function MerchantApp() {
     shopDetails?.entitlements?.effective_plan.features[
       key as keyof typeof shopDetails.entitlements.effective_plan.features
     ] ?? true;
+  const canViewAnalytics = planFeature("analytics");
   const canAccessManagementPage = (key: MerchantPage) => {
     if (key === "activity")
       return hasShopPermission("team.manage") && planFeature("activity_log");
@@ -1409,6 +1411,7 @@ export function MerchantApp() {
             dashboard={dashboard}
             summary={summary}
             canViewProfit={hasShopPermission("profit.view")}
+            canViewAnalytics={canViewAnalytics}
             onOpenInventory={() => go("inventory")}
             onOpenImport={() => go("imports")}
             onOpenAdd={() => setDialog("add")}
@@ -1424,6 +1427,7 @@ export function MerchantApp() {
             item={selected}
             canManage={hasShopPermission("inventory.manage")}
             canSell={hasShopPermission("inventory.sell")}
+            canViewAnalytics={canViewAnalytics}
             canNote={
               hasShopPermission("inventory.manage") ||
               hasShopPermission("inventory.sell")

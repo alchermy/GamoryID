@@ -17,6 +17,7 @@ export function SiteFooter() {
         </div>
         <div className="footer-column">
           <strong>ผลิตภัณฑ์</strong>
+          <a href="/browse">ร้านค้า</a>
           <a href="/#features">ฟีเจอร์</a>
           <a href="/#about">เกี่ยวกับระบบ</a>
           <a href="/#workflow">วิธีใช้งาน</a>

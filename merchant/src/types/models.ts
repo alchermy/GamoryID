@@ -60,6 +60,7 @@ export type InventoryItem = {
   description?: string | null;
   notes?: string | null;
   hasCredentials?: boolean;
+  viewCount?: number;
   media: InventoryMedia[];
 };
 
@@ -94,6 +95,7 @@ export type DashboardData = {
     inventory_value: number | null;
     revenue_this_month: number;
     profit_this_month: number | null;
+    storefront_views: number | null;
   };
   activity: Array<{
     id: number;
@@ -148,6 +150,7 @@ export type InventoryResponse = {
     notes: string | null;
     cost: number | null;
     list_price: number;
+    view_count?: number;
     status: InventoryStatus;
     updated_at: string;
     has_credentials: boolean;

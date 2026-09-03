@@ -4,11 +4,11 @@ import { ArrowLeft } from "lucide-react";
 import { SiteFooter } from "../landing/SiteFooter";
 import { SiteHeader } from "../landing/SiteHeader";
 import { ContactChips } from "./ContactChips";
+import { ListingCard } from "./ListingCard";
 import {
   fetchInventory,
   fetchShop,
   HttpError,
-  priceLabel,
   type ShopListing,
   type ShopProfile,
 } from "./api";
@@ -106,34 +106,11 @@ export function StorefrontPage() {
               <>
                 <div className="shop-grid">
                   {items.map((item) => (
-                    <Link
+                    <ListingCard
                       key={item.tag}
+                      item={item}
                       to={`/s/${shop.slug}/${encodeURIComponent(item.tag.replace(/^#/, ""))}`}
-                      className="listing-card"
-                    >
-                      <div className="listing-thumb">
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.title ?? item.tag}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : (
-                          <span className="listing-noimg">ไม่มีรูป</span>
-                        )}
-                        <span className="listing-badge">พร้อมขาย</span>
-                      </div>
-                      <div className="listing-body">
-                        <span className="listing-tag">{item.tag}</span>
-                        <p className="listing-meta">
-                          {[item.rank, item.level != null ? `Lv.${item.level}` : null, item.skin_count != null ? `${item.skin_count} สกิน` : null]
-                            .filter(Boolean)
-                            .join(" · ") || "ดูรายละเอียด"}
-                        </p>
-                        <span className="listing-price">{priceLabel(item.list_price)}</span>
-                      </div>
-                    </Link>
+                    />
                   ))}
                 </div>
                 {page < lastPage && (

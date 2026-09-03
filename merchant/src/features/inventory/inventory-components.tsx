@@ -1002,6 +1002,7 @@ export function InventoryDetailPage({
   canManage,
   canSell,
   canNote,
+  canViewAnalytics,
   onBack,
   onEdit,
   onCopyDetails,
@@ -1014,6 +1015,7 @@ export function InventoryDetailPage({
   canManage: boolean;
   canSell: boolean;
   canNote: boolean;
+  canViewAnalytics: boolean;
   onBack: () => void;
   onEdit: () => void;
   onCopyDetails: () => void;
@@ -1074,6 +1076,14 @@ export function InventoryDetailPage({
               <Data
                 label="จำนวนสกิน"
                 value={`${item.skins.toLocaleString("th-TH")} รายการ`}
+              />
+              <Data
+                label="ยอดเข้าชมหน้าร้าน"
+                value={
+                  canViewAnalytics
+                    ? `${(item.viewCount ?? 0).toLocaleString("th-TH")} ครั้ง`
+                    : "อัปเกรดเพื่อดู"
+                }
               />
             </div>
             <div className="inventory-description">

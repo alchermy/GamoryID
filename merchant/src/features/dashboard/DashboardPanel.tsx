@@ -5,6 +5,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   Clock3,
+  Eye,
   PackagePlus,
   RefreshCw,
   TrendingUp,
@@ -18,6 +19,7 @@ export function DashboardPanel({
   dashboard,
   summary,
   canViewProfit,
+  canViewAnalytics,
   onOpenInventory,
   onOpenImport,
   onOpenAdd,
@@ -32,6 +34,7 @@ export function DashboardPanel({
     value: number | null;
   };
   canViewProfit: boolean;
+  canViewAnalytics: boolean;
   onOpenInventory: () => void;
   onOpenImport: () => void;
   onOpenAdd: () => void;
@@ -122,6 +125,22 @@ export function DashboardPanel({
               : "ไม่มีสิทธิ์ดูต้นทุนและกำไร"
           }
           icon={<TrendingUp size={18} />}
+        />
+        <DashboardMetric
+          label="ยอดเข้าชมร้าน"
+          value={
+            canViewAnalytics
+              ? Number(dashboard?.summary.storefront_views ?? 0).toLocaleString(
+                  "th-TH",
+                )
+              : "—"
+          }
+          detail={
+            canViewAnalytics
+              ? "รวมจากหน้าร้านสาธารณะ"
+              : "ปลดล็อกด้วยแพ็ก Growth ขึ้นไป"
+          }
+          icon={<Eye size={18} />}
         />
       </section>
       <div className="dashboard-main-grid">

@@ -28,6 +28,12 @@ export type ShopMedia = { id: number; role: "display" | "detail"; image_url: str
 
 export type ShopItemDetail = ShopListing & { media: ShopMedia[] };
 
+export type BrowseListing = ShopListing & {
+  shop: { name: string | null; slug: string | null };
+};
+
+export type ListingSort = "newest" | "price_asc" | "price_desc" | "popular";
+
 export class HttpError extends Error {
   status: number;
 
@@ -60,6 +66,23 @@ export function fetchInventory(slug: string, page: number, signal: AbortSignal) 
     if (!response.ok) throw new HttpError(response.status);
     return (await response.json()) as {
       data: ShopListing[];
+      meta: { current_page: number; last_page: number; total: number };
+    };
+  });
+}
+
+export function fetchListings(
+  sort: ListingSort,
+  page: number,
+  signal: AbortSignal,
+) {
+  return fetch(`${apiBaseUrl}/public/listings?sort=${sort}&page=${page}`, {
+    signal,
+    headers: { Accept: "application/json" },
+  }).then(async (response) => {
+    if (!response.ok) throw new HttpError(response.status);
+    return (await response.json()) as {
+      data: BrowseListing[];
       meta: { current_page: number; last_page: number; total: number };
     };
   });

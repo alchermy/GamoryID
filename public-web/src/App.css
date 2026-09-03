@@ -2324,3 +2324,60 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* storefront: browse-all page + cross-shop card footer */
+.storefront-disclaim {
+  margin: 12px 0 0;
+  padding: 12px 15px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--sky);
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 640px;
+}
+.browse-sort {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.browse-sort button {
+  padding: 8px 15px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: 600 13px/1 var(--font-display);
+  cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+.browse-sort button:hover {
+  border-color: var(--primary);
+}
+.browse-sort button.is-on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.listing-card-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  text-decoration: none;
+  color: inherit;
+}
+.listing-shop {
+  display: block;
+  border-top: 1px solid var(--border);
+  padding: 9px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+}
+.listing-shop:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}

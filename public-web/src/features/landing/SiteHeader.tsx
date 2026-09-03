@@ -13,6 +13,7 @@ export function SiteHeader() {
         </a>
         <nav className="links" aria-label="เมนูเว็บไซต์">
           <div className="nav-links">
+            <a href="/browse">ร้านค้า</a>
             <a href="/#features">ฟีเจอร์</a>
             <a href="/#about">เกี่ยวกับระบบ</a>
             <a href="/#workflow">วิธีใช้งาน</a>
