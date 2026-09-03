@@ -992,11 +992,14 @@ export function MerchantApp() {
       );
     }
   };
-  const submitTopUp = async (credits: number, file: File) => {
-    if (!shop || paymentBusy) return;
+  const submitTopUp = async (
+    credits: number,
+    file: File,
+  ): Promise<boolean> => {
+    if (!shop || paymentBusy) return false;
     if (!Number.isInteger(credits) || credits < 1) {
       notify("ระบุจำนวนเครดิตอย่างน้อย 1 เครดิต");
-      return;
+      return false;
     }
     if (
       !["image/jpeg", "image/png"].includes(file.type) ||
@@ -1004,7 +1007,7 @@ export function MerchantApp() {
       file.size > 5 * 1024 * 1024
     ) {
       notify("ใช้สลิป JPEG หรือ PNG ขนาดไม่เกิน 5 MB");
-      return;
+      return false;
     }
     setPaymentBusy(true);
     try {
@@ -1017,13 +1020,15 @@ export function MerchantApp() {
         headers: { ...csrf, "Idempotency-Key": createIdempotencyKey() },
         body: form,
       });
-      notify("ส่งสลิปเติมเครดิตแล้ว รอตรวจสอบ");
-      setManagementDialog(null);
+      // The dialog shows its own "รอแอดมินตรวจ" confirmation — don't close it
+      // or toast here; just refresh so the pending-review banner appears.
       setManagementRevision((value) => value + 1);
+      return true;
     } catch (error) {
       notify(
         error instanceof Error ? error.message : "ส่งสลิปเติมเครดิตไม่สำเร็จ",
       );
+      return false;
     } finally {
       setPaymentBusy(false);
     }

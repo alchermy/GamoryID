@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import QRCode from "qrcode";
 import {
+  Check,
+  CheckCircle2,
   CreditCard,
   FileUp,
   RefreshCw,
@@ -38,8 +40,25 @@ export function BillingPanel({
   retry: () => void;
 }) {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const [showPlans, setShowPlans] = useState(false);
   const balance = shop?.credit_balance ?? 0;
   const ent = shop?.entitlements;
+  const sub = shop?.subscription ?? null;
+  const currentCode = ent?.effective_plan.code;
+  const currentPlan = plans.find((p) => p.code === currentCode) ?? null;
+  const topUp = shop?.latest_top_up ?? null;
+  const pendingTopUp =
+    topUp?.status === "pending" || topUp?.status === "pending_review";
+
+  const cyc = sub?.billing_cycle === "yearly" ? "yearly" : "monthly";
+  const curList =
+    cyc === "yearly" ? currentPlan?.price_yearly : currentPlan?.price_monthly;
+  const curSale =
+    cyc === "yearly"
+      ? currentPlan?.sale_price_yearly
+      : currentPlan?.sale_price_monthly;
+  const curPrice = curSale ?? curList ?? null;
+
   return (
     <section className="panel management-panel" aria-labelledby="billing-title">
       <div className="panel-head">
@@ -78,48 +97,26 @@ export function BillingPanel({
               </button>
             )}
           </section>
-          <div className="billing-summary">
-            <div>
-              <span>สถานะปัจจุบัน</span>
-              <strong>{shop?.subscription?.status ?? "trialing"}</strong>
+
+          {pendingTopUp && topUp && (
+            <div className="notice" role="status">
+              <RefreshCw size={18} />
+              <span>
+                กำลังตรวจสลิปเติมเครดิต {topUp.credits.toLocaleString("th-TH")}{" "}
+                เครดิต — เครดิตจะเข้าบัญชีเมื่อแอดมินอนุมัติ · ดูสถานะได้ที่เมนู
+                “ประวัติธุรกรรม”
+              </span>
             </div>
-            <div>
-              <span>แพ็กเกจ</span>
-              <strong>{shop?.subscription?.plan?.name ?? "ทดลองใช้"}</strong>
+          )}
+          {topUp?.status === "rejected" && (
+            <div className="notice notice-warning" role="status">
+              <ShieldCheck size={18} />
+              <span>
+                สลิปเติมเครดิต {topUp.credits.toLocaleString("th-TH")} เครดิต
+                ไม่ผ่านการตรวจสอบ
+                {topUp.review_note ? ` — ${topUp.review_note}` : ""}
+              </span>
             </div>
-            <div>
-              <span>สิทธิ์เขียนข้อมูลถึง</span>
-              <strong>
-                {shop?.subscription?.ends_at
-                  ? formatDate(shop.subscription.ends_at)
-                  : shop?.trial_ends_at
-                    ? formatDate(shop.trial_ends_at)
-                    : "–"}
-              </strong>
-            </div>
-          </div>
-          {shop?.subscription && (
-            <section className="auto-renew">
-              <div>
-                <strong>ต่ออายุอัตโนมัติ</strong>
-                <span>
-                  เมื่อแพ็กเกจหมดอายุ ระบบจะหักเครดิตตามราคาแพ็กเกจปัจจุบัน
-                </span>
-              </div>
-              <button
-                type="button"
-                className={`switch ${shop.subscription.auto_renew ? "is-on" : ""}`}
-                role="switch"
-                aria-checked={shop.subscription.auto_renew}
-                disabled={!canManage || busy}
-                onClick={() =>
-                  onAutoRenewChange(!shop.subscription!.auto_renew)
-                }
-              >
-                <span />
-                <b>{shop.subscription.auto_renew ? "เปิด" : "ปิด"}</b>
-              </button>
-            </section>
           )}
           {!canManage && (
             <div className="notice" role="status">
@@ -130,150 +127,291 @@ export function BillingPanel({
               </span>
             </div>
           )}
-          {ent && (
-            <div className="plan-usage" aria-label="การใช้งานเทียบโควตา">
-              <UsageBar
-                label="สต็อกพร้อมขาย"
-                used={ent.usage.inventory_active}
-                limit={ent.effective_plan.active_inventory_limit}
-              />
-              <UsageBar
-                label="สมาชิกในร้าน"
-                used={ent.usage.members}
-                limit={ent.effective_plan.member_limit}
-              />
+
+          <section
+            className="current-plan-card"
+            aria-labelledby="current-plan-title"
+          >
+            <div className="current-plan-head">
+              <div>
+                <span className="plan-tag">
+                  {PLAN_TAG[currentCode ?? ""] ?? "แพ็กเกจของร้าน"}
+                </span>
+                <h3 id="current-plan-title">
+                  {ent?.effective_plan.name ?? "ทดลองใช้"}
+                  <span
+                    className={`status-pill ${sub?.status ?? ent?.status ?? "trialing"}`}
+                  >
+                    {STATUS_LABEL[sub?.status ?? ent?.status ?? "trialing"] ??
+                      sub?.status ??
+                      "ทดลองใช้"}
+                  </span>
+                </h3>
+              </div>
+              <div className="current-plan-price">
+                {sub && curPrice != null ? (
+                  <>
+                    <strong>{curPrice.toLocaleString("th-TH")}</strong>
+                    <small> เครดิต / {cyc === "yearly" ? "ปี" : "เดือน"}</small>
+                  </>
+                ) : (
+                  <strong className="muted-text">ทดลองใช้ฟรี</strong>
+                )}
+              </div>
             </div>
-          )}
-          <div className="cycle-toggle" role="tablist" aria-label="รอบชำระ">
-            {(["monthly", "yearly"] as BillingCycle[]).map((c) => (
-              <button
-                key={c}
-                type="button"
-                role="tab"
-                aria-selected={cycle === c}
-                className={cycle === c ? "is-on" : ""}
-                onClick={() => setCycle(c)}
-              >
-                {c === "monthly" ? "รายเดือน" : "รายปี · ประหยัดกว่า"}
-              </button>
-            ))}
-          </div>
-          <div className="plan-grid">
-            {plans.map((plan) => {
-              const listPrice =
-                cycle === "yearly" ? plan.price_yearly : plan.price_monthly;
-              const rawSale =
-                cycle === "yearly"
-                  ? plan.sale_price_yearly
-                  : plan.sale_price_monthly;
-              // The API only sends a sale price while the sale is running.
-              const saleActive = rawSale != null;
-              const price = saleActive ? rawSale : (listPrice ?? 0);
-              const isCurrent = ent?.effective_plan.code === plan.code;
-              const unavailable = plan.is_free || listPrice == null;
-              const enough = balance >= price;
-              return (
-                <article
-                  className={`plan-card ${isCurrent ? "current" : ""} ${plan.code === "growth" ? "is-top" : ""}`}
-                  key={plan.id}
+            <p className="current-plan-until">
+              {sub?.ends_at
+                ? `ใช้ได้ถึง ${formatDate(sub.ends_at)}`
+                : shop?.trial_ends_at
+                  ? `ทดลองใช้ถึง ${formatDate(shop.trial_ends_at)}`
+                  : "—"}
+            </p>
+
+            {ent && (
+              <ul className="plan-feature-list">
+                <li>
+                  <Check size={16} /> สต็อกพร้อมขาย{" "}
+                  {limitLabel(ent.effective_plan.active_inventory_limit, "รายการ")}
+                </li>
+                <li>
+                  <Check size={16} /> สมาชิกในร้าน{" "}
+                  {limitLabel(ent.effective_plan.member_limit, "คน")}
+                </li>
+                {FEATURE_ORDER.filter(
+                  (k) => ent.effective_plan.features[k],
+                ).map((k) => (
+                  <li key={k}>
+                    <Check size={16} /> {FEATURE_LABELS[k]}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {ent && (
+              <div className="plan-usage" aria-label="การใช้งานเทียบโควตา">
+                <UsageBar
+                  label="สต็อกพร้อมขาย"
+                  used={ent.usage.inventory_active}
+                  limit={ent.effective_plan.active_inventory_limit}
+                />
+                <UsageBar
+                  label="สมาชิกในร้าน"
+                  used={ent.usage.members}
+                  limit={ent.effective_plan.member_limit}
+                />
+              </div>
+            )}
+
+            {sub && (
+              <div className="auto-renew">
+                <div>
+                  <strong>ต่ออายุอัตโนมัติ</strong>
+                  <span>
+                    เมื่อแพ็กเกจหมดอายุ ระบบจะหักเครดิตตามราคาแพ็กเกจปัจจุบัน
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className={`switch ${sub.auto_renew ? "is-on" : ""}`}
+                  role="switch"
+                  aria-checked={sub.auto_renew}
+                  disabled={!canManage || busy}
+                  onClick={() => onAutoRenewChange(!sub.auto_renew)}
                 >
-                  <div className="plan-card-head">
-                    <div>
-                      <span className="eyebrow">{plan.code.toUpperCase()}</span>
-                      <h3>{plan.name}</h3>
-                    </div>
-                    {isCurrent && <span className="current-badge">ใช้อยู่</span>}
-                  </div>
-                  {plan.is_free ? (
-                    <strong className="plan-price">
-                      ฟรี <small>ตลอดการใช้งาน</small>
-                    </strong>
-                  ) : listPrice == null ? (
-                    <strong className="plan-price muted-text">
-                      <small>ไม่มีรอบรายปี</small>
-                    </strong>
-                  ) : (
-                    <div className="plan-price">
-                      {saleActive && (
-                        <span className="plan-price-was">
-                          <s>{listPrice.toLocaleString("th-TH")}</s>
-                          {plan.sale_label && (
-                            <span className="sale-badge">{plan.sale_label}</span>
-                          )}
-                        </span>
-                      )}
-                      <strong className="plan-price-now">
-                        {price.toLocaleString("th-TH")}
-                        <small>
-                          {" "}
-                          เครดิต / {cycle === "yearly" ? "ปี" : "เดือน"}
-                        </small>
-                      </strong>
-                    </div>
-                  )}
-                  <ul>
-                    <li>
-                      สต็อกพร้อมขาย{" "}
-                      {plan.active_inventory_limit == null
-                        ? "ไม่จำกัด"
-                        : `${plan.active_inventory_limit.toLocaleString("th-TH")} รายการ`}
-                    </li>
-                    <li>
-                      สมาชิก{" "}
-                      {plan.member_limit == null
-                        ? "ไม่จำกัด"
-                        : `${plan.member_limit} คน`}
-                    </li>
-                    {FEATURE_ORDER.map((key) => (
-                      <li
-                        key={key}
-                        className={plan.features[key] ? "has" : "hasnt"}
-                      >
-                        {plan.features[key] ? "✓" : "—"} {FEATURE_LABELS[key]}
-                      </li>
-                    ))}
-                  </ul>
-                  {unavailable ? (
-                    <button className="button plan-upload" disabled>
-                      {plan.is_free ? "แพ็กเริ่มต้น" : "ไม่เปิดขายรอบนี้"}
-                    </button>
-                  ) : !canManage ? (
-                    <button className="button plan-upload" disabled>
-                      <ShieldCheck size={17} />
-                      ไม่มีสิทธิ์ซื้อแพ็กเกจ
-                    </button>
-                  ) : (
+                  <span />
+                  <b>{sub.auto_renew ? "เปิด" : "ปิด"}</b>
+                </button>
+              </div>
+            )}
+
+            {canManage && (
+              <button
+                type="button"
+                className="button plan-change-btn"
+                onClick={() => setShowPlans((v) => !v)}
+              >
+                <RefreshCw size={16} />
+                {showPlans ? "ซ่อนแพ็กเกจอื่น" : "เปลี่ยนแพ็กเกจ"}
+              </button>
+            )}
+          </section>
+
+          {showPlans && (
+            <section className="plan-select" aria-label="เลือกแพ็กเกจ">
+              <div className="plan-select-head">
+                <h3>เลือกแพ็กเกจ</h3>
+                <div
+                  className="cycle-toggle"
+                  role="tablist"
+                  aria-label="รอบชำระ"
+                >
+                  {(["monthly", "yearly"] as BillingCycle[]).map((c) => (
                     <button
+                      key={c}
                       type="button"
-                      className="button blue plan-upload"
-                      disabled={busy || !enough}
-                      aria-describedby={
-                        !enough ? `plan-credit-${plan.id}` : undefined
-                      }
-                      onClick={() => onPurchase(plan, cycle)}
+                      role="tab"
+                      aria-selected={cycle === c}
+                      className={cycle === c ? "is-on" : ""}
+                      onClick={() => setCycle(c)}
                     >
-                      <CreditCard size={17} />
-                      {enough
-                        ? `ใช้ ${price.toLocaleString("th-TH")} เครดิต`
-                        : "เครดิตไม่เพียงพอ"}
+                      {c === "monthly" ? "รายเดือน" : "รายปี · ประหยัดกว่า"}
                     </button>
-                  )}
-                  {!unavailable && !enough && canManage && (
-                    <small
-                      id={`plan-credit-${plan.id}`}
-                      className="credit-shortfall"
-                    >
-                      ต้องการเพิ่มอีก{" "}
-                      {(price - balance).toLocaleString("th-TH")} เครดิต
-                    </small>
-                  )}
-                </article>
-              );
-            })}
-          </div>
+                  ))}
+                </div>
+              </div>
+              <div className="plan-grid">
+                {plans.map((plan) => (
+                  <PlanCard
+                    key={plan.id}
+                    plan={plan}
+                    cycle={cycle}
+                    balance={balance}
+                    busy={busy}
+                    canManage={canManage}
+                    isCurrent={currentCode === plan.code}
+                    onPurchase={onPurchase}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
         </>
       )}
     </section>
+  );
+}
+
+const PLAN_TAG: Record<string, string> = {
+  free: "เริ่มต้น",
+  starter: "พ่อค้าคนเดียว",
+  growth: "ร้านมีทีม",
+  pro: "ร้านใหญ่",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  trialing: "ทดลองใช้",
+  active: "ใช้งาน",
+  grace_read_only: "อ่านอย่างเดียว",
+  pending_payment: "รอชำระเงิน",
+  suspended: "ระงับ",
+  cancelled: "ยกเลิก",
+  expired: "หมดอายุ",
+};
+
+function limitLabel(v: number | null, unit: string): string {
+  return v == null ? "ไม่จำกัด" : `${v.toLocaleString("th-TH")} ${unit}`;
+}
+
+function PlanCard({
+  plan,
+  cycle,
+  balance,
+  busy,
+  canManage,
+  isCurrent,
+  onPurchase,
+}: {
+  plan: Plan;
+  cycle: BillingCycle;
+  balance: number;
+  busy: boolean;
+  canManage: boolean;
+  isCurrent: boolean;
+  onPurchase: (plan: Plan, cycle: BillingCycle) => void;
+}) {
+  const listPrice =
+    cycle === "yearly" ? plan.price_yearly : plan.price_monthly;
+  const rawSale =
+    cycle === "yearly" ? plan.sale_price_yearly : plan.sale_price_monthly;
+  const saleActive = rawSale != null;
+  const price = saleActive ? rawSale : (listPrice ?? 0);
+  const unavailable = plan.is_free || listPrice == null;
+  const enough = balance >= price;
+  const priceText = `${price.toLocaleString("th-TH")} เครดิต`;
+
+  return (
+    <article
+      className={`plan-card ${isCurrent ? "current" : ""} ${plan.code === "growth" ? "is-top" : ""}`}
+    >
+      {plan.code === "growth" && <span className="plan-flag">แนะนำ</span>}
+      <div className="plan-card-head">
+        <div>
+          <span className="plan-tag">
+            {PLAN_TAG[plan.code] ?? plan.code.toUpperCase()}
+          </span>
+          <h3>{plan.name}</h3>
+        </div>
+        {isCurrent && <span className="current-badge">ใช้อยู่</span>}
+      </div>
+      {plan.is_free ? (
+        <strong className="plan-price">
+          ฟรี <small>ตลอดการใช้งาน</small>
+        </strong>
+      ) : listPrice == null ? (
+        <strong className="plan-price muted-text">
+          <small>ไม่มีรอบรายปี</small>
+        </strong>
+      ) : (
+        <div className="plan-price">
+          {saleActive && (
+            <span className="plan-price-was">
+              <s>{listPrice.toLocaleString("th-TH")}</s>
+              {plan.sale_label && (
+                <span className="sale-badge">{plan.sale_label}</span>
+              )}
+            </span>
+          )}
+          <strong className="plan-price-now">
+            {price.toLocaleString("th-TH")}
+            <small> เครดิต / {cycle === "yearly" ? "ปี" : "เดือน"}</small>
+          </strong>
+        </div>
+      )}
+      <ul className="plan-feature-list">
+        <li>
+          <Check size={15} /> สต็อกพร้อมขาย{" "}
+          {limitLabel(plan.active_inventory_limit, "รายการ")}
+        </li>
+        <li>
+          <Check size={15} /> สมาชิก {limitLabel(plan.member_limit, "คน")}
+        </li>
+        {FEATURE_ORDER.filter((k) => plan.features[k]).map((k) => (
+          <li key={k}>
+            <Check size={15} /> {FEATURE_LABELS[k]}
+          </li>
+        ))}
+      </ul>
+      {unavailable ? (
+        <button className="button plan-upload" disabled>
+          {plan.is_free ? "แพ็กเริ่มต้น" : "ไม่เปิดขายรอบนี้"}
+        </button>
+      ) : !canManage ? (
+        <button className="button plan-upload" disabled>
+          <ShieldCheck size={17} />
+          ไม่มีสิทธิ์ซื้อแพ็กเกจ
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="button blue plan-upload"
+          disabled={busy || !enough}
+          aria-describedby={!enough ? `plan-credit-${plan.id}` : undefined}
+          onClick={() => onPurchase(plan, cycle)}
+        >
+          <CreditCard size={17} />
+          {!enough
+            ? "เครดิตไม่เพียงพอ"
+            : isCurrent
+              ? `ต่ออายุ · ใช้ ${priceText}`
+              : `ใช้ ${priceText}`}
+        </button>
+      )}
+      {!unavailable && !enough && canManage && (
+        <small id={`plan-credit-${plan.id}`} className="credit-shortfall">
+          ต้องการเพิ่มอีก {(price - balance).toLocaleString("th-TH")} เครดิต
+        </small>
+      )}
+    </article>
   );
 }
 
@@ -460,8 +598,9 @@ export function TopUpDialog({
 }: {
   busy: boolean;
   close: () => void;
-  submit: (credits: number, file: File) => void;
+  submit: (credits: number, file: File) => Promise<boolean>;
 }) {
+  const [phase, setPhase] = useState<"form" | "done">("form");
   const [credits, setCredits] = useState("");
   const [slip, setSlip] = useState<File | null>(null);
   const [slipPreview, setSlipPreview] = useState("");
@@ -497,10 +636,11 @@ export function TopUpDialog({
     };
   }, [amount, validAmount]);
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!slip || !validAmount) return;
-    submit(amount, slip);
+    const ok = await submit(amount, slip);
+    if (ok) setPhase("done");
   };
 
   return (
@@ -519,7 +659,11 @@ export function TopUpDialog({
         <div className="dialog-head">
           <div>
             <h2 id="topup-title">เติมเครดิต</h2>
-            <p>โอนตามยอดที่ต้องการ แล้วแนบสลิปให้ทีมงานตรวจสอบ</p>
+            <p>
+              {phase === "done"
+                ? "ทีมงานได้รับสลิปของคุณแล้ว"
+                : "โอนตามยอดที่ต้องการ แล้วแนบสลิปให้ทีมงานตรวจสอบ"}
+            </p>
           </div>
           <button
             className="icon-button"
@@ -530,6 +674,30 @@ export function TopUpDialog({
             <X size={20} />
           </button>
         </div>
+        {phase === "done" ? (
+          <div className="dialog-body topup-done">
+            <span className="topup-done-icon" aria-hidden="true">
+              <CheckCircle2 size={38} />
+            </span>
+            <h3>ส่งสลิปเรียบร้อยแล้ว</h3>
+            <p>
+              ขอบคุณที่ใช้บริการ 🙏 ทีมงานกำลังตรวจสอบสลิปของคุณ เครดิต{" "}
+              {amount.toLocaleString("th-TH")} เครดิต
+              จะเข้าบัญชีร้านทันทีที่อนุมัติ (โดยปกติภายในไม่กี่ชั่วโมง) ·
+              ติดตามสถานะได้ที่เมนู “ประวัติธุรกรรม”
+            </p>
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="button primary"
+                onClick={close}
+                autoFocus
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        ) : (
         <form className="dialog-body topup-body" onSubmit={onSubmit} noValidate>
           <div className="topup-pay">
             <div className="topup-qr">
@@ -627,6 +795,7 @@ export function TopUpDialog({
             </button>
           </div>
         </form>
+        )}
       </section>
     </div>
   );
