@@ -462,9 +462,20 @@ export function TopUpDialog({
 }) {
   const [credits, setCredits] = useState("");
   const [slip, setSlip] = useState<File | null>(null);
+  const [slipPreview, setSlipPreview] = useState("");
   const [qr, setQr] = useState("");
   const amount = Number(credits);
   const validAmount = Number.isInteger(amount) && amount > 0;
+
+  useEffect(() => {
+    if (!slip) {
+      setSlipPreview("");
+      return;
+    }
+    const url = URL.createObjectURL(slip);
+    setSlipPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [slip]);
 
   useEffect(() => {
     let cancelled = false;
@@ -577,6 +588,23 @@ export function TopUpDialog({
                 required
               />
             </label>
+            {slipPreview ? (
+              <figure className="topup-slip-preview">
+                <img src={slipPreview} alt="ตัวอย่างสลิปที่แนบ" />
+                <button
+                  type="button"
+                  className="topup-slip-clear"
+                  onClick={() => setSlip(null)}
+                  disabled={busy}
+                >
+                  <X size={14} /> เอาสลิปออก
+                </button>
+              </figure>
+            ) : (
+              <p className="topup-slip-hint">
+                แนบรูปสลิปโอนเงิน (JPEG/PNG) ระบบจะแสดงตัวอย่างให้ตรวจก่อนส่ง
+              </p>
+            )}
           </div>
           <div className="dialog-actions topup-actions">
             <button
