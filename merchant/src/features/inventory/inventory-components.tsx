@@ -85,6 +85,7 @@ export function InventoryPanel({
   setInventoryStatus,
   canSell,
   canNote,
+  canViewAnalytics,
   busy,
   onStatusChange,
   onSelect,
@@ -100,6 +101,7 @@ export function InventoryPanel({
   setInventoryStatus: (v: "all" | InventoryStatus) => void;
   canSell: boolean;
   canNote: boolean;
+  canViewAnalytics: boolean;
   busy: boolean;
   onStatusChange: (item: InventoryItem, status: InventoryStatus) => void;
   onSelect: (v: InventoryItem) => void;
@@ -150,6 +152,7 @@ export function InventoryPanel({
                   <th>แรงก์</th>
                   <th>ราคาขาย</th>
                   <th>สถานะ</th>
+                  {canViewAnalytics && <th>เข้าชม</th>}
                   <th>Action</th>
                 </tr>
               </thead>
@@ -202,6 +205,12 @@ export function InventoryPanel({
                         onChange={onStatusChange}
                       />
                     </td>
+                    {canViewAnalytics && (
+                      <td className="inventory-views-cell">
+                        <Eye size={14} aria-hidden="true" />
+                        {(i.viewCount ?? 0).toLocaleString("th-TH")}
+                      </td>
+                    )}
                     <td>
                       <div className="row-actions">
                         {canNote && (
@@ -291,6 +300,12 @@ export function InventoryPanel({
                     <span className="mobile-price">
                       {money.format(i.price)}
                     </span>
+                    {canViewAnalytics && (
+                      <span className="mobile-views">
+                        <Eye size={14} aria-hidden="true" />
+                        {(i.viewCount ?? 0).toLocaleString("th-TH")}
+                      </span>
+                    )}
                     <span>
                       ดูรายละเอียด <ChevronRight size={18} />
                     </span>

@@ -1534,6 +1534,7 @@ export function MerchantApp() {
               hasShopPermission("inventory.manage") ||
               hasShopPermission("inventory.sell")
             }
+            canViewAnalytics={canViewAnalytics}
             busy={inventoryBusy}
             onStatusChange={changeInventoryStatus}
             onSelect={openDetail}

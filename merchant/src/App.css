@@ -1386,3 +1386,22 @@ tbody tr:last-child td {
     font-size: 28px;
   }
 }
+
+/* inventory table: storefront view count column */
+.inventory-views-cell {
+  white-space: nowrap;
+  color: var(--muted, #667085);
+  font-variant-numeric: tabular-nums;
+}
+.inventory-views-cell svg {
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+.mobile-views {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted, #667085);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
