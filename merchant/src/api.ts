@@ -95,7 +95,7 @@ export async function downloadShopFile(
   filename: string,
 ): Promise<void> {
   const timeout = new AbortController();
-  const timeoutId = window.setTimeout(() => timeout.abort(), 15_000);
+  const timeoutId = window.setTimeout(() => timeout.abort(), 60_000);
   try {
     const response = await fetch(`${API_BASE}${path}`, {
       credentials: "include",

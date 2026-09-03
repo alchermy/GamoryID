@@ -49,6 +49,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/public/shops/{shop:slug}', [PublicStorefrontController::class, 'show']);
         Route::get('/public/shops/{shop:slug}/inventory', [PublicStorefrontController::class, 'inventory']);
         Route::get('/public/shops/{shop:slug}/items/{tag}', [PublicStorefrontController::class, 'item']);
+        Route::get('/public/shops/{shop:slug}/{target}', [PublicStorefrontController::class, 'branding'])->whereIn('target', ['logo', 'banner']);
         Route::get('/public/media/{media}', [PublicMediaController::class, 'show']);
     });
 
@@ -140,6 +141,8 @@ Route::prefix('v1')->group(function () {
             Route::put('/team/{member}/password', [TeamController::class, 'resetPassword'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::delete('/team/{member}', [TeamController::class, 'destroy'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::put('/shop', [ShopController::class, 'update'])->middleware(['shop.writable', 'shop.permission:team.manage']);
+            Route::post('/shop/branding', [ShopController::class, 'updateBranding'])->middleware(['shop.writable', 'shop.permission:team.manage']);
+            Route::delete('/shop/branding', [ShopController::class, 'deleteBranding'])->middleware(['shop.writable', 'shop.permission:team.manage']);
 
             Route::get('/plans', [PaymentController::class, 'plans']);
             Route::get('/credits', [CreditController::class, 'index'])->middleware('shop.permission:billing.manage');
@@ -147,7 +150,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/credits/top-ups', [CreditController::class, 'topUp'])->middleware('shop.permission:billing.manage');
             Route::post('/subscriptions/purchase', [CreditController::class, 'purchase'])->middleware('shop.permission:billing.manage');
             Route::put('/subscriptions/auto-renew', [CreditController::class, 'updateAutoRenew'])->middleware('shop.permission:billing.manage');
-            Route::get('/export/inventory.csv', ExportController::class)->middleware(['shop.permission:data.export', 'plan.feature:advanced_export']);
+            Route::get('/export/inventory.csv', [ExportController::class, 'inventory'])->middleware('shop.permission:data.export');
+            Route::get('/export/sales.csv', [ExportController::class, 'sales'])->middleware(['shop.permission:data.export', 'plan.feature:advanced_export']);
 
             Route::middleware('plan.feature:discord')->group(function () {
                 Route::get('/discord/settings', [DiscordSettingsController::class, 'show']);

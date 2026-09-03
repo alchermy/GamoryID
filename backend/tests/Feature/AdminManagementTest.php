@@ -171,6 +171,43 @@ class AdminManagementTest extends TestCase
         Notification::assertSentToTimes($owner, PaymentReviewedNotification::class, 2);
     }
 
+    public function test_super_admin_can_hide_a_shop_and_a_listing_from_the_directory(): void
+    {
+        $admin = $this->admin();
+        [$shop] = $this->shopWithSubscription();
+        $item = \App\Models\InventoryItem::create([
+            'shop_id' => $shop->id, 'tag' => 'HIDE1', 'title' => 'ไอดี', 'cost' => 1000, 'list_price' => 2000, 'status' => 'available',
+        ]);
+
+        // the detail + edit pages render the new controls
+        $this->withSession(['admin_user_id' => $admin->id])->get(route('admin.shops.show', $shop))
+            ->assertOk()->assertSee('รายการในหน้ารวม /browse')->assertSee('#HIDE1');
+        $this->withSession(['admin_user_id' => $admin->id])->get(route('admin.shops.edit', $shop))
+            ->assertOk()->assertSee('ซ่อนร้านนี้จากหน้ารวม');
+
+        // shop-level hide via the edit form
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->patch(route('admin.shops.update', $shop), [
+                'name' => $shop->name, 'slug' => $shop->slug, 'status' => $shop->status,
+                'hidden_from_directory' => '1',
+            ])
+            ->assertRedirect(route('admin.shops.show', $shop));
+        $this->assertTrue($shop->fresh()->hidden_from_directory);
+
+        // per-listing toggle
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->patch(route('admin.shops.listing-visibility', [$shop, $item]))
+            ->assertRedirect();
+        $this->assertTrue($item->fresh()->hidden_from_directory);
+
+        $this->assertDatabaseHas('activity_logs', ['event' => 'listing.directory_hidden']);
+
+        // toggling back
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->patch(route('admin.shops.listing-visibility', [$shop, $item]));
+        $this->assertFalse($item->fresh()->hidden_from_directory);
+    }
+
     private function admin(): User
     {
         return User::create(['name' => 'Admin', 'email' => uniqid('admin-').'@example.test', 'password' => 'password', 'is_super_admin' => true]);

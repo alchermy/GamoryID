@@ -126,8 +126,13 @@ class AdminController extends Controller
         $subscriptions = $shop->subscriptions()->with('plan')->latest('created_at')->paginate(10, ['*'], 'subscriptions_page')->withQueryString();
         $topUps = $shop->paymentSubmissions()->whereNotNull('credit_amount')->with('submittedBy')->latest()->paginate(10, ['*'], 'topups_page')->withQueryString();
         $creditTransactions = $shop->creditTransactions()->with('plan')->latest()->limit(12)->get();
+        $directoryListings = $shop->inventoryItems()
+            ->where('status', 'available')
+            ->orderByDesc('updated_at')
+            ->limit(100)
+            ->get(['id', 'tag', 'title', 'list_price', 'hidden_from_directory']);
 
-        return $this->page('shop-show', $shop->name, compact('shop', 'subscriptions', 'topUps', 'creditTransactions'));
+        return $this->page('shop-show', $shop->name, compact('shop', 'subscriptions', 'topUps', 'creditTransactions', 'directoryListings'));
     }
 
     public function editShop(Shop $shop)
@@ -200,11 +205,13 @@ class AdminController extends Controller
             'line_url' => ['nullable', 'url', 'max:255'],
             'phone' => ['nullable', 'string', 'max:32'],
             'status' => ['required', Rule::in(['trialing', 'pending_payment', 'active', 'grace_read_only', 'suspended', 'cancelled'])],
+            'hidden_from_directory' => ['sometimes', 'boolean'],
         ]);
-        $before = $shop->only(['name', 'slug', 'status']);
+        $data['hidden_from_directory'] = $request->boolean('hidden_from_directory');
+        $before = $shop->only(['name', 'slug', 'status', 'hidden_from_directory']);
         $data['slug'] = Str::lower($data['slug']);
         $shop->update($data);
-        $this->recordAdminLog($request, $shop, 'shop.updated', $shop, ['before' => $before, 'after' => $shop->only(['name', 'slug', 'status'])]);
+        $this->recordAdminLog($request, $shop, 'shop.updated', $shop, ['before' => $before, 'after' => $shop->only(['name', 'slug', 'status', 'hidden_from_directory'])]);
 
         return redirect()->route('admin.shops.show', $shop)->with('message', 'บันทึกข้อมูลร้านค้าแล้ว');
     }
@@ -245,6 +252,16 @@ class AdminController extends Controller
         $this->recordAdminLog($request, $shop, 'subscription.auto_renew_updated', $subscription, ['before' => $before, 'after' => $subscription->auto_renew]);
 
         return back()->with('message', $subscription->auto_renew ? 'เปิดต่ออายุอัตโนมัติแล้ว' : 'ปิดต่ออายุอัตโนมัติแล้ว');
+    }
+
+    public function toggleListingVisibility(Request $request, Shop $shop, InventoryItem $item)
+    {
+        abort_unless($item->shop_id === $shop->id, 404);
+        $hidden = ! $item->hidden_from_directory;
+        $item->update(['hidden_from_directory' => $hidden]);
+        $this->recordAdminLog($request, $shop, 'listing.directory_hidden', $item, ['tag' => $item->tag, 'hidden' => $hidden]);
+
+        return back()->with('message', $hidden ? "ซ่อน #{$item->tag} จากหน้ารวมแล้ว" : "แสดง #{$item->tag} ในหน้ารวมแล้ว");
     }
 
     public function storePlan(Request $request)

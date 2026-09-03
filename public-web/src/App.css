@@ -2055,8 +2055,39 @@
 .storefront-back:hover {
   text-decoration: underline;
 }
+.storefront-banner {
+  margin: 4px 0 18px;
+  aspect-ratio: 4 / 1;
+  max-height: 220px;
+  border-radius: var(--radius-lg, 16px);
+  overflow: hidden;
+  background: var(--surface-muted, #eef3fa);
+}
+.storefront-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .storefront-head {
   margin: 8px 0 28px;
+}
+.storefront-head.has-logo {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+.storefront-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--surface, #fff);
+  box-shadow: 0 1px 6px rgb(7 26 51 / 12%);
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+.storefront-head-text {
+  min-width: 0;
 }
 .storefront-eyebrow {
   font: 700 11px/1 var(--font-mono);
@@ -2390,7 +2421,9 @@
   color: inherit;
 }
 .listing-shop {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border-top: 1px solid var(--border);
   padding: 9px 16px;
   font-size: 12px;
@@ -2398,7 +2431,15 @@
   color: var(--muted);
   text-decoration: none;
 }
-.listing-shop:hover {
+.listing-shop-logo {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+  background: var(--surface, #fff);
+}
+.listing-shop:hover span {
   color: var(--primary);
   text-decoration: underline;
 }

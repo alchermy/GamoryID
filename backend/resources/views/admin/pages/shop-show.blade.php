@@ -57,8 +57,30 @@
             <div><dt>LINE</dt><dd>{{ $shop->line_url ?: '—' }}</dd></div>
             <div><dt>เบอร์โทร</dt><dd>{{ $shop->phone ?: '—' }}</dd></div>
             <div><dt>รายละเอียด</dt><dd>{{ $shop->description ?: '—' }}</dd></div>
+            <div><dt>หน้าร้านสาธารณะ</dt><dd>{{ $shop->storefront_enabled ? 'เปิด' : 'ปิด' }}</dd></div>
+            <div><dt>หน้ารวม /browse</dt><dd>{{ $shop->hidden_from_directory ? 'ถูกซ่อนโดยผู้ดูแล' : 'แสดงตามปกติ' }}</dd></div>
         </dl>
     </section>
+</section>
+
+<section class="card" aria-labelledby="directory-title">
+    <div class="card-head"><div><h2 id="directory-title">รายการในหน้ารวม /browse</h2><p>ซ่อนไอดีที่ไม่เหมาะสมออกจากหน้ารวม โดยหน้าร้านตรง /s/{{ $shop->slug }}/&lt;tag&gt; ยังเปิดปกติ</p></div><span class="count">{{ $directoryListings->count() }} รายการพร้อมขาย</span></div>
+    <div class="table-wrap"><table><thead><tr><th scope="col">แท็ก</th><th scope="col">ชื่อไอดี</th><th scope="col">ราคา</th><th scope="col">สถานะในหน้ารวม</th><th scope="col">การจัดการ</th></tr></thead><tbody>
+        @forelse($directoryListings as $listing)
+            <tr>
+                <td><strong>#{{ $listing->tag }}</strong></td>
+                <td>{{ $listing->title ?: '—' }}</td>
+                <td class="credit">{{ number_format($listing->list_price) }}</td>
+                <td>{!! $listing->hidden_from_directory ? '<span class="status suspended">ถูกซ่อน</span>' : '<span class="status active">แสดงอยู่</span>' !!}</td>
+                <td>
+                    <form method="post" action="{{ route('admin.shops.listing-visibility', [$shop, $listing]) }}" novalidate>
+                        @csrf @method('PATCH')
+                        <button class="button secondary" type="submit">{{ $listing->hidden_from_directory ? 'แสดงในหน้ารวม' : 'ซ่อนจากหน้ารวม' }}</button>
+                    </form>
+                </td>
+            </tr>
+        @empty<tr><td colspan="5" class="empty">ยังไม่มีไอดีที่พร้อมขายในร้านนี้</td></tr>@endforelse
+    </tbody></table></div>
 </section>
 
 <section class="card" aria-labelledby="members-title">

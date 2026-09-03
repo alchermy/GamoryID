@@ -211,4 +211,55 @@ class PublicStorefrontApiTest extends TestCase
         $this->assertSame(1, $item->fresh()->view_count);
         $this->assertSame(2, $shop->fresh()->storefront_view_count);
     }
+
+    public function test_storefront_exposes_logo_and_banner_urls_and_streams_them(): void
+    {
+        Storage::fake('private');
+        $shop = $this->shop();
+        $shop->forceFill([
+            'logo_path' => UploadedFile::fake()->create('logo.png', 8, 'image/png')->store("shops/{$shop->id}", 'private'),
+            'banner_path' => UploadedFile::fake()->create('banner.png', 12, 'image/png')->store("shops/{$shop->id}", 'private'),
+        ])->save();
+        $this->item($shop, 'AAAAA');
+
+        $profile = $this->getJson('/api/v1/public/shops/test-storefront')->assertOk();
+        $this->assertStringContainsString('/public/shops/test-storefront/logo', $profile->json('data.logo_url'));
+        $this->assertStringContainsString('/public/shops/test-storefront/banner', $profile->json('data.banner_url'));
+
+        $this->get('/api/v1/public/shops/test-storefront/logo')->assertOk();
+        $this->get('/api/v1/public/shops/test-storefront/banner')->assertOk();
+
+        $row = collect($this->getJson('/api/v1/public/listings')->json('data'))->firstWhere('tag', '#AAAAA');
+        $this->assertStringContainsString('/public/shops/test-storefront/logo', $row['shop']['logo_url']);
+
+        // a shop with no branding returns null + 404
+        $bare = $this->shop(slug: 'bare-shop');
+        $this->assertNull($this->getJson('/api/v1/public/shops/bare-shop')->json('data.logo_url'));
+        $this->get('/api/v1/public/shops/bare-shop/logo')->assertNotFound();
+
+        // branding is not served once the storefront is switched off
+        $shop->update(['storefront_enabled' => false]);
+        $this->get('/api/v1/public/shops/test-storefront/logo')->assertNotFound();
+    }
+
+    public function test_admin_hidden_flags_only_remove_items_from_the_directory(): void
+    {
+        $shop = $this->shop(slug: 'visible-shop');
+        $hiddenShop = $this->shop(slug: 'hidden-shop');
+        $hiddenShop->update(['hidden_from_directory' => true]);
+
+        $shown = $this->item($shop, 'SHOWN');
+        $hiddenItem = $this->item($shop, 'HIDDN');
+        $hiddenItem->update(['hidden_from_directory' => true]);
+        $this->item($hiddenShop, 'OTHER');
+
+        $tags = collect($this->getJson('/api/v1/public/listings')->json('data'))->pluck('tag')->all();
+        $this->assertSame(['#SHOWN'], $tags);
+
+        // both the hidden shop and the hidden item still work on their own pages
+        $this->getJson('/api/v1/public/shops/hidden-shop')->assertOk();
+        $this->getJson('/api/v1/public/shops/visible-shop/items/HIDDN')->assertOk();
+
+        unset($shown);
+    }
 }

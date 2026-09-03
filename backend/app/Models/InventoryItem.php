@@ -18,7 +18,7 @@ class InventoryItem extends Model
     protected $fillable = [
         'shop_id', 'created_by', 'tag', 'title', 'riot_id', 'username', 'region', 'rank', 'level', 'skin_count',
         'battlepass_level', 'description', 'notes', 'cost', 'list_price', 'status',
-        'custom_values', 'lock_version', 'archived_at',
+        'custom_values', 'lock_version', 'archived_at', 'hidden_from_directory',
     ];
 
     protected function casts(): array
@@ -29,6 +29,7 @@ class InventoryItem extends Model
             'cost' => 'decimal:2',
             'list_price' => 'decimal:2',
             'view_count' => 'integer',
+            'hidden_from_directory' => 'boolean',
             'archived_at' => 'datetime',
         ];
     }

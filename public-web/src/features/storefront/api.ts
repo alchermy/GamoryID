@@ -8,6 +8,8 @@ export type ShopProfile = {
   line_url: string | null;
   phone: string | null;
   inventory_copy_footer: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
   timezone: string | null;
 };
 
@@ -29,7 +31,7 @@ export type ShopMedia = { id: number; role: "display" | "detail"; image_url: str
 export type ShopItemDetail = ShopListing & { media: ShopMedia[] };
 
 export type BrowseListing = ShopListing & {
-  shop: { name: string | null; slug: string | null };
+  shop: { name: string | null; slug: string | null; logo_url: string | null };
 };
 
 export type ListingSort = "newest" | "price_asc" | "price_desc" | "popular";

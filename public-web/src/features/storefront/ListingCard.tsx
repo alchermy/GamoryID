@@ -9,7 +9,7 @@ export function ListingCard({
 }: {
   item: ShopListing;
   to: string;
-  shop?: { name: string | null; slug: string | null };
+  shop?: { name: string | null; slug: string | null; logo_url?: string | null };
 }) {
   const meta =
     [
@@ -47,7 +47,15 @@ export function ListingCard({
       </Link>
       {shop?.slug && (
         <Link to={`/s/${shop.slug}`} className="listing-shop">
-          โดย {shop.name ?? shop.slug}
+          {shop.logo_url ? (
+            <img
+              className="listing-shop-logo"
+              src={shop.logo_url}
+              alt=""
+              loading="lazy"
+            />
+          ) : null}
+          <span>โดย {shop.name ?? shop.slug}</span>
         </Link>
       )}
     </article>

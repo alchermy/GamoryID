@@ -39,7 +39,10 @@ class PlanFeatureGateTest extends TestCase
 
         $this->req($user, $shop, 'GET', '/api/v1/activity')->assertForbidden();
         $this->req($user, $shop, 'GET', '/api/v1/discord/settings')->assertForbidden();
-        $this->req($user, $shop, 'GET', '/api/v1/export/inventory.csv')->assertForbidden();
+        // inventory CSV is basic data portability — allowed on any plan with the permission;
+        // the sales/profit report stays a paid (advanced_export) feature.
+        $this->req($user, $shop, 'GET', '/api/v1/export/inventory.csv')->assertOk();
+        $this->req($user, $shop, 'GET', '/api/v1/export/sales.csv')->assertForbidden();
         $this->req($user, $shop, 'POST', '/api/v1/imports/preview')->assertForbidden();
 
         $this->req($user, $shop, 'GET', '/api/v1/dashboard')
@@ -76,7 +79,8 @@ class PlanFeatureGateTest extends TestCase
 
         $this->req($user, $shop, 'GET', '/api/v1/activity')->assertOk();
         $this->req($user, $shop, 'GET', '/api/v1/discord/settings')->assertOk();
-        $this->req($user, $shop, 'GET', '/api/v1/export/inventory.csv')->assertForbidden();
+        $this->req($user, $shop, 'GET', '/api/v1/export/inventory.csv')->assertOk();
+        $this->req($user, $shop, 'GET', '/api/v1/export/sales.csv')->assertForbidden();
 
         $this->req($user, $shop, 'GET', '/api/v1/dashboard')
             ->assertOk()

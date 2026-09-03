@@ -30,6 +30,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('/shops/{shop}', [AdminController::class, 'destroyShop'])->name('shops.destroy');
         Route::patch('/shops/{shop}/restore', [AdminController::class, 'restoreShop'])->withTrashed()->name('shops.restore');
         Route::patch('/shops/{shop}/auto-renew', [AdminController::class, 'updateAutoRenew'])->name('shops.auto-renew');
+        Route::patch('/shops/{shop}/listings/{item}/visibility', [AdminController::class, 'toggleListingVisibility'])->name('shops.listing-visibility');
         Route::get('/plans', [AdminController::class, 'plans'])->name('plans.index');
         Route::get('/plans/create', [AdminController::class, 'createPlan'])->name('plans.create');
         Route::get('/plans/{plan}/edit', [AdminController::class, 'editPlan'])->name('plans.edit');

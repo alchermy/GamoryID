@@ -67,6 +67,7 @@ import {
 } from "../billing/billing-components";
 import { TransactionsPanel } from "../transactions/TransactionsPanel";
 import { ManualPanel } from "../manual/ManualPanel";
+import { ExportDialog } from "./ExportDialog";
 import { ActivityPanel } from "../activity/ActivityPanel";
 import { SettingsPanel } from "../settings/SettingsPanel";
 import { DashboardPanel, Kpi } from "../dashboard/DashboardPanel";
@@ -180,6 +181,7 @@ export function MerchantApp() {
       | "purchase"
       | "autoRenew"
       | "topUp"
+      | "export"
       | null
     >(null),
     [selectedMember, setSelectedMember] = useState<TeamMember | null>(null),
@@ -968,6 +970,27 @@ export function MerchantApp() {
       );
     }
   };
+  const saveShopBranding = async (
+    body: FormData,
+    method: "POST" | "DELETE",
+  ) => {
+    if (!shop) return;
+    try {
+      const result = await shopRequest<{ data: ShopDetails }>(
+        method === "DELETE"
+          ? `/shop/branding?target=${body.get("target")}`
+          : "/shop/branding",
+        shop.id,
+        method === "DELETE" ? { method } : { method, body },
+      );
+      setShopDetails(result.data);
+      notify("อัปเดตแบรนด์ร้านแล้ว");
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "อัปเดตแบรนด์ร้านไม่สำเร็จ",
+      );
+    }
+  };
   const submitTopUp = async (credits: number, file: File) => {
     if (!shop || paymentBusy) return;
     if (!Number.isInteger(credits) || credits < 1) {
@@ -1244,13 +1267,15 @@ export function MerchantApp() {
             </p>
           </div>
           <div className="actions">
-            <button
-              className="button"
-              onClick={() => notify("เตรียมไฟล์ส่งออกแล้ว")}
-            >
-              <Download size={17} />
-              ส่งออก
-            </button>
+            {hasShopPermission("data.export") && (
+              <button
+                className="button"
+                onClick={() => setManagementDialog("export")}
+              >
+                <Download size={17} />
+                ส่งออก
+              </button>
+            )}
             <button className="button" onClick={() => go("imports")}>
               <FileUp size={17} />
               นำเข้าข้อมูล
@@ -1402,7 +1427,19 @@ export function MerchantApp() {
             loading={managementLoading}
             error={managementError}
             canUseStorefront={planFeature("storefront")}
+            logoUrl={shopDetails?.logo_url ?? null}
+            bannerUrl={shopDetails?.banner_url ?? null}
             onSubmit={saveShopSettings}
+            onUploadBranding={(target, file) => {
+              const body = new FormData();
+              body.append(target, file);
+              void saveShopBranding(body, "POST");
+            }}
+            onRemoveBranding={(target) => {
+              const body = new FormData();
+              body.append("target", target);
+              void saveShopBranding(body, "DELETE");
+            }}
             retry={() => setManagementRevision((value) => value + 1)}
           />
         )}
@@ -1695,6 +1732,15 @@ export function MerchantApp() {
           busy={paymentBusy}
           close={() => setManagementDialog(null)}
           submit={submitTopUp}
+        />
+      )}{" "}
+      {managementDialog === "export" && shop && (
+        <ExportDialog
+          shopId={shop.id}
+          shopSlug={shopDetails?.slug ?? shop.slug ?? "shop"}
+          canSalesExport={planFeature("advanced_export")}
+          notify={notify}
+          close={() => setManagementDialog(null)}
         />
       )}{" "}
       {toast && (

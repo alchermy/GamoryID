@@ -15,6 +15,10 @@
             <label class="field" for="shop-facebook">Facebook URL<input id="shop-facebook" name="facebook_url" type="url" value="{{ old('facebook_url', $shop->facebook_url) }}" placeholder="https://facebook.com/..."></label>
             <label class="field" for="shop-line">LINE URL<input id="shop-line" name="line_url" type="url" value="{{ old('line_url', $shop->line_url) }}" placeholder="https://line.me/..."></label>
             <label class="field" for="shop-phone">เบอร์โทร<input id="shop-phone" name="phone" value="{{ old('phone', $shop->phone) }}" maxlength="32" autocomplete="tel"></label>
+            <label class="field field-wide" for="shop-hidden-directory" style="flex-direction:row;align-items:center;gap:8px">
+                <input id="shop-hidden-directory" name="hidden_from_directory" type="checkbox" value="1" @checked(old('hidden_from_directory', $shop->hidden_from_directory)) style="width:auto">
+                <span>ซ่อนร้านนี้จากหน้ารวม /browse (หน้าร้านตรง /s/{{ $shop->slug }} ยังเปิดปกติ)</span>
+            </label>
         </div>
         <div class="form-actions"><a class="button secondary" href="{{ route('admin.shops.show', $shop) }}">ยกเลิก</a><button class="button" type="submit">บันทึกการแก้ไข</button></div>
     </form>

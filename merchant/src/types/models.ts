@@ -255,6 +255,8 @@ export type ShopDetails = Shop & {
   credit_balance: number;
   inventory_copy_footer?: string | null;
   storefront_enabled?: boolean;
+  logo_url?: string | null;
+  banner_url?: string | null;
   subscription: {
     status: string;
     auto_renew: boolean;

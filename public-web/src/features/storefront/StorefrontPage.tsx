@@ -91,11 +91,29 @@ export function StorefrontPage() {
 
         {status === "ready" && shop && (
           <div className="storefront-shell">
-            <header className="storefront-head">
-              <span className="storefront-eyebrow">ร้านค้าบน GamoryID</span>
-              <h1>{shop.name}</h1>
-              {shop.description && <p className="storefront-desc">{shop.description}</p>}
-              <ContactChips shop={shop} />
+            {shop.banner_url && (
+              <div className="storefront-banner">
+                <img src={shop.banner_url} alt={`แบนเนอร์ร้าน ${shop.name}`} />
+              </div>
+            )}
+            <header
+              className={`storefront-head${shop.logo_url ? " has-logo" : ""}`}
+            >
+              {shop.logo_url && (
+                <img
+                  className="storefront-logo"
+                  src={shop.logo_url}
+                  alt={`โลโก้ร้าน ${shop.name}`}
+                />
+              )}
+              <div className="storefront-head-text">
+                <span className="storefront-eyebrow">ร้านค้าบน GamoryID</span>
+                <h1>{shop.name}</h1>
+                {shop.description && (
+                  <p className="storefront-desc">{shop.description}</p>
+                )}
+                <ContactChips shop={shop} />
+              </div>
             </header>
 
             {items.length === 0 ? (

@@ -9,6 +9,8 @@ use App\Services\AuditLogger;
 use App\Services\CurrentShop;
 use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -47,6 +49,56 @@ class ShopController extends Controller
         return response()->json(['data' => $this->payload($shop->fresh(), $entitlements)]);
     }
 
+    /** Upload or replace the shop's storefront logo and/or banner. */
+    public function updateBranding(Request $request, CurrentShop $currentShop, AuditLogger $audit, PlanEntitlements $entitlements)
+    {
+        $shop = $currentShop->from($request);
+        $request->validate([
+            'logo' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+            'banner' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:4096'],
+        ]);
+        if (! $request->hasFile('logo') && ! $request->hasFile('banner')) {
+            throw ValidationException::withMessages(['logo' => 'กรุณาเลือกรูปโลโก้หรือแบนเนอร์อย่างน้อยหนึ่งรูป']);
+        }
+
+        $updated = [];
+        foreach (['logo', 'banner'] as $target) {
+            if (! $request->hasFile($target)) {
+                continue;
+            }
+            $column = "{$target}_path";
+            $old = $shop->{$column};
+            $path = $request->file($target)->store("shops/{$shop->id}", 'private');
+            $shop->{$column} = $path;
+            $updated[] = $target;
+            if ($old) {
+                DB::afterCommit(fn () => Storage::disk('private')->delete($old));
+            }
+        }
+        $shop->save();
+        $audit->record($request, $shop, 'shop.branding_updated', $shop, ['targets' => $updated]);
+
+        return response()->json(['data' => $this->payload($shop->fresh(), $entitlements)]);
+    }
+
+    /** Remove the shop's logo or banner. */
+    public function deleteBranding(Request $request, CurrentShop $currentShop, AuditLogger $audit, PlanEntitlements $entitlements)
+    {
+        $shop = $currentShop->from($request);
+        $target = $request->query('target');
+        abort_unless(in_array($target, ['logo', 'banner'], true), 422);
+        $column = "{$target}_path";
+        $old = $shop->{$column};
+        if ($old) {
+            $shop->{$column} = null;
+            $shop->save();
+            DB::afterCommit(fn () => Storage::disk('private')->delete($old));
+            $audit->record($request, $shop, 'shop.branding_updated', $shop, ['removed' => $target]);
+        }
+
+        return response()->json(['data' => $this->payload($shop->fresh(), $entitlements)]);
+    }
+
     private function payload(Shop $shop, PlanEntitlements $entitlements): array
     {
         $subscription = $shop->subscriptions()->latest()->with('plan')->first();
@@ -63,6 +115,8 @@ class ShopController extends Controller
             'phone' => $shop->phone,
             'inventory_copy_footer' => $shop->inventory_copy_footer,
             'storefront_enabled' => $shop->storefront_enabled,
+            'logo_url' => $shop->logoUrl(),
+            'banner_url' => $shop->bannerUrl(),
             'timezone' => $shop->timezone,
             'trial_ends_at' => $shop->trial_ends_at,
             'grace_ends_at' => $shop->grace_ends_at,

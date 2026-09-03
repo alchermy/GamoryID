@@ -11,6 +11,7 @@ use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PublicStorefrontController extends Controller
 {
@@ -32,9 +33,25 @@ class PublicStorefrontController extends Controller
                 'line_url' => $shop->line_url,
                 'phone' => $shop->phone,
                 'inventory_copy_footer' => $shop->inventory_copy_footer,
+                'logo_url' => $shop->logoUrl(),
+                'banner_url' => $shop->bannerUrl(),
                 'timezone' => $shop->timezone,
             ]])
             ->header('Cache-Control', 'public, max-age=60');
+    }
+
+    /** Stream the shop's storefront logo or banner (public, gated on opt-in). */
+    public function branding(Shop $shop, string $target)
+    {
+        abort_unless(in_array($target, ['logo', 'banner'], true), 404);
+        $this->ensureVisible($shop);
+        $path = $shop->{"{$target}_path"};
+        abort_if(! $path, 404);
+
+        return Storage::disk('private')->response($path, null, [
+            'Cache-Control' => 'public, max-age=3600',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function inventory(Request $request, Shop $shop)
@@ -90,16 +107,18 @@ class PublicStorefrontController extends Controller
         // flag if the number of opted-in shops grows large.
         $eligibleShopIds = Shop::query()
             ->where('storefront_enabled', true)
+            ->where('hidden_from_directory', false)
             ->get()
             ->filter(fn (Shop $shop) => $this->entitlements->can($shop, 'storefront'))
             ->pluck('id');
 
         $query = InventoryItem::query()
             ->where('status', InventoryStatus::Available)
+            ->where('hidden_from_directory', false)
             ->whereIn('shop_id', $eligibleShopIds)
             ->with([
                 'media' => fn ($media) => $media->where('role', InventoryMedia::DISPLAY),
-                'shop:id,name,slug',
+                'shop:id,name,slug,logo_path',
             ]);
 
         match ($sort) {
@@ -114,7 +133,11 @@ class PublicStorefrontController extends Controller
         return response()
             ->json([
                 'data' => $page->getCollection()->map(fn (InventoryItem $item) => $this->listingPayload($item) + [
-                    'shop' => ['name' => $item->shop?->name, 'slug' => $item->shop?->slug],
+                    'shop' => [
+                        'name' => $item->shop?->name,
+                        'slug' => $item->shop?->slug,
+                        'logo_url' => $item->shop?->logoUrl(),
+                    ],
                 ])->all(),
                 'meta' => $this->meta($page),
             ])

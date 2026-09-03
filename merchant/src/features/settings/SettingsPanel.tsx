@@ -1,28 +1,51 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Copy, ExternalLink, Link2, Phone, Save, Settings, Store } from "lucide-react";
+import {
+  Copy,
+  ExternalLink,
+  Image as ImageIcon,
+  Link2,
+  Phone,
+  Save,
+  Settings,
+  Store,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { AsyncError } from "../../shared/ui/async-state";
 import { Field } from "../../shared/ui/form-controls";
 import { storefrontUrl } from "../../config/links";
 import { writeClipboard } from "../../shared/lib/clipboard";
 import type { Shop, ShopDetails } from "../../types/models";
 
+type BrandingTarget = "logo" | "banner";
+
 export function SettingsPanel({
   shop,
   loading,
   error,
   canUseStorefront,
+  logoUrl,
+  bannerUrl,
   onSubmit,
+  onUploadBranding,
+  onRemoveBranding,
   retry,
 }: {
   shop: ShopDetails | Shop | null;
   loading: boolean;
   error: string;
   canUseStorefront: boolean;
+  logoUrl: string | null;
+  bannerUrl: string | null;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onUploadBranding: (target: BrandingTarget, file: File) => void;
+  onRemoveBranding: (target: BrandingTarget) => void;
   retry: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const logoInput = useRef<HTMLInputElement>(null);
+  const bannerInput = useRef<HTMLInputElement>(null);
   if (error)
     return (
       <section className="panel management-panel">
@@ -243,6 +266,111 @@ export function SettingsPanel({
               <Store size={13} /> เปลี่ยน Slug แล้วอย่าลืมกดบันทึกก่อน ลิงก์จึงจะ
               อัปเดต
             </small>
+          </section>
+          <section
+            className="settings-section"
+            aria-labelledby="shop-branding-title"
+          >
+            <div className="settings-section-head">
+              <div>
+                <h3 id="shop-branding-title">แบรนด์ร้าน</h3>
+                <p>
+                  โลโก้แสดงในหน้ารวมทุกร้านและหัวหน้าร้านของคุณ · แบนเนอร์แสดงเป็น
+                  ภาพปกด้านบนหน้าร้าน (บันทึกทันทีเมื่อเลือกไฟล์)
+                </p>
+              </div>
+              <span>05</span>
+            </div>
+            <div className="settings-branding">
+              <div className="settings-branding-row">
+                <div className="settings-branding-preview settings-branding-logo">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="โลโก้ร้าน" />
+                  ) : (
+                    <ImageIcon size={22} aria-hidden="true" />
+                  )}
+                </div>
+                <div className="settings-branding-actions">
+                  <strong>โลโก้</strong>
+                  <small className="field-help">
+                    รูปสี่เหลี่ยมจัตุรัส PNG/JPG/WebP ไม่เกิน 2 MB
+                  </small>
+                  <div>
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={() => logoInput.current?.click()}
+                    >
+                      <Upload size={15} /> อัปโหลด
+                    </button>
+                    {logoUrl && (
+                      <button
+                        type="button"
+                        className="button ghost"
+                        onClick={() => onRemoveBranding("logo")}
+                      >
+                        <Trash2 size={15} /> เอาออก
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <input
+                  ref={logoInput}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  hidden
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) onUploadBranding("logo", file);
+                    event.target.value = "";
+                  }}
+                />
+              </div>
+              <div className="settings-branding-row">
+                <div className="settings-branding-preview settings-branding-banner">
+                  {bannerUrl ? (
+                    <img src={bannerUrl} alt="แบนเนอร์ร้าน" />
+                  ) : (
+                    <ImageIcon size={22} aria-hidden="true" />
+                  )}
+                </div>
+                <div className="settings-branding-actions">
+                  <strong>แบนเนอร์</strong>
+                  <small className="field-help">
+                    แนะนำอัตราส่วน 4:1 PNG/JPG/WebP ไม่เกิน 4 MB
+                  </small>
+                  <div>
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={() => bannerInput.current?.click()}
+                    >
+                      <Upload size={15} /> อัปโหลด
+                    </button>
+                    {bannerUrl && (
+                      <button
+                        type="button"
+                        className="button ghost"
+                        onClick={() => onRemoveBranding("banner")}
+                      >
+                        <Trash2 size={15} /> เอาออก
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <input
+                  ref={bannerInput}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  hidden
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) onUploadBranding("banner", file);
+                    event.target.value = "";
+                  }}
+                />
+              </div>
+            </div>
           </section>
         </div>
         <div className="settings-form-actions">
