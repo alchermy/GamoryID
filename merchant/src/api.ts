@@ -70,6 +70,7 @@ export async function apiRequest<T>(
     const error = new Error(body.message ?? "ไม่สามารถเชื่อมต่อระบบได้");
     Object.assign(error, {
       status: response.status,
+      code: body.code,
       fields: body.errors ?? {},
     });
     throw error;

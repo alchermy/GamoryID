@@ -382,6 +382,9 @@ export function AuthGate() {
     if (session.email_verified_at && location.pathname === "/verify-email") {
       return <Navigate to="/" replace />;
     }
+    if (session.email_verified_at && !session.terms_current) {
+      return <ReconsentScreen onAccepted={() => void checkSession()} />;
+    }
     return <Outlet context={session} />;
   }
   return (
@@ -398,6 +401,102 @@ export function AuthGate() {
           <a className="button" href="/login">
             ไปหน้าเข้าสู่ระบบ
           </a>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export function ReconsentScreen({ onAccepted }: { onAccepted: () => void }) {
+  const [agreed, setAgreed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    document.title = "ข้อกำหนดการใช้บริการมีการปรับปรุง — GamoryID";
+  }, []);
+
+  const accept = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await apiRequest("/terms/accept", { method: "POST" });
+      onAccepted();
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "บันทึกการยอมรับไม่สำเร็จ กรุณาลองใหม่",
+      );
+      setBusy(false);
+    }
+  };
+
+  const signOut = async () => {
+    setBusy(true);
+    try {
+      const csrf = await prepareCsrf();
+      await apiRequest("/auth/logout", { method: "POST", headers: csrf });
+    } catch {
+      // No active session to end — carry on to the login screen.
+    }
+    window.location.href = "/login";
+  };
+
+  return (
+    <main className="auth-gate">
+      <section>
+        <img src="/mascot/gammy-secure.png" alt="Gammy" />
+        <p className="eyebrow">ข้อกำหนดการใช้บริการ</p>
+        <h1>ข้อกำหนดการใช้บริการมีการปรับปรุง</h1>
+        <p>
+          เราปรับปรุงข้อกำหนดการใช้บริการและนโยบายความเป็นส่วนตัว
+          กรุณาอ่านและกดยอมรับฉบับใหม่เพื่อใช้งานร้านของคุณต่อ
+          ระหว่างนี้คุณยังดูและส่งออกข้อมูลได้ แต่จะทำรายการที่เปลี่ยนแปลงข้อมูลไม่ได้
+        </p>
+        <div className="auth-consent">
+          <label htmlFor="reconsent-accept">
+            <input
+              id="reconsent-accept"
+              type="checkbox"
+              checked={agreed}
+              onChange={(event) => setAgreed(event.target.checked)}
+            />
+            <span>
+              ฉันได้อ่านและยอมรับ{" "}
+              <a href={termsUrl} target="_blank" rel="noopener noreferrer">
+                ข้อกำหนดการใช้บริการ
+              </a>{" "}
+              และ{" "}
+              <a href={privacyUrl} target="_blank" rel="noopener noreferrer">
+                นโยบายความเป็นส่วนตัว
+              </a>{" "}
+              ฉบับล่าสุด
+            </span>
+          </label>
+        </div>
+        {error ? (
+          <div className="auth-error" role="alert">
+            {error}
+          </div>
+        ) : null}
+        <div className="auth-gate-actions">
+          <button
+            className="button blue"
+            type="button"
+            disabled={!agreed || busy}
+            onClick={() => void accept()}
+          >
+            {busy ? "กำลังบันทึก…" : "ยอมรับและใช้งานต่อ"}
+          </button>
+          <button
+            className="button"
+            type="button"
+            disabled={busy}
+            onClick={() => void signOut()}
+          >
+            ออกจากระบบ
+          </button>
         </div>
       </section>
     </main>

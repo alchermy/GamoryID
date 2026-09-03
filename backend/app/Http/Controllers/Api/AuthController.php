@@ -91,6 +91,19 @@ class AuthController extends Controller
         return response()->json(['user' => $this->userPayload($request->user())]);
     }
 
+    public function acceptTerms(Request $request, AuditLogger $audit): JsonResponse
+    {
+        $user = $request->user();
+        $version = config('legal.terms_version');
+        $user->forceFill([
+            'terms_accepted_at' => now(),
+            'terms_version' => $version,
+        ])->save();
+        $audit->recordAuth($request, 'auth.terms_accepted', ['version' => $version]);
+
+        return response()->json(['user' => $this->userPayload($user)]);
+    }
+
     public function logout(Request $request, AuditLogger $audit): JsonResponse
     {
         $audit->recordAuth($request, 'auth.logged_out');
@@ -137,6 +150,7 @@ class AuthController extends Controller
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
             'current_shop_id' => $user->current_shop_id,
             'two_factor_enabled' => (bool) $user->two_factor_confirmed_at,
+            'terms_current' => $user->hasAcceptedCurrentTerms(),
             'shops' => $user->shops()->get()->map(fn ($shop) => [
                 'id' => $shop->id,
                 'name' => $shop->name,

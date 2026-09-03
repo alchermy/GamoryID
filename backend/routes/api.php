@@ -80,6 +80,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/sessions', [AuthController::class, 'sessions']);
         Route::delete('/auth/sessions/{session}', [AuthController::class, 'revokeSession']);
+        // Re-consent endpoint: outside `verified` + `terms.current` so a user
+        // who is behind on the Terms can always accept the new version.
+        Route::post('/terms/accept', [AuthController::class, 'acceptTerms']);
         Route::post('/email/verification-notification', function (Request $request) {
             $request->user()->sendEmailVerificationNotification();
 
@@ -89,7 +92,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/security/2fa/confirm', [SensitiveAccessController::class, 'confirmTwoFactor']);
         Route::post('/security/reauth', [SensitiveAccessController::class, 'confirmReauth'])->middleware('throttle:5,1');
 
-        Route::middleware('verified')->group(function () {
+        Route::middleware(['verified', 'terms.current'])->group(function () {
             Route::get('/dashboard', DashboardController::class);
             Route::get('/shop', [ShopController::class, 'show']);
             Route::get('/inventory', [InventoryController::class, 'index']);

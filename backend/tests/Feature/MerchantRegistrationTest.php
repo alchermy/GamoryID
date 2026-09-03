@@ -41,6 +41,7 @@ class MerchantRegistrationTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('user.email', 'new-owner@example.test')
             ->assertJsonPath('user.email_verified_at', null)
+            ->assertJsonPath('user.terms_current', true)
             ->assertJsonPath('shop.name', 'ร้านเริ่มใหม่');
 
         $user = User::query()->where('email', 'new-owner@example.test')->firstOrFail();

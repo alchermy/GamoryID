@@ -31,6 +31,8 @@ class DemoShopSeeder extends Seeder
             'password' => 'password',
             'current_shop_id' => $shop->id,
             'email_verified_at' => now(),
+            'terms_accepted_at' => now(),
+            'terms_version' => config('legal.terms_version'),
         ]);
         ShopMember::updateOrCreate(
             ['shop_id' => $shop->id, 'user_id' => $owner->id],

@@ -1,14 +1,9 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { SiteFooter } from "../landing/SiteFooter";
 import { SiteHeader } from "../landing/SiteHeader";
-import {
-  EFFECTIVE_DATE,
-  LEGAL_DRAFT,
-  PRIVACY_VERSION,
-  TERMS_VERSION,
-} from "./meta";
+import { EFFECTIVE_DATE, PRIVACY_VERSION, TERMS_VERSION } from "./meta";
 import { PRIVACY_DOC } from "./privacy";
 import { TERMS_DOC } from "./terms";
 
@@ -33,14 +28,6 @@ export function LegalPage({ kind }: { kind: "terms" | "privacy" }) {
           <p className="legal-meta">
             มีผลบังคับใช้ {EFFECTIVE_DATE} · ฉบับ {version}
           </p>
-
-          {LEGAL_DRAFT && (
-            <p className="legal-draft-note" role="note">
-              <AlertTriangle size={16} aria-hidden="true" />
-              เอกสารฉบับนี้อยู่ระหว่างการตรวจทานโดยที่ปรึกษากฎหมาย
-              อาจมีการปรับปรุงถ้อยคำก่อนเปิดให้บริการวงกว้าง
-            </p>
-          )}
 
           <nav className="legal-toc" aria-label="สารบัญ">
             <ol>

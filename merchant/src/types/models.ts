@@ -82,6 +82,8 @@ export type SessionUser = {
   name: string;
   email: string;
   email_verified_at: string | null;
+  /** false when the user must re-accept an updated Terms of Service version. */
+  terms_current: boolean;
   current_shop_id: number;
   shops: Shop[];
 };

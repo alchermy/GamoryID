@@ -15,7 +15,8 @@ export const CONTROLLER_ADDRESS =
   "62/137 ซ.เสรีไทย72 ถ.เสรีไทย แขวงมีนบุรี เขตมีนบุรี กรุงเทพมหานคร 10510";
 
 /**
- * While true, each legal page shows a "under legal review" notice. Flip to
- * false once a lawyer has signed off on the wording.
+ * When true, each legal page shows an "under legal review" notice. This is the
+ * in-force published version — no draft banner. Set true only if a future
+ * revision needs review before taking effect.
  */
-export const LEGAL_DRAFT = true;
+export const LEGAL_DRAFT = false;

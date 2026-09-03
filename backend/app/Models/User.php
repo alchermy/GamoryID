@@ -54,6 +54,21 @@ class User extends Authenticatable implements MustVerifyEmailContract
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Stamp the in-force Terms version on every new account unless the
+        // caller set it explicitly. Registration accepts it directly from the
+        // user; owner-created staff inherit it (the owner accepts on the shop's
+        // behalf, the same way staff are pre-verified). Everyone is re-prompted
+        // by the re-consent gate when the version next changes.
+        static::creating(function (User $user): void {
+            if (! array_key_exists('terms_version', $user->getAttributes())) {
+                $user->terms_version = config('legal.terms_version');
+                $user->terms_accepted_at ??= now();
+            }
+        });
+    }
+
     public function currentShop(): BelongsTo
     {
         return $this->belongsTo(Shop::class, 'current_shop_id');
@@ -69,6 +84,17 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(new VerifyEmailNotification);
+    }
+
+    /**
+     * Whether the user has accepted the currently in-force Terms of Service
+     * version. A null `terms_version` (legacy / seeded accounts) counts as not
+     * accepted, which triggers the re-consent gate on the next mutating request.
+     */
+    public function hasAcceptedCurrentTerms(): bool
+    {
+        return $this->terms_version !== null
+            && $this->terms_version === config('legal.terms_version');
     }
 
     public function hasShopPermission(Shop $shop, ShopPermission|string $permission): bool

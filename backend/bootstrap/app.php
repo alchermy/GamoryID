@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureSensitiveAccess;
 use App\Http\Middleware\EnsureShopPermission;
 use App\Http\Middleware\EnsureShopWritable;
 use App\Http\Middleware\EnsureSuperAdminSession;
+use App\Http\Middleware\EnsureTermsAccepted;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'plan.feature' => EnsurePlanFeature::class,
             'sensitive' => EnsureSensitiveAccess::class,
             'admin.session' => EnsureSuperAdminSession::class,
+            'terms.current' => EnsureTermsAccepted::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
