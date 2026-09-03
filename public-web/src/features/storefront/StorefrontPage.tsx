@@ -89,13 +89,14 @@ export function StorefrontPage() {
           </div>
         )}
 
+        {status === "ready" && shop && shop.banner_url && (
+          <div className="storefront-banner">
+            <img src={shop.banner_url} alt={`แบนเนอร์ร้าน ${shop.name}`} />
+          </div>
+        )}
+
         {status === "ready" && shop && (
           <div className="storefront-shell">
-            {shop.banner_url && (
-              <div className="storefront-banner">
-                <img src={shop.banner_url} alt={`แบนเนอร์ร้าน ${shop.name}`} />
-              </div>
-            )}
             <header
               className={`storefront-head${shop.logo_url ? " has-logo" : ""}`}
             >

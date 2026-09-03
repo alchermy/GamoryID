@@ -64,12 +64,23 @@ class Shop extends Model
 
     public function logoUrl(): ?string
     {
-        return $this->logo_path ? url("/api/v1/public/shops/{$this->slug}/logo") : null;
+        return $this->brandingUrl('logo', $this->logo_path);
     }
 
     public function bannerUrl(): ?string
     {
-        return $this->banner_path ? url("/api/v1/public/shops/{$this->slug}/banner") : null;
+        return $this->brandingUrl('banner', $this->banner_path);
+    }
+
+    private function brandingUrl(string $target, ?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        // `?v=` busts the CDN/browser cache when the merchant replaces the file
+        // (the stored path gets a fresh random name on every upload).
+        return url("/api/v1/public/shops/{$this->slug}/{$target}").'?v='.substr(sha1($path), 0, 8);
     }
 
     /**
