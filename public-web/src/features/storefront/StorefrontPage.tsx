@@ -91,7 +91,13 @@ export function StorefrontPage() {
 
         {status === "ready" && shop && shop.banner_url && (
           <div className="storefront-banner">
-            <img src={shop.banner_url} alt={`แบนเนอร์ร้าน ${shop.name}`} />
+            <img
+              src={shop.banner_url}
+              alt={`แบนเนอร์ร้าน ${shop.name}`}
+              onError={(event) => {
+                event.currentTarget.closest(".storefront-banner")?.remove();
+              }}
+            />
           </div>
         )}
 
@@ -105,6 +111,9 @@ export function StorefrontPage() {
                   className="storefront-logo"
                   src={shop.logo_url}
                   alt={`โลโก้ร้าน ${shop.name}`}
+                  onError={(event) => {
+                    event.currentTarget.style.display = "none";
+                  }}
                 />
               )}
               <div className="storefront-head-text">

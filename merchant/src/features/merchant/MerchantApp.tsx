@@ -32,6 +32,7 @@ import { buildInventoryCopyText } from "../../inventory-copy";
 import { DEFAULT_COPY_FOOTER, initialInventoryItems } from "../inventory/data";
 import { createIdempotencyKey, money } from "../../shared/lib/format";
 import { writeClipboard } from "../../shared/lib/clipboard";
+import { shrinkImage } from "../../shared/lib/image";
 import { useModalLayer } from "../../shared/hooks/useModalLayer";
 import type {
   BillingHistory,
@@ -1431,9 +1432,15 @@ export function MerchantApp() {
             bannerUrl={shopDetails?.banner_url ?? null}
             onSubmit={saveShopSettings}
             onUploadBranding={(target, file) => {
-              const body = new FormData();
-              body.append(target, file);
-              void saveShopBranding(body, "POST");
+              void (async () => {
+                const sized = await shrinkImage(
+                  file,
+                  target === "logo" ? 512 : 1600,
+                );
+                const body = new FormData();
+                body.append(target, sized);
+                void saveShopBranding(body, "POST");
+              })();
             }}
             onRemoveBranding={(target) => {
               const body = new FormData();

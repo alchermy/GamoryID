@@ -53,6 +53,9 @@ export function ListingCard({
               src={shop.logo_url}
               alt=""
               loading="lazy"
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+              }}
             />
           ) : null}
           <span>โดย {shop.name ?? shop.slug}</span>
