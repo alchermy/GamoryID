@@ -299,7 +299,7 @@ export function MerchantApp() {
     const upload = async (role: "display" | "detail", file: File) => {
       const payload = new FormData();
       payload.append("role", role);
-      payload.append("image", file);
+      payload.append("image", await shrinkImage(file, 1600));
       await shopRequest(`/inventory/${inventoryId}/media`, shop.id, {
         method: "POST",
         body: payload,

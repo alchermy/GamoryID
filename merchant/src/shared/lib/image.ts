@@ -1,12 +1,13 @@
 /**
- * Downscale an image file in the browser before upload so storefront assets
- * stay small (a 1 MB logo rendered at 20px is pure waste and loads slowly).
- * Falls back to the original file if anything goes wrong or it is already small.
+ * Downscale + re-encode an image to WebP in the browser before upload, so
+ * storefront and inventory assets stay light (a 1 MB PNG logo shown at 20px
+ * is pure waste). Returns the original file untouched if WebP is unsupported,
+ * the source is a GIF/non-image, or the result would not actually be smaller.
  */
 export async function shrinkImage(
   file: File,
   maxEdge: number,
-  quality = 0.85,
+  quality = 0.82,
 ): Promise<File> {
   if (!file.type.startsWith("image/") || file.type === "image/gif") {
     return file;
@@ -14,30 +15,31 @@ export async function shrinkImage(
   try {
     const bitmap = await createImageBitmap(file);
     const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
-    if (scale === 1 && file.size < 300_000) {
-      bitmap.close();
-      return file;
-    }
-    const width = Math.round(bitmap.width * scale);
-    const height = Math.round(bitmap.height * scale);
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return file;
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
     ctx.drawImage(bitmap, 0, 0, width, height);
     bitmap.close();
 
-    const hasAlpha = file.type === "image/png" || file.type === "image/webp";
-    const outType = hasAlpha ? "image/png" : "image/jpeg";
     const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, outType, quality),
+      canvas.toBlob(resolve, "image/webp", quality),
     );
-    if (!blob || blob.size >= file.size) return file;
+    // toBlob ignores an unsupported type and falls back to PNG — bail if we
+    // did not actually get WebP, or if it came out no smaller than the source.
+    if (!blob || blob.type !== "image/webp" || blob.size >= file.size) {
+      return file;
+    }
 
-    const ext = outType === "image/png" ? "png" : "jpg";
-    const name = file.name.replace(/\.[^.]+$/, "") + `.${ext}`;
-    return new File([blob], name, { type: outType });
+    const name = file.name.replace(/\.[^.]+$/, "") + ".webp";
+    return new File([blob], name, { type: "image/webp" });
   } catch {
     return file;
   }
