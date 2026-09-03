@@ -1,8 +1,12 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\SitemapController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/sitemap.xml', [SitemapController::class, 'sitemap']);
+Route::get('/robots.txt', [SitemapController::class, 'robots']);
 
 Route::get('/', function () {
     $adminId = session()->get('admin_user_id');

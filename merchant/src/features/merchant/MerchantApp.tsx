@@ -50,6 +50,7 @@ import type {
   SessionUser,
   ShopDetails,
   TeamMember,
+  ViewSeries,
 } from "../../types/models";
 import { ImportPanel } from "../imports/ImportPanel";
 import {
@@ -160,6 +161,10 @@ export function MerchantApp() {
       authenticatedSession ?? null,
     ),
     [dashboard, setDashboardData] = useState<DashboardData | null>(null),
+    [storefrontViews, setStorefrontViews] = useState<ViewSeries | null>(null),
+    [viewGranularity, setViewGranularity] = useState<
+      "day" | "month" | "year"
+    >("day"),
     [loadError, setLoadError] = useState("");
   const [sales, setSales] = useState<SaleRecord[]>([]),
     [customers, setCustomers] = useState<CustomerRecord[]>([]),
@@ -346,6 +351,17 @@ export function MerchantApp() {
     const result = await shopRequest<DashboardData>("/dashboard", shop.id);
     setDashboardData(result);
   }, [shop]);
+  const refreshStorefrontViews = useCallback(
+    async (granularity: "day" | "month" | "year") => {
+      if (!shop || !canViewAnalytics) return;
+      const result = await shopRequest<ViewSeries>(
+        `/storefront/views?granularity=${granularity}`,
+        shop.id,
+      );
+      setStorefrontViews(result);
+    },
+    [shop, canViewAnalytics],
+  );
   const refreshHistory = useCallback(async () => {
     if (!shop || !["sales", "customers"].includes(page) || saleDetailId) return;
     const endpoint =
@@ -433,6 +449,10 @@ export function MerchantApp() {
     if (!shop) return;
     void refreshDashboardData().catch(() => undefined);
   }, [refreshDashboardData, shop]);
+  useEffect(() => {
+    if (!shop || page !== "dashboard" || !canViewAnalytics) return;
+    void refreshStorefrontViews(viewGranularity).catch(() => undefined);
+  }, [refreshStorefrontViews, viewGranularity, page, shop, canViewAnalytics]);
   useEffect(() => {
     if (!shop) return;
     void shopRequest<{ data: ShopDetails }>("/shop", shop.id)
@@ -1462,6 +1482,9 @@ export function MerchantApp() {
             summary={summary}
             canViewProfit={hasShopPermission("profit.view")}
             canViewAnalytics={canViewAnalytics}
+            storefrontViews={storefrontViews}
+            viewGranularity={viewGranularity}
+            onViewGranularityChange={setViewGranularity}
             onOpenInventory={() => go("inventory")}
             onOpenImport={() => go("imports")}
             onOpenAdd={() => setDialog("add")}

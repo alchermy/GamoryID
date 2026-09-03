@@ -1,5 +1,12 @@
 import { apiBaseUrl } from "../../config/links";
 
+export type PageMeta = {
+  og_title: string;
+  og_description: string;
+  og_image: string | null;
+  canonical: string;
+};
+
 export type ShopProfile = {
   name: string;
   slug: string;
@@ -11,7 +18,7 @@ export type ShopProfile = {
   logo_url: string | null;
   banner_url: string | null;
   timezone: string | null;
-};
+} & PageMeta;
 
 export type ShopListing = {
   tag: string;
@@ -28,7 +35,7 @@ export type ShopListing = {
 
 export type ShopMedia = { id: number; role: "display" | "detail"; image_url: string };
 
-export type ShopItemDetail = ShopListing & { media: ShopMedia[] };
+export type ShopItemDetail = ShopListing & { media: ShopMedia[] } & PageMeta;
 
 export type BrowseListing = ShopListing & {
   shop: { name: string | null; slug: string | null; logo_url: string | null };

@@ -56,6 +56,11 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
 
+    // Public storefront origin (public-web). Used for sitemap <loc> and OG
+    // canonical URLs. Falls back to the CORS PUBLIC_WEB_URL so dev needs no
+    // extra env.
+    'storefront_url' => env('STOREFRONT_URL', env('PUBLIC_WEB_URL', 'http://localhost:5174')),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

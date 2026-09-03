@@ -262,4 +262,22 @@ class PublicStorefrontApiTest extends TestCase
 
         unset($shown);
     }
+
+    public function test_storefront_payloads_carry_og_meta(): void
+    {
+        config(['app.storefront_url' => 'https://shop.example']);
+        $shop = $this->shop();
+        $this->item($shop, 'AAAAA');
+
+        $this->getJson('/api/v1/public/shops/test-storefront')
+            ->assertOk()
+            ->assertJsonPath('data.og_title', 'ร้านทดสอบหน้าร้าน — ร้านไอดีเกมบน GamoryID')
+            ->assertJsonPath('data.canonical', 'https://shop.example/s/test-storefront')
+            ->assertJsonPath('data.og_description', 'ขายไอดี Valorant พร้อมส่ง');
+
+        $this->getJson('/api/v1/public/shops/test-storefront/items/AAAAA')
+            ->assertOk()
+            ->assertJsonPath('data.og_title', '#AAAAA ไอดี AAAAA — ร้านทดสอบหน้าร้าน')
+            ->assertJsonPath('data.canonical', 'https://shop.example/s/test-storefront/AAAAA');
+    }
 }

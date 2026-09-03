@@ -13,13 +13,18 @@ import {
 } from "lucide-react";
 import { formatDate, money } from "../../shared/lib/format";
 import { activityIcon, activityLabel } from "../../shared/lib/activity";
-import type { DashboardData } from "../../types/models";
+import type { DashboardData, ViewSeries } from "../../types/models";
+
+type Granularity = "day" | "month" | "year";
 
 export function DashboardPanel({
   dashboard,
   summary,
   canViewProfit,
   canViewAnalytics,
+  storefrontViews,
+  viewGranularity,
+  onViewGranularityChange,
   onOpenInventory,
   onOpenImport,
   onOpenAdd,
@@ -35,6 +40,9 @@ export function DashboardPanel({
   };
   canViewProfit: boolean;
   canViewAnalytics: boolean;
+  storefrontViews: ViewSeries | null;
+  viewGranularity: Granularity;
+  onViewGranularityChange: (g: Granularity) => void;
   onOpenInventory: () => void;
   onOpenImport: () => void;
   onOpenAdd: () => void;
@@ -223,6 +231,12 @@ export function DashboardPanel({
           </div>
         </section>
       </div>
+      <StorefrontViewsPanel
+        series={storefrontViews}
+        granularity={viewGranularity}
+        onGranularity={onViewGranularityChange}
+        canViewAnalytics={canViewAnalytics}
+      />
       <div className="dashboard-lower-grid">
         <section
           className="panel stock-health"
@@ -347,6 +361,105 @@ export function DashboardPanel({
     </div>
   );
 }
+function StorefrontViewsPanel({
+  series,
+  granularity,
+  onGranularity,
+  canViewAnalytics,
+}: {
+  series: ViewSeries | null;
+  granularity: Granularity;
+  onGranularity: (g: Granularity) => void;
+  canViewAnalytics: boolean;
+}) {
+  const fmtPeriod = (period: string): string => {
+    if (granularity === "year") return String(Number(period) + 543);
+    if (granularity === "month") {
+      const [y, m] = period.split("-").map(Number);
+      return new Intl.DateTimeFormat("th-TH", { month: "short" }).format(
+        new Date(y, m - 1, 1),
+      );
+    }
+    return new Intl.DateTimeFormat("th-TH", {
+      day: "numeric",
+      month: "numeric",
+    }).format(new Date(`${period}T12:00:00`));
+  };
+  const points = series?.data ?? [];
+  const maxViews = Math.max(1, ...points.map((p) => p.views));
+  const empty = points.length === 0 || points.every((p) => p.views === 0);
+
+  return (
+    <section className="panel dashboard-views" aria-labelledby="views-title">
+      <div className="panel-head">
+        <div>
+          <h2 id="views-title">ยอดเข้าชมร้าน</h2>
+          <small>
+            {canViewAnalytics
+              ? `${(series?.total ?? 0).toLocaleString("th-TH")} ครั้ง รวมทั้งหมด`
+              : "ปลดล็อกด้วยแพ็ก Growth ขึ้นไป"}
+          </small>
+        </div>
+        {canViewAnalytics && (
+          <div className="cycle-toggle" role="tablist" aria-label="ช่วงเวลา">
+            {(["day", "month", "year"] as Granularity[]).map((g) => (
+              <button
+                key={g}
+                type="button"
+                role="tab"
+                aria-selected={granularity === g}
+                className={granularity === g ? "is-on" : ""}
+                onClick={() => onGranularity(g)}
+              >
+                {g === "day" ? "วัน" : g === "month" ? "เดือน" : "ปี"}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="views-body">
+        {!canViewAnalytics ? (
+          <div className="dashboard-empty">
+            <Eye size={24} />
+            <strong>รายงานยอดเข้าชมสำหรับแพ็ก Growth ขึ้นไป</strong>
+            <span>อัปเกรดเพื่อดูกราฟยอดเข้าชมรายวัน / เดือน / ปี</span>
+          </div>
+        ) : empty ? (
+          <div className="dashboard-empty">
+            <Eye size={24} />
+            <strong>ยังไม่มียอดเข้าชมในช่วงนี้</strong>
+            <span>เมื่อมีคนเปิดหน้าร้านสาธารณะ กราฟจะแสดงที่นี่</span>
+          </div>
+        ) : (
+          <div
+            className={`views-bars gran-${granularity}`}
+            aria-label={`กราฟยอดเข้าชมราย${
+              granularity === "day" ? "วัน" : granularity === "month" ? "เดือน" : "ปี"
+            }`}
+          >
+            {points.map((point) => {
+              const height = Math.max(
+                4,
+                Math.round((point.views / maxViews) * 100),
+              );
+              return (
+                <div className="views-column" key={point.period}>
+                  <span className="views-tooltip">
+                    {point.views.toLocaleString("th-TH")} ครั้ง ·{" "}
+                    {fmtPeriod(point.period)}
+                  </span>
+                  <i style={{ height: `${height}%` }} />
+                  <span className="views-label">{fmtPeriod(point.period)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function DashboardMetric({
   label,
   value,

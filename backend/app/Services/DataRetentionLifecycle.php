@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\ImportError;
 use App\Models\ImportJob;
 use App\Models\PaymentSubmission;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Psr\Log\LoggerInterface;
@@ -26,6 +27,7 @@ class DataRetentionLifecycle
         $this->pruneActivityLogs($log);
         $this->pruneImportHistory($log);
         $this->pruneSlipFiles($log);
+        $this->pruneStorefrontViewDaily($log);
     }
 
     private function anonymizeInactiveCustomers(LoggerInterface $log): void
@@ -106,6 +108,22 @@ class DataRetentionLifecycle
 
         if ($count > 0) {
             $log->info('ลบไฟล์สลิปเก่าตามนโยบายเก็บข้อมูล (เก็บเฉพาะรายการชำระเงิน)', ['slips' => $count, 'older_than_days' => $days]);
+        }
+    }
+
+    private function pruneStorefrontViewDaily(LoggerInterface $log): void
+    {
+        $days = (int) config('privacy.storefront_view_days');
+        if ($days <= 0) {
+            return;
+        }
+
+        $deleted = DB::table('shop_view_daily')
+            ->where('date', '<', now()->subDays($days)->toDateString())
+            ->delete();
+
+        if ($deleted > 0) {
+            $log->info('ลบสถิติยอดเข้าชมร้านรายวันที่เกินช่วงเก็บข้อมูล', ['rows' => $deleted, 'older_than_days' => $days]);
         }
     }
 }

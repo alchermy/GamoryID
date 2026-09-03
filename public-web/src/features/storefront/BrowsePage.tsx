@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { SiteFooter } from "../landing/SiteFooter";
 import { SiteHeader } from "../landing/SiteHeader";
+import { applyPageMeta } from "../../shared/head";
 import { ListingCard } from "./ListingCard";
 import {
   fetchListings,
@@ -25,7 +26,12 @@ export function BrowsePage() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = "ไอดีทั้งหมด — GamoryID";
+    applyPageMeta({
+      title: "ไอดีทั้งหมด — GamoryID",
+      description:
+        "รวมไอดีเกมพร้อมขายจากทุกร้านบน GamoryID เลือกดูตามราคาหรือความนิยม แล้วติดต่อร้านได้โดยตรง",
+      canonical: `${window.location.origin}/browse`,
+    });
   }, []);
 
   useEffect(() => {

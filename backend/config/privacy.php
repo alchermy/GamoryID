@@ -26,4 +26,8 @@ return [
     // many days after the top-up was submitted.
     'slip_file_days' => (int) env('PRIVACY_SLIP_FILE_DAYS', 180),
 
+    // Keep per-day storefront view rollup rows for this many days (the lifetime
+    // counter on shops is never pruned).
+    'storefront_view_days' => (int) env('PRIVACY_STOREFRONT_VIEW_DAYS', 550),
+
 ];

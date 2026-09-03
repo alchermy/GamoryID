@@ -81,6 +81,7 @@ class PlanFeatureGateTest extends TestCase
         $this->req($user, $shop, 'GET', '/api/v1/discord/settings')->assertOk();
         $this->req($user, $shop, 'GET', '/api/v1/export/inventory.csv')->assertOk();
         $this->req($user, $shop, 'GET', '/api/v1/export/sales.csv')->assertForbidden();
+        $this->req($user, $shop, 'GET', '/api/v1/storefront/views')->assertForbidden();
 
         $this->req($user, $shop, 'GET', '/api/v1/dashboard')
             ->assertOk()
@@ -95,6 +96,7 @@ class PlanFeatureGateTest extends TestCase
         $this->req($user, $shop, 'GET', '/api/v1/activity')->assertOk();
         $this->req($user, $shop, 'GET', '/api/v1/discord/settings')->assertOk();
         $this->req($user, $shop, 'GET', '/api/v1/export/inventory.csv')->assertOk();
+        $this->req($user, $shop, 'GET', '/api/v1/storefront/views')->assertOk();
 
         $dashboard = $this->req($user, $shop, 'GET', '/api/v1/dashboard')->assertOk();
         $dashboard->assertJsonPath('subscription.effective_plan.code', 'growth')

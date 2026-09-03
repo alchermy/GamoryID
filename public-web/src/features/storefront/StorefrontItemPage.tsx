@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { SiteFooter } from "../landing/SiteFooter";
 import { SiteHeader } from "../landing/SiteHeader";
+import { applyPageMeta } from "../../shared/head";
 import { ContactChips } from "./ContactChips";
 import {
   fetchItem,
@@ -35,7 +36,14 @@ export function StorefrontItemPage() {
         setShop(profile);
         setItem(detail);
         setStatus("ready");
-        document.title = `${detail.tag} ${detail.title ?? ""} — ${profile.name}`;
+        applyPageMeta({
+          title:
+            detail.og_title ||
+            `${detail.tag} ${detail.title ?? ""} — ${profile.name}`,
+          description: detail.og_description,
+          image: detail.og_image,
+          canonical: detail.canonical,
+        });
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;

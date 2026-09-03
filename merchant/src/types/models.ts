@@ -109,6 +109,12 @@ export type DashboardData = {
   subscription: PlanEntitlementSummary;
 };
 
+export type ViewSeries = {
+  granularity: "day" | "month" | "year";
+  total: number;
+  data: Array<{ period: string; views: number }>;
+};
+
 export type PlanFeatureKey =
   | "storefront"
   | "bulk_import"

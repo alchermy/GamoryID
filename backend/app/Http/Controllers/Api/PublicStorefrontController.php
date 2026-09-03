@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class PublicStorefrontController extends Controller
 {
@@ -23,6 +24,8 @@ class PublicStorefrontController extends Controller
     {
         $this->ensureVisible($shop);
         $this->recordView($request, 'shop', $shop->id);
+
+        $base = rtrim(config('app.storefront_url'), '/');
 
         return response()
             ->json(['data' => [
@@ -36,6 +39,10 @@ class PublicStorefrontController extends Controller
                 'logo_url' => $shop->logoUrl(),
                 'banner_url' => $shop->bannerUrl(),
                 'timezone' => $shop->timezone,
+                'og_title' => $shop->name.' — ร้านไอดีเกมบน GamoryID',
+                'og_description' => Str::limit($shop->description ?: "ดูไอดีพร้อมขายและช่องทางติดต่อร้าน {$shop->name}", 155),
+                'og_image' => $shop->bannerUrl() ?? $shop->logoUrl(),
+                'canonical' => "{$base}/s/{$shop->slug}",
             ]])
             ->header('Cache-Control', 'public, max-age=60');
     }
@@ -84,13 +91,21 @@ class PublicStorefrontController extends Controller
 
         $this->recordView($request, 'item', $item->id, $shop->id);
 
+        $media = $item->media->map(fn (InventoryMedia $m) => [
+            'id' => $m->id,
+            'role' => $m->role,
+            'image_url' => url('/api/v1/public/media/'.$m->id),
+        ])->all();
+        $display = $item->media->firstWhere('role', InventoryMedia::DISPLAY);
+        $base = rtrim(config('app.storefront_url'), '/');
+
         return response()
             ->json(['data' => $this->listingPayload($item) + [
-                'media' => $item->media->map(fn (InventoryMedia $media) => [
-                    'id' => $media->id,
-                    'role' => $media->role,
-                    'image_url' => url('/api/v1/public/media/'.$media->id),
-                ])->all(),
+                'media' => $media,
+                'og_title' => trim("#{$item->tag} ".($item->title ?? '')).' — '.$shop->name,
+                'og_description' => Str::limit($item->description ?: "ไอดี #{$item->tag} จากร้าน {$shop->name} บน GamoryID", 155),
+                'og_image' => $display ? url('/api/v1/public/media/'.$display->id) : $shop->bannerUrl(),
+                'canonical' => "{$base}/s/{$shop->slug}/{$item->tag}",
             ]])
             ->header('Cache-Control', 'public, max-age=60');
     }
@@ -164,6 +179,7 @@ class PublicStorefrontController extends Controller
         if (Cache::add("sfv:$type:$id:$hash", true, now()->addHours(6))) {
             if ($type === 'shop') {
                 DB::table('shops')->where('id', $id)->increment('storefront_view_count');
+                $this->bumpDailyShopView($id);
             } else {
                 DB::table('inventory_items')->where('id', $id)->increment('view_count');
             }
@@ -171,6 +187,35 @@ class PublicStorefrontController extends Controller
 
         if ($type === 'item' && $shopId !== null) {
             $this->recordView($request, 'shop', $shopId);
+        }
+    }
+
+    /**
+     * Add today's shop view to the per-day rollup (portable increment-or-insert,
+     * MySQL + SQLite). Only reached for views that already passed the 6h dedup.
+     */
+    private function bumpDailyShopView(int $shopId): void
+    {
+        $today = now()->toDateString();
+        $updated = DB::table('shop_view_daily')
+            ->where('shop_id', $shopId)->where('date', $today)
+            ->increment('views');
+
+        if ($updated === 0) {
+            try {
+                DB::table('shop_view_daily')->insert([
+                    'shop_id' => $shopId,
+                    'date' => $today,
+                    'views' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } catch (\Illuminate\Database\QueryException) {
+                // Lost the insert race — the row exists now, just bump it.
+                DB::table('shop_view_daily')
+                    ->where('shop_id', $shopId)->where('date', $today)
+                    ->increment('views');
+            }
         }
     }
 

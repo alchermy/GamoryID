@@ -853,6 +853,94 @@ tbody tr:last-child td {
   grid-template-columns: 1.1fr 1.25fr 0.9fr;
   gap: 20px;
 }
+.dashboard-views {
+  margin-bottom: 20px;
+}
+.dashboard-views .panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.views-body {
+  padding: 18px;
+}
+.views-bars {
+  height: 180px;
+  display: grid;
+  gap: 8px;
+  align-items: end;
+  border-bottom: 1px solid var(--border);
+}
+.views-bars.gran-day {
+  grid-template-columns: repeat(30, 1fr);
+  gap: 3px;
+}
+.views-bars.gran-month {
+  grid-template-columns: repeat(12, 1fr);
+}
+.views-bars.gran-year {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+.views-column {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: end;
+  justify-items: center;
+  height: 100%;
+  min-width: 0;
+  gap: 8px;
+  color: var(--muted);
+  font: 11px var(--font-data);
+}
+.views-column i {
+  width: min(30px, 82%);
+  min-height: 4px;
+  border-radius: 5px 5px 0 0;
+  background: var(--primary);
+  transition: height 180ms ease-out;
+}
+.views-column .views-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.views-bars.gran-day .views-column .views-label {
+  display: none;
+}
+.views-bars.gran-day .views-column:first-child .views-label,
+.views-bars.gran-day .views-column:nth-child(15) .views-label,
+.views-bars.gran-day .views-column:last-child .views-label {
+  display: block;
+}
+.views-tooltip {
+  position: absolute;
+  z-index: 2;
+  top: -8px;
+  left: 50%;
+  width: max-content;
+  max-width: 180px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+.views-column:hover .views-tooltip,
+.views-column:focus-within .views-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
 .stock-health-body {
   padding: 20px;
 }

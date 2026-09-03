@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { SiteFooter } from "../landing/SiteFooter";
 import { SiteHeader } from "../landing/SiteHeader";
+import { applyPageMeta } from "../../shared/head";
 import { ContactChips } from "./ContactChips";
 import { ListingCard } from "./ListingCard";
 import {
@@ -38,7 +39,12 @@ export function StorefrontPage() {
         setPage(inventory.meta.current_page);
         setLastPage(inventory.meta.last_page);
         setStatus("ready");
-        document.title = `${profile.name} — ร้านค้าบน GamoryID`;
+        applyPageMeta({
+          title: profile.og_title || `${profile.name} — ร้านค้าบน GamoryID`,
+          description: profile.og_description,
+          image: profile.og_image,
+          canonical: profile.canonical,
+        });
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
