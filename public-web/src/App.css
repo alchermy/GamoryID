@@ -2032,3 +2032,295 @@
     transition: none;
   }
 }
+
+/* ============================================================
+   STOREFRONT (/s/:slug, /s/:slug/:tag)
+   ============================================================ */
+.storefront {
+  padding: 44px 0 88px;
+  background: var(--background);
+}
+.storefront-shell {
+  width: min(1120px, calc(100% - 48px));
+  margin-inline: auto;
+}
+.storefront-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  text-decoration: none;
+  font: 600 13px/1 var(--font-display);
+}
+.storefront-back:hover {
+  text-decoration: underline;
+}
+.storefront-head {
+  margin: 8px 0 28px;
+}
+.storefront-eyebrow {
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.storefront-head h1 {
+  margin: 10px 0 6px;
+  font: 700 clamp(26px, 3vw, 38px) / 1.2 var(--font-display);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.storefront-desc {
+  margin: 0 0 16px;
+  max-width: 640px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.storefront-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.storefront-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: 600 13px/1 var(--font-display);
+  text-decoration: none;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.storefront-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+.storefront-nocontact {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 20px;
+}
+.listing-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.listing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-float);
+}
+.listing-thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--sky);
+}
+.listing-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.listing-noimg {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.listing-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #e3f7ec;
+  color: #147b47;
+  font: 700 10px/1 var(--font-display);
+}
+.listing-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px 16px;
+}
+.listing-tag {
+  font: 700 13px/1 var(--font-mono);
+  color: var(--ink-soft);
+}
+.listing-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.listing-price {
+  margin-top: 2px;
+  font: 700 16px/1 var(--font-mono);
+  color: var(--action);
+}
+.storefront-more {
+  margin-top: 26px;
+  text-align: center;
+}
+.storefront-footer-note {
+  margin: 28px 0 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--sky);
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+.storefront-empty {
+  text-align: center;
+  padding: 48px 0 40px;
+  color: var(--muted);
+}
+.storefront-empty h1 {
+  font: 700 clamp(22px, 2.6vw, 30px) / 1.3 var(--font-display);
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+/* detail page */
+.storefront-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 34px;
+  margin-top: 18px;
+}
+.storefront-gallery-main {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--sky);
+}
+.storefront-gallery-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.storefront-gallery-thumbs {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.storefront-gallery-thumbs button {
+  width: 74px;
+  aspect-ratio: 1;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  background: var(--sky);
+}
+.storefront-gallery-thumbs button.is-active {
+  border-color: var(--primary);
+}
+.storefront-gallery-thumbs img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.storefront-detail-info h1 {
+  margin: 12px 0 4px;
+  font: 700 clamp(22px, 2.6vw, 30px) / 1.3 var(--font-display);
+  color: var(--ink);
+}
+.storefront-detail-tag {
+  font: 700 13px/1 var(--font-mono);
+  color: var(--muted);
+}
+.storefront-spec {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.storefront-spec dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.storefront-spec dd {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+.storefront-detail-price {
+  display: block;
+  font: 700 24px/1 var(--font-mono);
+  color: var(--action);
+}
+.storefront-detail-desc {
+  margin: 14px 0 0;
+  color: var(--ink-soft);
+  line-height: 1.7;
+  white-space: pre-line;
+}
+.storefront-buy {
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--sky);
+}
+.storefront-buy strong {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+}
+.storefront-buy p {
+  margin: 4px 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.storefront-skeleton-head {
+  height: 120px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #eef3fb, #f7faff, #eef3fb);
+  margin-bottom: 26px;
+}
+.storefront-skeleton-card {
+  height: 260px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, #eef3fb, #f7faff, #eef3fb);
+}
+
+@media (max-width: 900px) {
+  .storefront-detail {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+}
+@media (max-width: 560px) {
+  .shop-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .storefront-spec {
+    grid-template-columns: 1fr;
+  }
+}

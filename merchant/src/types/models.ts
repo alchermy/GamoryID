@@ -248,6 +248,7 @@ export type ShopDetails = Shop & {
   grace_ends_at: string | null;
   credit_balance: number;
   inventory_copy_footer?: string | null;
+  storefront_enabled?: boolean;
   subscription: {
     status: string;
     auto_renew: boolean;

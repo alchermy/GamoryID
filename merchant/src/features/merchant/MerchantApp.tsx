@@ -941,6 +941,7 @@ export function MerchantApp() {
             line_url: data.get("line_url") || null,
             phone: data.get("phone") || null,
             inventory_copy_footer: data.get("inventory_copy_footer") || null,
+            storefront_enabled: data.get("storefront_enabled") === "on",
           }),
         },
       );

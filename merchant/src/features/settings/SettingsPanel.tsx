@@ -1,7 +1,10 @@
+import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link2, Phone, Save, Settings } from "lucide-react";
+import { Copy, ExternalLink, Link2, Phone, Save, Settings, Store } from "lucide-react";
 import { AsyncError } from "../../shared/ui/async-state";
 import { Field } from "../../shared/ui/form-controls";
+import { storefrontUrl } from "../../config/links";
+import { writeClipboard } from "../../shared/lib/clipboard";
 import type { Shop, ShopDetails } from "../../types/models";
 
 export function SettingsPanel({
@@ -17,6 +20,7 @@ export function SettingsPanel({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   retry: () => void;
 }) {
+  const [copied, setCopied] = useState(false);
   if (error)
     return (
       <section className="panel management-panel">
@@ -34,6 +38,9 @@ export function SettingsPanel({
   if (!shop) return null;
   const copyFooter =
     "inventory_copy_footer" in shop ? (shop.inventory_copy_footer ?? "") : "";
+  const storefrontOn =
+    "storefront_enabled" in shop && Boolean(shop.storefront_enabled);
+  const shopUrl = shop.slug ? storefrontUrl(shop.slug) : "";
   return (
     <section
       className="panel management-panel settings-panel"
@@ -52,7 +59,7 @@ export function SettingsPanel({
       </div>
       <form
         className="settings-form"
-        key={`${shop.id}-${shop.name}-${shop.slug ?? ""}-${copyFooter}`}
+        key={`${shop.id}-${shop.name}-${shop.slug ?? ""}-${copyFooter}-${storefrontOn}`}
         onSubmit={onSubmit}
         noValidate
       >
@@ -169,6 +176,64 @@ export function SettingsPanel({
                 ระบบจะต่อข้อความนี้ท้ายรายละเอียดไอดีโดยอัตโนมัติทุกครั้งที่กดคัดลอก
               </small>
             </Field>
+          </section>
+          <section
+            className="settings-section"
+            aria-labelledby="shop-storefront-title"
+          >
+            <div className="settings-section-head">
+              <div>
+                <h3 id="shop-storefront-title">หน้าร้านสาธารณะ</h3>
+                <p>
+                  เปิดหน้าร้านเพื่อให้ลูกค้าดูไอดีที่ "พร้อมขาย" และช่องทางติดต่อ
+                  ของร้านได้จากลิงก์ ลูกค้าติดต่อซื้อผ่านช่องทางเหล่านั้นโดยตรง
+                </p>
+              </div>
+              <span>04</span>
+            </div>
+            <label className="settings-storefront-toggle">
+              <input
+                type="checkbox"
+                name="storefront_enabled"
+                defaultChecked={storefrontOn}
+              />
+              <span>เปิดหน้าร้านสาธารณะ</span>
+            </label>
+            <div className="settings-storefront-link">
+              <input
+                type="text"
+                readOnly
+                value={shopUrl || "ตั้งค่า Slug ร้านในหัวข้อ 01 ก่อน"}
+                aria-label="ลิงก์หน้าร้าน"
+              />
+              <button
+                type="button"
+                className="button"
+                disabled={!shopUrl}
+                onClick={() => {
+                  void writeClipboard(shopUrl);
+                  setCopied(true);
+                  window.setTimeout(() => setCopied(false), 1600);
+                }}
+              >
+                <Copy size={16} />
+                {copied ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+              </button>
+              <a
+                className="button"
+                href={shopUrl || undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-disabled={!shopUrl}
+              >
+                <ExternalLink size={16} />
+                เปิดดูหน้าร้าน
+              </a>
+            </div>
+            <small className="field-help">
+              <Store size={13} /> เปลี่ยน Slug แล้วอย่าลืมกดบันทึกก่อน ลิงก์จึงจะ
+              อัปเดต
+            </small>
           </section>
         </div>
         <div className="settings-form-actions">
