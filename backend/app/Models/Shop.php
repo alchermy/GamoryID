@@ -15,11 +15,11 @@ class Shop extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'description', 'facebook_url', 'line_url', 'phone', 'inventory_copy_footer', 'status', 'trial_ends_at', 'grace_ends_at', 'timezone', 'currency', 'credit_balance'];
+    protected $fillable = ['name', 'slug', 'description', 'facebook_url', 'line_url', 'phone', 'inventory_copy_footer', 'storefront_enabled', 'status', 'trial_ends_at', 'grace_ends_at', 'timezone', 'currency', 'credit_balance'];
 
     protected function casts(): array
     {
-        return ['trial_ends_at' => 'datetime', 'grace_ends_at' => 'datetime', 'credit_balance' => 'integer'];
+        return ['trial_ends_at' => 'datetime', 'grace_ends_at' => 'datetime', 'credit_balance' => 'integer', 'storefront_enabled' => 'boolean'];
     }
 
     public function users(): BelongsToMany

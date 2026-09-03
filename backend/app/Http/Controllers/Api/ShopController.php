@@ -31,6 +31,7 @@ class ShopController extends Controller
             'line_url' => ['nullable', 'url', 'max:500'],
             'phone' => ['nullable', 'string', 'max:32'],
             'inventory_copy_footer' => ['nullable', 'string', 'max:2000'],
+            'storefront_enabled' => ['sometimes', 'boolean'],
         ]);
         $shop->update($data);
         $audit->record($request, $shop, 'shop.updated', $shop, ['fields' => array_keys($data)]);
@@ -53,6 +54,8 @@ class ShopController extends Controller
             'line_url' => $shop->line_url,
             'phone' => $shop->phone,
             'inventory_copy_footer' => $shop->inventory_copy_footer,
+            'storefront_enabled' => $shop->storefront_enabled,
+            'timezone' => $shop->timezone,
             'trial_ends_at' => $shop->trial_ends_at,
             'grace_ends_at' => $shop->grace_ends_at,
             'credit_balance' => $shop->credit_balance,

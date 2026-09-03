@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\InventoryMediaController;
 use App\Http\Controllers\Api\InventoryTimelineController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PublicMediaController;
+use App\Http\Controllers\Api\PublicStorefrontController;
 use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SensitiveAccessController;
@@ -39,6 +41,15 @@ Route::prefix('v1')->group(function () {
         'privacy_version' => config('legal.privacy_version'),
         'effective_date' => config('legal.effective_date'),
     ]]))->middleware('throttle:60,1');
+
+    // Public shop storefront (no auth) — only shops that opted in, only their
+    // "available" inventory. Images stream through PublicMediaController.
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/public/shops/{shop:slug}', [PublicStorefrontController::class, 'show']);
+        Route::get('/public/shops/{shop:slug}/inventory', [PublicStorefrontController::class, 'inventory']);
+        Route::get('/public/shops/{shop:slug}/items/{tag}', [PublicStorefrontController::class, 'item']);
+        Route::get('/public/media/{media}', [PublicMediaController::class, 'show']);
+    });
 
     // The verification link is opened straight from an email, in any browser or
     // device, so it must NOT require an authenticated session. It is protected

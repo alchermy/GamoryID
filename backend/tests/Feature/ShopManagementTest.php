@@ -27,13 +27,16 @@ class ShopManagementTest extends TestCase
                 'name' => 'ร้านใหม่', 'slug' => 'shop-new', 'description' => 'ร้านไอดี TH',
                 'facebook_url' => 'https://facebook.com/gamoryid', 'line_url' => 'https://line.me/ti/p/@gamory', 'phone' => '0812345678',
                 'inventory_copy_footer' => 'สอบถามเพิ่มเติมทาง LINE รับประกัน 7 วัน',
+                'storefront_enabled' => true,
             ])->assertOk()->assertJsonPath('data.name', 'ร้านใหม่')
             ->assertJsonPath('data.line_url', 'https://line.me/ti/p/@gamory')
-            ->assertJsonPath('data.inventory_copy_footer', 'สอบถามเพิ่มเติมทาง LINE รับประกัน 7 วัน');
+            ->assertJsonPath('data.inventory_copy_footer', 'สอบถามเพิ่มเติมทาง LINE รับประกัน 7 วัน')
+            ->assertJsonPath('data.storefront_enabled', true);
 
         $this->assertDatabaseHas('shops', [
             'id' => $shop->id,
             'inventory_copy_footer' => 'สอบถามเพิ่มเติมทาง LINE รับประกัน 7 วัน',
+            'storefront_enabled' => true,
         ]);
     }
 
