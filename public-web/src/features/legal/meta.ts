@@ -4,9 +4,9 @@
  * the source-of-record markdown in `docs/terms-of-service.md` /
  * `docs/privacy-notice.md`.
  */
-export const TERMS_VERSION = "2026-09-03";
-export const PRIVACY_VERSION = "2026-09-03";
-export const EFFECTIVE_DATE = "3 กันยายน 2026";
+export const TERMS_VERSION = "2026-09-04";
+export const PRIVACY_VERSION = "2026-09-04";
+export const EFFECTIVE_DATE = "4 กันยายน 2026";
 
 /** Service provider / data-controller identity shown in both documents. */
 export const CONTROLLER_NAME = "นายธนวัฒน์ ว่องประสบโชค";

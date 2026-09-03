@@ -13,9 +13,9 @@ return [
     |
     */
 
-    'terms_version' => env('LEGAL_TERMS_VERSION', '2026-09-03'),
-    'privacy_version' => env('LEGAL_PRIVACY_VERSION', '2026-09-03'),
-    'effective_date' => env('LEGAL_EFFECTIVE_DATE', '2026-09-03'),
+    'terms_version' => env('LEGAL_TERMS_VERSION', '2026-09-04'),
+    'privacy_version' => env('LEGAL_PRIVACY_VERSION', '2026-09-04'),
+    'effective_date' => env('LEGAL_EFFECTIVE_DATE', '2026-09-04'),
 
     /*
     |--------------------------------------------------------------------------
