@@ -46,6 +46,28 @@ class PlanFeatureGateTest extends TestCase
             ->assertOk()
             ->assertJsonPath('summary.profit_this_month', null)
             ->assertJsonPath('subscription.effective_plan.code', 'free');
+
+        // the public storefront is a Starter+ feature
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson('/api/v1/shop', [
+                'name' => 'ร้านฟรี', 'slug' => 'free-'.substr(uniqid(), -6),
+                'storefront_enabled' => true,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['storefront_enabled']);
+    }
+
+    public function test_a_starter_shop_can_open_its_public_storefront(): void
+    {
+        [$user, $shop] = $this->ownerOn('starter');
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson('/api/v1/shop', [
+                'name' => 'ร้านสตาร์ท', 'slug' => 'starter-'.substr(uniqid(), -6),
+                'storefront_enabled' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.storefront_enabled', true);
     }
 
     public function test_a_starter_shop_gets_log_import_and_discord_but_not_exports_or_analytics(): void

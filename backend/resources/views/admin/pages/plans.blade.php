@@ -1,4 +1,5 @@
 @php($featureLabels = [
+    'storefront' => 'หน้าร้านสาธารณะ',
     'bulk_import' => 'นำเข้าชุด',
     'advanced_export' => 'ส่งออกรายงาน',
     'activity_log' => 'บันทึกกิจกรรม',

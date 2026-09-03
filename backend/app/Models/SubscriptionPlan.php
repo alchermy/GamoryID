@@ -8,6 +8,7 @@ class SubscriptionPlan extends Model
 {
     /** Feature flags a plan can grant. Keys map to entitlement checks. */
     public const FEATURES = [
+        'storefront',
         'bulk_import',
         'advanced_export',
         'activity_log',
@@ -121,21 +122,21 @@ class SubscriptionPlan extends Model
                 'code' => 'starter', 'name' => 'Starter', 'sort_order' => 1,
                 'price_monthly' => 250, 'price_yearly' => 2500,
                 'active_inventory_limit' => 50, 'member_limit' => 2,
-                'features' => $feat('bulk_import', 'activity_log', 'discord'),
+                'features' => $feat('storefront', 'bulk_import', 'activity_log', 'discord'),
                 ...$promo(199, 1990),
             ],
             [
                 'code' => 'growth', 'name' => 'Growth', 'sort_order' => 2,
                 'price_monthly' => 600, 'price_yearly' => 6000,
                 'active_inventory_limit' => 250, 'member_limit' => 4,
-                'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access'),
+                'features' => $feat('storefront', 'bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access'),
                 ...$promo(490, 4900),
             ],
             [
                 'code' => 'pro', 'name' => 'Pro', 'sort_order' => 3,
                 'price_monthly' => 1190, 'price_yearly' => 11900,
                 'active_inventory_limit' => 500, 'member_limit' => null,
-                'features' => $feat('bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access', 'priority_support'),
+                'features' => $feat('storefront', 'bulk_import', 'activity_log', 'advanced_export', 'discord', 'analytics', 'early_access', 'priority_support'),
                 ...$promo(890, 8900),
             ],
         ];

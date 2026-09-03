@@ -1,10 +1,11 @@
 @php($featureLabels = [
+    'storefront' => 'หน้าร้านสาธารณะ (แชร์ลิงก์ให้ลูกค้า)',
     'bulk_import' => 'นำเข้า Excel/CSV แบบชุด',
     'advanced_export' => 'ส่งออกยอดขาย/กำไร/ประวัติ',
     'activity_log' => 'บันทึกกิจกรรม (audit log)',
     'discord' => 'เชื่อมต่อ Discord',
     'analytics' => 'วิเคราะห์ต้นทุน–กำไร / รายงานลึก',
-    'early_access' => 'ได้ฟีเจอร์ใหม่ก่อนใคร',
+    'early_access' => 'ได้ใช้ฟีเจอร์ใหม่ก่อนใคร',
     'priority_support' => 'ซัพพอร์ตแบบให้ความสำคัญก่อน',
 ])
 <section class="form-card" aria-labelledby="plan-form-title">

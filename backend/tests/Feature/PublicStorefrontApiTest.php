@@ -16,10 +16,12 @@ class PublicStorefrontApiTest extends TestCase
 
     private function shop(bool $enabled = true, string $slug = 'test-storefront'): Shop
     {
+        // trialing → trial-tier plan, which grants the `storefront` feature.
         return Shop::create([
             'name' => 'ร้านทดสอบหน้าร้าน',
             'slug' => $slug,
-            'status' => 'active',
+            'status' => 'trialing',
+            'trial_ends_at' => now()->addMonth(),
             'description' => 'ขายไอดี Valorant พร้อมส่ง',
             'line_url' => 'https://line.me/ti/p/@testshop',
             'facebook_url' => 'https://facebook.com/testshop',
@@ -85,6 +87,23 @@ class PublicStorefrontApiTest extends TestCase
         $this->getJson('/api/v1/public/shops/test-storefront/inventory')->assertNotFound();
         $this->getJson('/api/v1/public/shops/test-storefront/items/AAAAA')->assertNotFound();
         $this->getJson('/api/v1/public/shops/no-such-shop')->assertNotFound();
+    }
+
+    public function test_a_shop_without_the_storefront_plan_feature_is_not_public(): void
+    {
+        // active + no subscription → Free plan → no `storefront` feature,
+        // even though the flag is on.
+        $shop = Shop::create([
+            'name' => 'ร้านฟรี',
+            'slug' => 'free-shop',
+            'status' => 'active',
+            'storefront_enabled' => true,
+        ]);
+        $this->item($shop, 'AAAAA', 'available');
+
+        $this->getJson('/api/v1/public/shops/free-shop')->assertNotFound();
+        $this->getJson('/api/v1/public/shops/free-shop/inventory')->assertNotFound();
+        $this->assertSame([], $this->getJson('/api/v1/public/listings')->assertOk()->json('data'));
     }
 
     public function test_a_single_item_returns_its_media_and_hides_sold_items(): void

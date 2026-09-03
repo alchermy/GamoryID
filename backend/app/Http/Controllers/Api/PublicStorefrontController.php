@@ -7,15 +7,20 @@ use App\Http\Controllers\Controller;
 use App\Models\InventoryItem;
 use App\Models\InventoryMedia;
 use App\Models\Shop;
+use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class PublicStorefrontController extends Controller
 {
+    public function __construct(private readonly PlanEntitlements $entitlements)
+    {
+    }
+
     public function show(Request $request, Shop $shop)
     {
-        abort_unless($shop->storefront_enabled, 404);
+        $this->ensureVisible($shop);
         $this->recordView($request, 'shop', $shop->id);
 
         return response()
@@ -34,7 +39,7 @@ class PublicStorefrontController extends Controller
 
     public function inventory(Request $request, Shop $shop)
     {
-        abort_unless($shop->storefront_enabled, 404);
+        $this->ensureVisible($shop);
 
         $page = InventoryItem::forShop($shop)
             ->where('status', InventoryStatus::Available)
@@ -52,7 +57,7 @@ class PublicStorefrontController extends Controller
 
     public function item(Request $request, Shop $shop, string $tag)
     {
-        abort_unless($shop->storefront_enabled, 404);
+        $this->ensureVisible($shop);
 
         $item = InventoryItem::forShop($shop)
             ->where('status', InventoryStatus::Available)
@@ -80,9 +85,18 @@ class PublicStorefrontController extends Controller
     {
         $sort = $request->query('sort', 'newest');
 
+        // "storefront" is a plan feature, not a column — resolve the eligible
+        // shop ids up front. Fine at launch scale; revisit with a denormalised
+        // flag if the number of opted-in shops grows large.
+        $eligibleShopIds = Shop::query()
+            ->where('storefront_enabled', true)
+            ->get()
+            ->filter(fn (Shop $shop) => $this->entitlements->can($shop, 'storefront'))
+            ->pluck('id');
+
         $query = InventoryItem::query()
             ->where('status', InventoryStatus::Available)
-            ->whereHas('shop', fn ($shop) => $shop->where('storefront_enabled', true))
+            ->whereIn('shop_id', $eligibleShopIds)
             ->with([
                 'media' => fn ($media) => $media->where('role', InventoryMedia::DISPLAY),
                 'shop:id,name,slug',
@@ -105,6 +119,14 @@ class PublicStorefrontController extends Controller
                 'meta' => $this->meta($page),
             ])
             ->header('Cache-Control', 'public, max-age=60');
+    }
+
+    private function ensureVisible(Shop $shop): void
+    {
+        abort_unless(
+            $shop->storefront_enabled && $this->entitlements->can($shop, 'storefront'),
+            404,
+        );
     }
 
     /**

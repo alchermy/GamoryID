@@ -10,6 +10,7 @@ use App\Services\CurrentShop;
 use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ShopController extends Controller
 {
@@ -33,6 +34,13 @@ class ShopController extends Controller
             'inventory_copy_footer' => ['nullable', 'string', 'max:2000'],
             'storefront_enabled' => ['sometimes', 'boolean'],
         ]);
+
+        if (($data['storefront_enabled'] ?? false) && ! $entitlements->can($shop, 'storefront')) {
+            throw ValidationException::withMessages([
+                'storefront_enabled' => 'หน้าร้านสาธารณะใช้ได้ตั้งแต่แพ็ก Starter ขึ้นไป อัปเกรดได้ที่หน้าแพ็กเกจ',
+            ]);
+        }
+
         $shop->update($data);
         $audit->record($request, $shop, 'shop.updated', $shop, ['fields' => array_keys($data)]);
 
