@@ -254,6 +254,18 @@ class AdminController extends Controller
         return back()->with('message', $subscription->auto_renew ? 'เปิดต่ออายุอัตโนมัติแล้ว' : 'ปิดต่ออายุอัตโนมัติแล้ว');
     }
 
+    public function shopBranding(Shop $shop, string $target)
+    {
+        abort_unless(in_array($target, ['logo', 'banner'], true), 404);
+        $path = $shop->{"{$target}_path"};
+        abort_if(! $path, 404);
+
+        return Storage::disk('private')->response($path, null, [
+            'Cache-Control' => 'private, max-age=300',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     public function toggleListingVisibility(Request $request, Shop $shop, InventoryItem $item)
     {
         abort_unless($item->shop_id === $shop->id, 404);

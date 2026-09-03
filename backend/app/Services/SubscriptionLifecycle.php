@@ -64,8 +64,10 @@ class SubscriptionLifecycle
             });
 
         // Trial ended: the shop keeps working but drops to Free entitlements.
+        // Skip shops that already bought a plan — their trial is irrelevant.
         Shop::whereIn('status', [SubscriptionStatus::Trialing->value])
             ->whereNotNull('trial_ends_at')->where('trial_ends_at', '<', now())
+            ->whereDoesntHave('subscriptions', fn ($q) => $q->where('status', SubscriptionStatus::Active->value))
             ->orderBy('id')->each(function (Shop $shop) use ($log) {
                 $shop->subscriptions()
                     ->where('status', SubscriptionStatus::Trialing->value)

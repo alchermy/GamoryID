@@ -19,13 +19,21 @@ class DemoShopSeeder extends Seeder
     public function run(): void
     {
         $starter = SubscriptionPlan::query()->where('code', 'starter')->firstOrFail();
-        $shop = Shop::updateOrCreate(['slug' => 'nexus-store'], [
+        $shop = Shop::firstOrNew(['slug' => 'nexus-store']);
+        $shop->fill([
             'name' => 'Nexus Store',
-            'status' => 'trialing',
-            'trial_ends_at' => now()->addDays(24),
-            'grace_ends_at' => now()->addDays(38),
             'inventory_copy_footer' => "สนใจรายละเอียดเพิ่มเติมสอบถามได้ทาง LINE หรือ Facebook\nรับประกันข้อมูลตรงตามรายละเอียดก่อนส่งมอบ",
         ]);
+        // Lifecycle fields are set only on the first seed so re-running does not
+        // clobber a real plan purchase made from the app during testing.
+        if (! $shop->exists) {
+            $shop->fill([
+                'status' => 'trialing',
+                'trial_ends_at' => now()->addDays(24),
+                'grace_ends_at' => now()->addDays(38),
+            ]);
+        }
+        $shop->save();
         $owner = User::updateOrCreate(['email' => 'owner@gamoryid.local'], [
             'name' => 'พีท เจ้าของร้าน',
             'password' => 'password',

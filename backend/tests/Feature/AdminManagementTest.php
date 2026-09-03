@@ -208,6 +208,28 @@ class AdminManagementTest extends TestCase
         $this->assertFalse($item->fresh()->hidden_from_directory);
     }
 
+    public function test_admin_sees_shop_logo_and_the_real_plan_status(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('private');
+        $admin = $this->admin();
+        [$shop] = $this->shopWithSubscription(); // has an active subscription
+        // the shop row column reads "trialing" even though a plan is active
+        $shop->forceFill([
+            'status' => 'trialing',
+            'logo_path' => \Illuminate\Http\UploadedFile::fake()->create('logo.png', 6, 'image/png')->store("shops/{$shop->id}", 'private'),
+        ])->save();
+
+        $list = $this->withSession(['admin_user_id' => $admin->id])->get(route('admin.shops.index'))->assertOk();
+        // status column reflects the active subscription, not the stale shops.status
+        $list->assertSee('status active', false)->assertDontSee('status trialing', false);
+        $list->assertSee(route('admin.shops.branding', [$shop, 'logo']), false);
+
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->get(route('admin.shops.branding', [$shop, 'logo']))->assertOk();
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->get(route('admin.shops.branding', [$shop, 'banner']))->assertNotFound();
+    }
+
     private function admin(): User
     {
         return User::create(['name' => 'Admin', 'email' => uniqid('admin-').'@example.test', 'password' => 'password', 'is_super_admin' => true]);

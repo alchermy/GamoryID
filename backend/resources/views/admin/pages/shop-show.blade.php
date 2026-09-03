@@ -1,6 +1,9 @@
 @php
     $currentSubscription = $shop->latestSubscription;
-    $shopStatus = $shop->trashed() ? 'archived' : $shop->status;
+    $subStatus = $currentSubscription?->status?->value;
+    $shopStatus = $shop->trashed()
+        ? 'archived'
+        : (in_array($subStatus, ['active', 'grace_read_only'], true) ? $subStatus : $shop->status);
     $expiresAt = $currentSubscription?->ends_at ?? $shop->trial_ends_at;
 @endphp
 <div class="back-row">
@@ -19,7 +22,15 @@
 </div>
 
 <section class="shop-hero" aria-label="สรุปร้านค้า">
-    <div class="shop-identity"><span class="eyebrow">SHOP #{{ $shop->id }}</span><h2>{{ $shop->name }}</h2><p>{{ $shop->slug }} · สมัครเมื่อ {{ $shop->created_at->timezone('Asia/Bangkok')->format('d/m/Y H:i') }} น.</p></div>
+    <div class="shop-identity" style="display:flex;align-items:center;gap:14px">
+        @if($shop->logo_path)
+            <img src="{{ route('admin.shops.branding', [$shop, 'logo']) }}" alt="โลโก้ {{ $shop->name }}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#eef3fa">
+        @endif
+        <div><span class="eyebrow">SHOP #{{ $shop->id }}</span><h2>{{ $shop->name }}</h2><p>{{ $shop->slug }} · สมัครเมื่อ {{ $shop->created_at->timezone('Asia/Bangkok')->format('d/m/Y H:i') }} น.</p></div>
+    </div>
+    @if($shop->banner_path)
+        <img src="{{ route('admin.shops.branding', [$shop, 'banner']) }}" alt="แบนเนอร์ {{ $shop->name }}" style="display:block;width:100%;max-height:160px;object-fit:cover">
+    @endif
     <div class="shop-hero-status"><span class="status {{ $shopStatus }}">{{ $statusLabels[$shopStatus] ?? $shopStatus }}</span></div>
     <div class="shop-kpis">
         <div><span>เครดิตคงเหลือ</span><strong>{{ number_format($shop->credit_balance) }}</strong><small>เครดิต</small></div>

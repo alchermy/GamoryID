@@ -20,11 +20,21 @@
             @forelse($shops as $shop)
                 @php
                     $subscription = $shop->latestSubscription;
-                    $effectiveStatus = $shop->trashed() ? 'archived' : $shop->status;
+                    $subStatus = $subscription?->status?->value;
+                    $effectiveStatus = $shop->trashed()
+                        ? 'archived'
+                        : (in_array($subStatus, ['active', 'grace_read_only'], true) ? $subStatus : $shop->status);
                     $expiresAt = $subscription?->ends_at ?? $shop->trial_ends_at;
                 @endphp
                 <tr class="{{ $shop->trashed() ? 'row-archived' : '' }}">
-                    <td class="shop-name"><a class="table-link" href="{{ route('admin.shops.show', $shop) }}">{{ $shop->name }}</a><small>{{ $shop->slug }}</small></td>
+                    <td class="shop-name">
+                        <span style="display:inline-flex;align-items:center;gap:10px">
+                            @if($shop->logo_path)
+                                <img src="{{ route('admin.shops.branding', [$shop, 'logo']) }}" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#eef3fa">
+                            @endif
+                            <span><a class="table-link" href="{{ route('admin.shops.show', $shop) }}">{{ $shop->name }}</a><small>{{ $shop->slug }}</small></span>
+                        </span>
+                    </td>
                     <td>{{ number_format($shop->staff_count) }} คน</td>
                     <td><strong>{{ $subscription?->plan?->name ?? ($subscription?->status?->value === 'trialing' ? 'Trial' : '—') }}</strong></td>
                     <td class="muted">{{ $shop->created_at->timezone('Asia/Bangkok')->format('d/m/Y') }}</td>
