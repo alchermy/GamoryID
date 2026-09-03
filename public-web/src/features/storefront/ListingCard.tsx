@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { priceLabel, type ShopListing } from "./api";
 
 export function ListingCard({
@@ -39,6 +40,9 @@ export function ListingCard({
           <span className="listing-tag">{item.tag}</span>
           <p className="listing-meta">{meta}</p>
           <span className="listing-price">{priceLabel(item.list_price)}</span>
+          <span className="listing-cta">
+            ดูรายละเอียด <ArrowRight size={15} aria-hidden="true" />
+          </span>
         </div>
       </Link>
       {shop?.slug && (

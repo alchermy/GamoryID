@@ -1401,6 +1401,7 @@ export function MerchantApp() {
             shop={shopDetails ?? shop ?? null}
             loading={managementLoading}
             error={managementError}
+            canUseStorefront={planFeature("storefront")}
             onSubmit={saveShopSettings}
             retry={() => setManagementRevision((value) => value + 1)}
           />

@@ -108,6 +108,7 @@ export type DashboardData = {
 };
 
 export type PlanFeatureKey =
+  | "storefront"
   | "bulk_import"
   | "advanced_export"
   | "activity_log"

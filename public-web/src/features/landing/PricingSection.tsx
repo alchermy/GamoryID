@@ -7,6 +7,7 @@ import { Mascot } from "./Mascot";
 type Cycle = "monthly" | "yearly";
 
 type FeatureKey =
+  | "storefront"
   | "bulk_import"
   | "advanced_export"
   | "activity_log"
@@ -61,7 +62,7 @@ const FALLBACK_PLANS: ApiPlan[] = [
     sale_label: "โปรเปิดตัว",
     active_inventory_limit: 50,
     member_limit: 2,
-    features: feats("bulk_import", "activity_log", "discord"),
+    features: feats("storefront", "bulk_import", "activity_log", "discord"),
   },
   {
     code: "growth",
@@ -76,6 +77,7 @@ const FALLBACK_PLANS: ApiPlan[] = [
     active_inventory_limit: 250,
     member_limit: 4,
     features: feats(
+      "storefront",
       "bulk_import",
       "activity_log",
       "advanced_export",
@@ -97,6 +99,7 @@ const FALLBACK_PLANS: ApiPlan[] = [
     active_inventory_limit: 500,
     member_limit: null,
     features: feats(
+      "storefront",
       "bulk_import",
       "activity_log",
       "advanced_export",
@@ -110,6 +113,7 @@ const FALLBACK_PLANS: ApiPlan[] = [
 
 function feats(...on: FeatureKey[]): Record<FeatureKey, boolean> {
   const keys: FeatureKey[] = [
+    "storefront",
     "bulk_import",
     "advanced_export",
     "activity_log",
@@ -131,12 +135,13 @@ const TAG_BY_CODE: Record<string, string> = {
 };
 
 const FEATURE_ROWS: { key: FeatureKey; label: string }[] = [
+  { key: "storefront", label: "หน้าร้านสาธารณะ (แชร์ลิงก์ให้ลูกค้า)" },
   { key: "bulk_import", label: "นำเข้า Excel/CSV แบบชุด" },
   { key: "activity_log", label: "บันทึกกิจกรรม (ตรวจย้อนหลัง)" },
   { key: "discord", label: "เชื่อมต่อ Discord" },
   { key: "advanced_export", label: "ส่งออกยอดขาย/กำไร/ประวัติ" },
   { key: "analytics", label: "วิเคราะห์ต้นทุน–กำไร / รายงานลึก" },
-  { key: "early_access", label: "ได้ฟีเจอร์ใหม่ก่อนใคร" },
+  { key: "early_access", label: "ได้ใช้ฟีเจอร์ใหม่ก่อนใคร" },
 ];
 
 export function PricingSection() {

@@ -2154,6 +2154,7 @@
 }
 .listing-body {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 6px;
   padding: 14px 16px 16px;
@@ -2172,6 +2173,21 @@
   margin-top: 2px;
   font: 700 16px/1 var(--font-mono);
   color: var(--action);
+}
+.listing-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: auto;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--grad-cta);
+  color: #fff;
+  font: 700 13px/1 var(--font-display);
+}
+.listing-card:hover .listing-cta {
+  filter: brightness(1.05);
 }
 .storefront-more {
   margin-top: 26px;

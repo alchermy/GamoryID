@@ -278,6 +278,7 @@ export function BillingPanel({
 }
 
 const FEATURE_ORDER = [
+  "storefront",
   "bulk_import",
   "advanced_export",
   "activity_log",
@@ -288,12 +289,13 @@ const FEATURE_ORDER = [
 ] as const;
 
 const FEATURE_LABELS: Record<(typeof FEATURE_ORDER)[number], string> = {
+  storefront: "หน้าร้านสาธารณะ (แชร์ลิงก์ให้ลูกค้า)",
   bulk_import: "นำเข้า Excel/CSV แบบชุด",
   advanced_export: "ส่งออกยอดขาย/กำไร/ประวัติ",
   activity_log: "บันทึกกิจกรรม",
   discord: "เชื่อมต่อ Discord",
   analytics: "วิเคราะห์ต้นทุน–กำไร",
-  early_access: "ได้ฟีเจอร์ใหม่ก่อนใคร",
+  early_access: "ได้ใช้ฟีเจอร์ใหม่ก่อนใคร",
   priority_support: "ซัพพอร์ตให้ความสำคัญก่อน",
 };
 

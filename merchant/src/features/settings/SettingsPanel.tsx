@@ -11,12 +11,14 @@ export function SettingsPanel({
   shop,
   loading,
   error,
+  canUseStorefront,
   onSubmit,
   retry,
 }: {
   shop: ShopDetails | Shop | null;
   loading: boolean;
   error: string;
+  canUseStorefront: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   retry: () => void;
 }) {
@@ -59,7 +61,7 @@ export function SettingsPanel({
       </div>
       <form
         className="settings-form"
-        key={`${shop.id}-${shop.name}-${shop.slug ?? ""}-${copyFooter}-${storefrontOn}`}
+        key={`${shop.id}-${shop.name}-${shop.slug ?? ""}-${copyFooter}-${storefrontOn}-${canUseStorefront}`}
         onSubmit={onSubmit}
         noValidate
       >
@@ -195,10 +197,17 @@ export function SettingsPanel({
               <input
                 type="checkbox"
                 name="storefront_enabled"
-                defaultChecked={storefrontOn}
+                defaultChecked={storefrontOn && canUseStorefront}
+                disabled={!canUseStorefront}
               />
               <span>เปิดหน้าร้านสาธารณะ</span>
             </label>
+            {!canUseStorefront && (
+              <p className="field-help settings-storefront-lock">
+                หน้าร้านสาธารณะใช้ได้ตั้งแต่แพ็ก Starter ขึ้นไป — อัปเกรดได้ที่หน้า
+                "แพ็กเกจ"
+              </p>
+            )}
             <div className="settings-storefront-link">
               <input
                 type="text"
