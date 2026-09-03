@@ -23,6 +23,7 @@ class InventoryItemResource extends JsonResource
             'notes' => $this->notes,
             'cost' => $this->when($request->user()?->hasShopPermission($this->shop, 'profit.view'), $this->cost),
             'list_price' => $this->list_price,
+            'view_count' => (int) $this->view_count,
             'status' => $this->status->value,
             'custom_values' => $this->custom_values ?? (object) [],
             'has_credentials' => $this->credentials_exists ?? $this->credentials()->exists(),

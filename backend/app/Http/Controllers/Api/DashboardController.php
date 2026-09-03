@@ -18,7 +18,8 @@ class DashboardController extends Controller
     public function __invoke(Request $request, CurrentShop $currentShop, PlanEntitlements $entitlements): JsonResponse
     {
         $shop = $currentShop->from($request);
-        $showProfit = $request->user()->hasShopPermission($shop, 'profit.view') && $entitlements->can($shop, 'analytics');
+        $canAnalytics = $entitlements->can($shop, 'analytics');
+        $showProfit = $request->user()->hasShopPermission($shop, 'profit.view') && $canAnalytics;
         $counts = InventoryItem::forShop($shop)
             ->select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
@@ -44,6 +45,7 @@ class DashboardController extends Controller
                 'inventory_value' => $showProfit
                     ? (float) InventoryItem::forShop($shop)->whereIn('status', ['available', 'reserved'])->sum('cost')
                     : null,
+                'storefront_views' => $canAnalytics ? (int) $shop->storefront_view_count : null,
             ],
             'activity' => ActivityLog::query()->where('shop_id', $shop->id)->latest('created_at')->limit(8)->get(),
             'sales_last_7_days' => collect(range(6, 0))->map(function (int $daysAgo) use ($dailySales) {

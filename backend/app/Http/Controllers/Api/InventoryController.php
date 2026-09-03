@@ -29,7 +29,7 @@ class InventoryController extends Controller
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:available,reserved,sold,archived'],
-            'sort' => ['nullable', 'in:updated_at,tag,list_price,rank'],
+            'sort' => ['nullable', 'in:updated_at,tag,list_price,rank,view_count'],
             'direction' => ['nullable', 'in:asc,desc'],
             'per_page' => ['nullable', 'integer', 'in:25,50,100'],
         ]);

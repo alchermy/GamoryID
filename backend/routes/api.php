@@ -45,6 +45,7 @@ Route::prefix('v1')->group(function () {
     // Public shop storefront (no auth) — only shops that opted in, only their
     // "available" inventory. Images stream through PublicMediaController.
     Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/public/listings', [PublicStorefrontController::class, 'listings']);
         Route::get('/public/shops/{shop:slug}', [PublicStorefrontController::class, 'show']);
         Route::get('/public/shops/{shop:slug}/inventory', [PublicStorefrontController::class, 'inventory']);
         Route::get('/public/shops/{shop:slug}/items/{tag}', [PublicStorefrontController::class, 'item']);

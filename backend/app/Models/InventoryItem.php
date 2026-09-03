@@ -28,6 +28,7 @@ class InventoryItem extends Model
             'custom_values' => 'array',
             'cost' => 'decimal:2',
             'list_price' => 'decimal:2',
+            'view_count' => 'integer',
             'archived_at' => 'datetime',
         ];
     }

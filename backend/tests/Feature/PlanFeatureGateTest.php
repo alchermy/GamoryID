@@ -58,7 +58,8 @@ class PlanFeatureGateTest extends TestCase
 
         $this->req($user, $shop, 'GET', '/api/v1/dashboard')
             ->assertOk()
-            ->assertJsonPath('summary.profit_this_month', null);
+            ->assertJsonPath('summary.profit_this_month', null)
+            ->assertJsonPath('summary.storefront_views', null);
     }
 
     public function test_a_growth_shop_unlocks_discord_export_and_analytics(): void
@@ -72,8 +73,9 @@ class PlanFeatureGateTest extends TestCase
         $dashboard = $this->req($user, $shop, 'GET', '/api/v1/dashboard')->assertOk();
         $dashboard->assertJsonPath('subscription.effective_plan.code', 'growth')
             ->assertJsonPath('subscription.effective_plan.features.discord', true);
-        // analytics unlocked → profit is a real number (0.0), not null
+        // analytics unlocked → profit + storefront views are real numbers, not null
         $this->assertNotNull($dashboard->json('summary.profit_this_month'));
+        $this->assertSame(0, $dashboard->json('summary.storefront_views'));
         $this->assertIsArray($dashboard->json('subscription.usage'));
     }
 }
