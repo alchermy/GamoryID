@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
   Copy,
@@ -46,6 +46,17 @@ export function SettingsPanel({
   const [copied, setCopied] = useState(false);
   const logoInput = useRef<HTMLInputElement>(null);
   const bannerInput = useRef<HTMLInputElement>(null);
+  // Deep-link support: /settings#branding etc. from the onboarding guide.
+  useEffect(() => {
+    if (loading) return;
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById(id)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [loading]);
   if (error)
     return (
       <section className="panel management-panel">
@@ -90,6 +101,7 @@ export function SettingsPanel({
       >
         <div className="settings-form-body">
           <section
+            id="shop-info"
             className="settings-section"
             aria-labelledby="shop-info-title"
           >
@@ -128,6 +140,7 @@ export function SettingsPanel({
             </div>
           </section>
           <section
+            id="contact"
             className="settings-section"
             aria-labelledby="shop-contact-title"
           >
@@ -176,6 +189,7 @@ export function SettingsPanel({
             </div>
           </section>
           <section
+            id="copy"
             className="settings-section settings-copy-section"
             aria-labelledby="shop-copy-title"
           >
@@ -203,6 +217,7 @@ export function SettingsPanel({
             </Field>
           </section>
           <section
+            id="storefront"
             className="settings-section"
             aria-labelledby="shop-storefront-title"
           >
@@ -268,6 +283,7 @@ export function SettingsPanel({
             </small>
           </section>
           <section
+            id="branding"
             className="settings-section"
             aria-labelledby="shop-branding-title"
           >

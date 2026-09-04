@@ -20,6 +20,7 @@ const merchantPaths = [
   "/discord",
   "/settings",
   "/manual",
+  "/onboarding",
 ];
 
 function AppRoutes() {

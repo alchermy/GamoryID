@@ -97,6 +97,8 @@ Route::prefix('v1')->group(function () {
         Route::middleware(['verified', 'terms.current'])->group(function () {
             Route::get('/dashboard', DashboardController::class);
             Route::get('/shop', [ShopController::class, 'show']);
+            // Outside shop.writable so the guide can be dismissed even after the trial lapses.
+            Route::put('/onboarding/dismiss', [ShopController::class, 'dismissOnboarding']);
             Route::get('/inventory', [InventoryController::class, 'index']);
             Route::get('/inventory/{inventory}', [InventoryController::class, 'show']);
             Route::patch('/inventory/{inventory}/note', [InventoryController::class, 'updateNote'])->middleware('shop.writable');

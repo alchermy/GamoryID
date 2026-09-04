@@ -40,6 +40,33 @@ class ShopManagementTest extends TestCase
         ]);
     }
 
+    public function test_a_fresh_shop_has_not_dismissed_the_onboarding_guide(): void
+    {
+        [$user, $shop] = $this->owner('onb-fresh@example.test', 'ร้านใหม่เอี่ยม');
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->getJson('/api/v1/shop')->assertOk()
+            ->assertJsonPath('data.onboarding_dismissed_at', null);
+    }
+
+    public function test_owner_can_dismiss_the_onboarding_guide_even_when_read_only(): void
+    {
+        [$user, $shop] = $this->owner('onb-dismiss@example.test', 'ร้านเลิกไกด์');
+        $shop->update(['status' => 'grace_read_only']); // trial/plan lapsed → shop.writable would block
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson('/api/v1/onboarding/dismiss')->assertOk()
+            ->assertJsonPath('data.onboarding_dismissed_at', fn ($v) => $v !== null);
+
+        $this->assertNotNull($shop->fresh()->onboarding_dismissed_at);
+
+        // idempotent — second call is fine, keeps the first timestamp
+        $first = $shop->fresh()->onboarding_dismissed_at;
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson('/api/v1/onboarding/dismiss')->assertOk();
+        $this->assertEquals($first, $shop->fresh()->onboarding_dismissed_at);
+    }
+
     public function test_shop_settings_cannot_cross_tenant_boundary(): void
     {
         [$user, $shopA] = $this->owner('settings-a@example.test', 'ร้าน A');

@@ -99,6 +99,18 @@ class ShopController extends Controller
         return response()->json(['data' => $this->payload($shop->fresh(), $entitlements)]);
     }
 
+    /** Hide the first-time setup guide for this shop (persisted, survives read-only mode). */
+    public function dismissOnboarding(Request $request, CurrentShop $currentShop, AuditLogger $audit, PlanEntitlements $entitlements)
+    {
+        $shop = $currentShop->from($request);
+        if (! $shop->onboarding_dismissed_at) {
+            $shop->forceFill(['onboarding_dismissed_at' => now()])->save();
+            $audit->record($request, $shop, 'shop.onboarding_dismissed', $shop);
+        }
+
+        return response()->json(['data' => $this->payload($shop->fresh(), $entitlements)]);
+    }
+
     private function payload(Shop $shop, PlanEntitlements $entitlements): array
     {
         $subscription = $shop->subscriptions()->latest()->with('plan')->first();
@@ -115,6 +127,7 @@ class ShopController extends Controller
             'phone' => $shop->phone,
             'inventory_copy_footer' => $shop->inventory_copy_footer,
             'storefront_enabled' => $shop->storefront_enabled,
+            'onboarding_dismissed_at' => $shop->onboarding_dismissed_at,
             'logo_url' => $shop->logoUrl(),
             'banner_url' => $shop->bannerUrl(),
             'timezone' => $shop->timezone,

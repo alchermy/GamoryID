@@ -22,7 +22,8 @@ export type MerchantPage =
   | "transactions"
   | "discord"
   | "settings"
-  | "manual";
+  | "manual"
+  | "onboarding";
 
 export type ActivityEntry = {
   id: number;
@@ -261,6 +262,7 @@ export type ShopDetails = Shop & {
   credit_balance: number;
   inventory_copy_footer?: string | null;
   storefront_enabled?: boolean;
+  onboarding_dismissed_at?: string | null;
   logo_url?: string | null;
   banner_url?: string | null;
   subscription: {

@@ -19,7 +19,7 @@ class Shop extends Model
 
     protected function casts(): array
     {
-        return ['trial_ends_at' => 'datetime', 'grace_ends_at' => 'datetime', 'credit_balance' => 'integer', 'storefront_enabled' => 'boolean', 'storefront_view_count' => 'integer', 'hidden_from_directory' => 'boolean'];
+        return ['trial_ends_at' => 'datetime', 'grace_ends_at' => 'datetime', 'credit_balance' => 'integer', 'storefront_enabled' => 'boolean', 'storefront_view_count' => 'integer', 'hidden_from_directory' => 'boolean', 'onboarding_dismissed_at' => 'datetime'];
     }
 
     public function users(): BelongsToMany

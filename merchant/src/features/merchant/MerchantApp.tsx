@@ -13,6 +13,7 @@ import {
   House,
   Menu,
   PackagePlus,
+  Rocket,
   Search,
   ShoppingBag,
   Tag,
@@ -69,6 +70,11 @@ import {
 } from "../billing/billing-components";
 import { TransactionsPanel } from "../transactions/TransactionsPanel";
 import { ManualPanel } from "../manual/ManualPanel";
+import { OnboardingPanel } from "../onboarding/OnboardingPanel";
+import { OnboardingCard } from "../onboarding/OnboardingCard";
+import { buildOnboardingSteps } from "../onboarding/steps";
+import type { OnboardingCtaAction } from "../onboarding/steps";
+import { loadDiscordSettings } from "../discord/discord-api";
 import { ExportDialog } from "./ExportDialog";
 import { ActivityPanel } from "../activity/ActivityPanel";
 import { SettingsPanel } from "../settings/SettingsPanel";
@@ -203,6 +209,7 @@ export function MerchantApp() {
     [transactionsLoading, setTransactionsLoading] = useState(false),
     [transactionsError, setTransactionsError] = useState(""),
     [transactionsRevision, setTransactionsRevision] = useState(0);
+  const [discordConnected, setDiscordConnected] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const toastTimer = useRef<number | null>(null);
   useModalLayer(
@@ -220,6 +227,14 @@ export function MerchantApp() {
       key as keyof typeof shopDetails.entitlements.effective_plan.features
     ] ?? true;
   const canViewAnalytics = planFeature("analytics");
+  const onboardingDismissed = Boolean(shopDetails?.onboarding_dismissed_at);
+  const onboardingSteps = useMemo(
+    () => buildOnboardingSteps({ shopDetails, dashboard, discordConnected }),
+    [shopDetails, dashboard, discordConnected],
+  );
+  const onboardingRequiredLeft = onboardingSteps.filter(
+    (step) => step.kind === "required" && !step.done,
+  ).length;
   const canAccessManagementPage = (key: MerchantPage) => {
     if (key === "activity")
       return hasShopPermission("team.manage") && planFeature("activity_log");
@@ -462,6 +477,17 @@ export function MerchantApp() {
       .catch(() => undefined);
   }, [shop]);
   useEffect(() => {
+    if (!shop || page !== "onboarding" || !shopDetails || !planFeature("discord"))
+      return;
+    const controller = new AbortController();
+    void loadDiscordSettings(shop.id, controller.signal)
+      .then((settings) => setDiscordConnected(Boolean(settings.connected)))
+      .catch(() => undefined);
+    return () => controller.abort();
+    // planFeature reads shopDetails; page + shop are the real triggers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shop, page, shopDetails?.entitlements]);
+  useEffect(() => {
     void refreshHistory();
   }, [historyRevision, refreshHistory]);
   useEffect(() => {
@@ -501,11 +527,55 @@ export function MerchantApp() {
   useEffect(() => {
     void refreshTransactions();
   }, [transactionsRevision, refreshTransactions]);
-  const go = (p: MerchantPage) => {
-    navigate(PAGE_PATHS[p]);
+  const go = (p: MerchantPage, hash?: string) => {
+    navigate(PAGE_PATHS[p] + (hash ? `#${hash}` : ""));
     setSelected(null);
     if (p === "inventory")
       window.setTimeout(() => searchRef.current?.focus(), 0);
+  };
+  const dismissOnboarding = async () => {
+    if (!shop || onboardingDismissed) return;
+    try {
+      const result = await shopRequest<{ data: ShopDetails }>(
+        "/onboarding/dismiss",
+        shop.id,
+        { method: "PUT" },
+      );
+      setShopDetails(result.data);
+      notify("ซ่อนไกด์เริ่มต้นใช้งานแล้ว");
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "ไม่สามารถซ่อนไกด์ได้",
+      );
+    }
+  };
+  const handleOnboardingCta = (action: OnboardingCtaAction) => {
+    switch (action) {
+      case "settings-info":
+        go("settings", "shop-info");
+        break;
+      case "branding":
+        go("settings", "branding");
+        break;
+      case "storefront":
+        go("settings", "storefront");
+        break;
+      case "add":
+        setDialog("add");
+        break;
+      case "imports":
+        go("imports");
+        break;
+      case "discord":
+        go("discord");
+        break;
+      case "team":
+        go("team");
+        break;
+      case "billing":
+        go("billing");
+        break;
+    }
   };
   const changeInventoryStatus = async (
     i: InventoryItem,
@@ -1161,6 +1231,8 @@ export function MerchantApp() {
         ? "คลังไอดี"
         : page === "manual"
           ? "คู่มือการใช้งานระบบ"
+          : page === "onboarding"
+            ? "เริ่มต้นใช้งาน"
           : (mainNavigation.find((n) => n[0] === page)?.[1] ??
           managementNavigation.find((n) => n[0] === page)?.[1] ??
           "GamoryID");
@@ -1242,6 +1314,16 @@ export function MerchantApp() {
               <i style={{ width: `${planMeterPct}%` }} />
             </div>
           </div>
+          <button
+            className={`nav-button ${page === "onboarding" ? "active" : ""}`}
+            onClick={() => go("onboarding")}
+          >
+            <Rocket size={18} />
+            เริ่มต้นใช้งาน
+            {onboardingRequiredLeft > 0 && (
+              <span className="nav-badge">{onboardingRequiredLeft}</span>
+            )}
+          </button>
           <button className="nav-button" onClick={() => go("manual")}>
             <BookOpen size={18} />
             คู่มือการใช้งานระบบ
@@ -1267,7 +1349,7 @@ export function MerchantApp() {
         </div>
       </header>
       <main
-        className={`page ${page === "dashboard" ? "dashboard-page" : ""} ${page === "inventory" ? "inventory-page" : ""} ${page === "inventory" && selected ? "inventory-detail-page" : ""} ${page === "sales" ? "sales-page" : ""} ${saleDetailId ? "sale-detail-page" : ""} ${page === "customers" ? "customers-page" : ""} ${["team", "billing", "transactions", "discord", "settings", "manual"].includes(page) ? "management-page" : ""}`}
+        className={`page ${page === "dashboard" ? "dashboard-page" : ""} ${page === "inventory" ? "inventory-page" : ""} ${page === "inventory" && selected ? "inventory-detail-page" : ""} ${page === "sales" ? "sales-page" : ""} ${saleDetailId ? "sale-detail-page" : ""} ${page === "customers" ? "customers-page" : ""} ${["team", "billing", "transactions", "discord", "settings", "manual", "onboarding"].includes(page) ? "management-page" : ""}`}
       >
         <div className="page-head">
           <div>
@@ -1476,6 +1558,23 @@ export function MerchantApp() {
           />
         )}
         {page === "manual" && <ManualPanel />}
+        {page === "onboarding" && (
+          <OnboardingPanel
+            steps={onboardingSteps}
+            dismissed={onboardingDismissed}
+            onCta={handleOnboardingCta}
+            onDismiss={() => void dismissOnboarding()}
+          />
+        )}
+        {page === "dashboard" &&
+          !onboardingDismissed &&
+          onboardingRequiredLeft > 0 && (
+            <OnboardingCard
+              steps={onboardingSteps}
+              onOpen={() => go("onboarding")}
+              onDismiss={() => void dismissOnboarding()}
+            />
+          )}
         {page === "dashboard" && (
           <DashboardPanel
             dashboard={dashboard}

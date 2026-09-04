@@ -51,6 +51,7 @@ class MerchantRegistrationTest extends TestCase
         $this->assertDatabaseHas('shops', [
             'id' => $user->current_shop_id,
             'status' => SubscriptionStatus::Trialing->value,
+            'onboarding_dismissed_at' => null,
         ]);
         $this->assertDatabaseHas('shop_members', [
             'shop_id' => $user->current_shop_id,
