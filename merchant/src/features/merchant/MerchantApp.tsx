@@ -1375,13 +1375,27 @@ export function MerchantApp() {
         </div>
       </header>
       <main
-        className={`page ${page === "dashboard" ? "dashboard-page" : ""} ${page === "inventory" ? "inventory-page" : ""} ${page === "inventory" && selected ? "inventory-detail-page" : ""} ${page === "sales" ? "sales-page" : ""} ${saleDetailId ? "sale-detail-page" : ""} ${page === "customers" ? "customers-page" : ""} ${["team", "billing", "transactions", "discord", "settings", "manual", "onboarding"].includes(page) ? "management-page" : ""}`}
+        className={`page ${page === "dashboard" ? "dashboard-page" : ""} ${page === "inventory" ? "inventory-page" : ""} ${page === "inventory" && selected ? "inventory-detail-page" : ""} ${page === "sales" ? "sales-page" : ""} ${saleDetailId ? "sale-detail-page" : ""} ${page === "customers" ? "customers-page" : ""} ${["team", "billing", "transactions", "discord", "settings", "manual", "onboarding", "activity", "analytics"].includes(page) ? "management-page" : ""}`}
       >
         <div className="page-head">
           <div>
             <div className="eyebrow">
               {shop?.name ?? "ร้านของคุณ"} /{" "}
-              {page === "dashboard" ? "DASHBOARD" : "พื้นที่ทำงาน"}
+              {page === "dashboard"
+                ? "DASHBOARD"
+                : [
+                      "team",
+                      "billing",
+                      "transactions",
+                      "discord",
+                      "settings",
+                      "activity",
+                      "analytics",
+                      "manual",
+                      "onboarding",
+                    ].includes(page)
+                  ? "จัดการร้าน"
+                  : "พื้นที่ทำงาน"}
             </div>
             <h1>
               {page === "dashboard"
@@ -1397,7 +1411,11 @@ export function MerchantApp() {
                     ? "เชื่อมเซิร์ฟเวอร์ ตั้งค่าห้องแจ้งเตือน และจัดการร้านด้วยคำสั่งภาษาไทย"
                     : page === "manual"
                       ? "สรุปการใช้งานหลักของ GamoryID สำหรับเจ้าของร้านและพนักงาน"
-                      : "ค้นหา จอง และขายไอดีได้จากที่เดียว"}
+                      : page === "analytics"
+                        ? "เจาะยอดขายตามแรงก์ ช่วงราคา ทีมขาย และลูกค้า ตามช่วงเวลาที่เลือก"
+                        : page === "activity"
+                          ? "ทุกการกระทำของเจ้าของร้านและพนักงาน ตรวจสอบย้อนหลังได้"
+                          : "ค้นหา จอง และขายไอดีได้จากที่เดียว"}
             </p>
           </div>
           <div className="actions">
@@ -1426,9 +1444,15 @@ export function MerchantApp() {
             )}
           </div>
         </div>
-        {["team", "billing", "transactions", "discord", "settings"].includes(
-          page,
-        ) && (
+        {[
+          "team",
+          "billing",
+          "transactions",
+          "discord",
+          "settings",
+          "activity",
+          "analytics",
+        ].includes(page) && (
           <nav
             className="mobile-manage-nav"
             aria-label="เมนูจัดการร้านบนมือถือ"

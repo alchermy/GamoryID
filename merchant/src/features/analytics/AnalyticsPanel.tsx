@@ -58,25 +58,7 @@ export function AnalyticsPanel({
   const summary = data?.summary;
 
   return (
-    <section
-      className="panel management-panel analytics-panel"
-      aria-labelledby="analytics-title"
-    >
-      <div className="panel-head">
-        <div>
-          <h2 id="analytics-title">รายงานเชิงลึก</h2>
-          <small>เจาะยอดขายตามแรงก์ ช่วงราคา ทีมขาย และลูกค้า</small>
-        </div>
-        <button
-          className="button"
-          onClick={() => void load()}
-          disabled={loading}
-        >
-          <RefreshCw size={16} />
-          รีเฟรช
-        </button>
-      </div>
-
+    <section className="analytics-panel" aria-labelledby="analytics-title">
       <div className="analytics-filter">
         <label>
           <span>ตั้งแต่</span>
@@ -104,7 +86,18 @@ export function AnalyticsPanel({
         >
           ดูรายงาน
         </button>
+        <button
+          className="button ghost analytics-refresh"
+          onClick={() => void load()}
+          disabled={loading}
+          aria-label="รีเฟรช"
+        >
+          <RefreshCw size={16} />
+        </button>
       </div>
+      <h2 id="analytics-title" className="sr-only">
+        รายงานเชิงลึก
+      </h2>
 
       {error ? (
         <AsyncError error={error} retry={() => void load()} />

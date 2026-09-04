@@ -1939,12 +1939,22 @@ ul.plan-feature-list li svg {
 }
 
 /* ── Analytics (รายงานเชิงลึก) ─────────────────────────────── */
+.analytics-panel {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
 .analytics-filter {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 10px;
-  margin: 16px 0 18px;
+}
+.analytics-refresh {
+  width: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
 }
 .analytics-filter label {
   display: inline-flex;
@@ -1972,10 +1982,10 @@ ul.plan-feature-list li svg {
 .analytics-kpis {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  margin-bottom: 16px;
 }
 .analytics-kpi {
   padding: 13px 14px;
@@ -1994,6 +2004,9 @@ ul.plan-feature-list li svg {
   margin-top: 4px;
   font: 800 16px var(--font-data);
   letter-spacing: -0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .analytics-grid {
   display: grid;
