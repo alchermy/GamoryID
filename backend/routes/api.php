@@ -99,6 +99,12 @@ Route::prefix('v1')->group(function () {
             Route::get('/shop', [ShopController::class, 'show']);
             // Outside shop.writable so the guide can be dismissed even after the trial lapses.
             Route::put('/onboarding/dismiss', [ShopController::class, 'dismissOnboarding']);
+            // Merchant-only branding stream — signed URL, not gated on storefront opt-in
+            // (so an owner can preview a logo before turning the public storefront on).
+            Route::get('/shop/{shop}/branding/{target}', [ShopController::class, 'branding'])
+                ->whereIn('target', ['logo', 'banner'])
+                ->middleware('signed:relative')
+                ->name('api.shop.branding');
             Route::get('/inventory', [InventoryController::class, 'index']);
             Route::get('/inventory/{inventory}', [InventoryController::class, 'show']);
             Route::patch('/inventory/{inventory}/note', [InventoryController::class, 'updateNote'])->middleware('shop.writable');

@@ -8,7 +8,9 @@ use App\Models\ShopMember;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ShopManagementTest extends TestCase
@@ -65,6 +67,33 @@ class ShopManagementTest extends TestCase
         $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
             ->putJson('/api/v1/onboarding/dismiss')->assertOk();
         $this->assertEquals($first, $shop->fresh()->onboarding_dismissed_at);
+    }
+
+    public function test_owner_can_preview_own_branding_even_with_the_storefront_off(): void
+    {
+        Storage::fake('private');
+        [$user, $shop] = $this->owner('branding@example.test', 'ร้านโลโก้');
+        $shop->forceFill([
+            'storefront_enabled' => false,
+            'logo_path' => UploadedFile::fake()->create('logo.png', 8, 'image/png')
+                ->store("shops/{$shop->id}", 'private'),
+        ])->save();
+
+        $logoUrl = $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->getJson('/api/v1/shop')->assertOk()->json('data.logo_url');
+
+        $this->assertNotNull($logoUrl);
+        $this->assertStringContainsString('/shop/'.$shop->id.'/branding/logo', $logoUrl);
+
+        // the signed URL streams the file regardless of the public storefront being off
+        $this->actingAs($user)->get($logoUrl)->assertOk();
+
+        // tampered / unsigned request is rejected
+        $this->actingAs($user)->get('/api/v1/shop/'.$shop->id.'/branding/logo')->assertForbidden();
+
+        // another shop's owner cannot borrow the signature for their session
+        [$other] = $this->owner('branding-other@example.test', 'ร้านอื่น');
+        $this->actingAs($other)->get($logoUrl)->assertNotFound();
     }
 
     public function test_shop_settings_cannot_cross_tenant_boundary(): void

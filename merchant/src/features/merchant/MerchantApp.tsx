@@ -1535,8 +1535,14 @@ export function MerchantApp() {
             loading={managementLoading}
             error={managementError}
             canUseStorefront={planFeature("storefront")}
-            logoUrl={shopDetails?.logo_url ?? null}
-            bannerUrl={shopDetails?.banner_url ?? null}
+            logoUrl={
+              shopDetails?.logo_url ? apiAssetUrl(shopDetails.logo_url) : null
+            }
+            bannerUrl={
+              shopDetails?.banner_url
+                ? apiAssetUrl(shopDetails.banner_url)
+                : null
+            }
             onSubmit={saveShopSettings}
             onUploadBranding={(target, file) => {
               void (async () => {

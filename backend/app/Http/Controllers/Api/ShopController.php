@@ -11,6 +11,7 @@ use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -99,6 +100,31 @@ class ShopController extends Controller
         return response()->json(['data' => $this->payload($shop->fresh(), $entitlements)]);
     }
 
+    /**
+     * Stream the shop's own logo/banner for the merchant UI.
+     *
+     * Unlike the public storefront branding route this is NOT gated on
+     * `storefront_enabled` — the owner must be able to preview a logo they just
+     * uploaded before (or without ever) turning the public storefront on. The
+     * signed URL is the capability; membership is re-checked here as defence in
+     * depth. Mirrors the inventory-media signed-URL pattern.
+     */
+    public function branding(Request $request, Shop $shop, string $target)
+    {
+        abort_unless(in_array($target, ['logo', 'banner'], true), 404);
+        abort_unless(
+            $request->user()?->shops()->where('shops.id', $shop->id)->exists() === true,
+            404,
+        );
+        $path = $shop->{"{$target}_path"};
+        abort_if(! $path, 404);
+
+        return Storage::disk('private')->response($path, null, [
+            'Cache-Control' => 'private, max-age=600',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     /** Hide the first-time setup guide for this shop (persisted, survives read-only mode). */
     public function dismissOnboarding(Request $request, CurrentShop $currentShop, AuditLogger $audit, PlanEntitlements $entitlements)
     {
@@ -109,6 +135,23 @@ class ShopController extends Controller
         }
 
         return response()->json(['data' => $this->payload($shop->fresh(), $entitlements)]);
+    }
+
+    /** Short-lived signed URL to the merchant-only branding stream, or null. */
+    private function signedBrandingUrl(Shop $shop, string $target): ?string
+    {
+        $path = $shop->{"{$target}_path"};
+        if (! $path) {
+            return null;
+        }
+
+        return URL::temporarySignedRoute(
+            'api.shop.branding',
+            now()->addHours(6),
+            // `v` rotates the URL the moment the file is replaced.
+            ['shop' => $shop->id, 'target' => $target, 'v' => substr(sha1($path), 0, 8)],
+            absolute: false,
+        );
     }
 
     private function payload(Shop $shop, PlanEntitlements $entitlements): array
@@ -128,8 +171,8 @@ class ShopController extends Controller
             'inventory_copy_footer' => $shop->inventory_copy_footer,
             'storefront_enabled' => $shop->storefront_enabled,
             'onboarding_dismissed_at' => $shop->onboarding_dismissed_at,
-            'logo_url' => $shop->logoUrl(),
-            'banner_url' => $shop->bannerUrl(),
+            'logo_url' => $this->signedBrandingUrl($shop, 'logo'),
+            'banner_url' => $this->signedBrandingUrl($shop, 'banner'),
             'timezone' => $shop->timezone,
             'trial_ends_at' => $shop->trial_ends_at,
             'grace_ends_at' => $shop->grace_ends_at,
