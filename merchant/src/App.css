@@ -76,6 +76,19 @@
 .sidebar-bottom {
   margin-top: auto;
 }
+.nav-signout {
+  margin-top: 4px;
+  border-top: 1px solid #1c3a5e;
+  border-radius: 0;
+  color: #9fb4cc;
+}
+.nav-signout:hover {
+  background: #3a2029;
+  color: #ff9c8f;
+}
+.nav-signout:disabled {
+  opacity: 0.6;
+}
 .plan-meter {
   margin: 12px 9px;
   padding: 13px;

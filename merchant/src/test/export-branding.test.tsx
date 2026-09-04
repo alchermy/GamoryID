@@ -97,6 +97,7 @@ describe("SettingsPanel branding", () => {
         onSubmit={vi.fn()}
         onUploadBranding={onUploadBranding}
         onRemoveBranding={onRemoveBranding}
+        onSignOut={vi.fn()}
         retry={vi.fn()}
       />,
     );
@@ -113,5 +114,28 @@ describe("SettingsPanel branding", () => {
     const inputs = document.querySelectorAll('input[type="file"]');
     await user.upload(inputs[0] as HTMLInputElement, file);
     expect(onUploadBranding).toHaveBeenCalledWith("logo", file);
+  });
+
+  it("ปุ่มออกจากระบบเรียก onSignOut", async () => {
+    const user = userEvent.setup();
+    const onSignOut = vi.fn();
+    render(
+      <SettingsPanel
+        shop={shop}
+        loading={false}
+        error=""
+        canUseStorefront
+        logoUrl={null}
+        bannerUrl={null}
+        onSubmit={vi.fn()}
+        onUploadBranding={vi.fn()}
+        onRemoveBranding={vi.fn()}
+        onSignOut={onSignOut}
+        retry={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "ออกจากระบบ" }));
+    expect(onSignOut).toHaveBeenCalled();
   });
 });

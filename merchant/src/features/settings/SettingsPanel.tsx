@@ -5,6 +5,7 @@ import {
   ExternalLink,
   Image as ImageIcon,
   Link2,
+  LogOut,
   Phone,
   Save,
   Settings,
@@ -30,6 +31,7 @@ export function SettingsPanel({
   onSubmit,
   onUploadBranding,
   onRemoveBranding,
+  onSignOut,
   retry,
 }: {
   shop: ShopDetails | Shop | null;
@@ -41,6 +43,7 @@ export function SettingsPanel({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onUploadBranding: (target: BrandingTarget, file: File) => void;
   onRemoveBranding: (target: BrandingTarget) => void;
+  onSignOut: () => void;
   retry: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -400,6 +403,12 @@ export function SettingsPanel({
           </button>
         </div>
       </form>
+      <div className="settings-signout">
+        <button type="button" className="button ghost" onClick={onSignOut}>
+          <LogOut size={16} />
+          ออกจากระบบ
+        </button>
+      </div>
     </section>
   );
 }

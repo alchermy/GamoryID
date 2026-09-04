@@ -758,6 +758,22 @@ ul.plan-feature-list li svg {
 .settings-form-actions .button {
   min-width: 174px;
 }
+/* Logout lives in the sidebar/topbar on desktop; surface it here for mobile. */
+.settings-signout {
+  display: none;
+  padding: 16px 26px 4px;
+}
+.settings-signout .button {
+  width: 100%;
+  justify-content: center;
+  color: #b42318;
+  border-color: #f3c7c2;
+}
+@media (max-width: 767px) {
+  .settings-signout {
+    display: block;
+  }
+}
 .field-help {
   color: #667085;
   font-size: 12px;

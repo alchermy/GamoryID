@@ -11,6 +11,7 @@ import {
   Download,
   FileUp,
   House,
+  LogOut,
   Menu,
   PackagePlus,
   Rocket,
@@ -558,6 +559,18 @@ export function MerchantApp() {
     setSelected(null);
     if (p === "inventory")
       window.setTimeout(() => searchRef.current?.focus(), 0);
+  };
+  const [signingOut, setSigningOut] = useState(false);
+  const signOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      const csrf = await prepareCsrf();
+      await apiRequest("/auth/logout", { method: "POST", headers: csrf });
+    } catch {
+      // No active session to end — fall through to the login screen.
+    }
+    window.location.href = "/login";
   };
   const dismissOnboarding = async () => {
     if (!shop || onboardingDismissed) return;
@@ -1354,6 +1367,14 @@ export function MerchantApp() {
             <BookOpen size={18} />
             คู่มือการใช้งานระบบ
           </button>
+          <button
+            className="nav-button nav-signout"
+            onClick={() => void signOut()}
+            disabled={signingOut}
+          >
+            <LogOut size={18} />
+            ออกจากระบบ
+          </button>
         </div>
       </aside>
       <header className="topbar">
@@ -1372,6 +1393,15 @@ export function MerchantApp() {
             <strong>{session?.name ?? "พีท เจ้าของร้าน"}</strong>
             <span>{shop?.name ?? "Nexus Store"}</span>
           </div>
+          <button
+            className="icon-button"
+            aria-label="ออกจากระบบ"
+            title="ออกจากระบบ"
+            onClick={() => void signOut()}
+            disabled={signingOut}
+          >
+            <LogOut size={18} />
+          </button>
         </div>
       </header>
       <main
@@ -1616,6 +1646,7 @@ export function MerchantApp() {
               body.append("target", target);
               void saveShopBranding(body, "DELETE");
             }}
+            onSignOut={() => void signOut()}
             retry={() => setManagementRevision((value) => value + 1)}
           />
         )}
