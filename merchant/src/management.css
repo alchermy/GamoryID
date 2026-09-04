@@ -1939,22 +1939,16 @@ ul.plan-feature-list li svg {
 }
 
 /* ── Analytics (รายงานเชิงลึก) ─────────────────────────────── */
-.analytics-panel {
+.analytics-body {
   display: grid;
-  gap: 14px;
-  align-content: start;
+  gap: 16px;
+  padding: 18px;
 }
 .analytics-filter {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 10px;
-}
-.analytics-refresh {
-  width: 40px;
-  padding: 0;
-  display: grid;
-  place-items: center;
 }
 .analytics-filter label {
   display: inline-flex;

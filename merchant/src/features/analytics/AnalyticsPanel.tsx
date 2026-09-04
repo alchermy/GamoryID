@@ -58,56 +58,64 @@ export function AnalyticsPanel({
   const summary = data?.summary;
 
   return (
-    <section className="analytics-panel" aria-labelledby="analytics-title">
-      <div className="analytics-filter">
-        <label>
-          <span>ตั้งแต่</span>
-          <input
-            type="date"
-            value={from}
-            max={to || TODAY}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-        </label>
-        <label>
-          <span>ถึง</span>
-          <input
-            type="date"
-            value={to}
-            min={from || undefined}
-            max={TODAY}
-            onChange={(e) => setTo(e.target.value)}
-          />
-        </label>
+    <section
+      className="panel management-panel analytics-panel"
+      aria-labelledby="analytics-title"
+    >
+      <div className="panel-head">
+        <div>
+          <h2 id="analytics-title">รายงานเชิงลึก</h2>
+          <small>เลือกช่วงวันที่ แล้วกด “ดูรายงาน”</small>
+        </div>
         <button
-          className="button primary"
+          className="button"
           onClick={() => void load()}
           disabled={loading}
-        >
-          ดูรายงาน
-        </button>
-        <button
-          className="button ghost analytics-refresh"
-          onClick={() => void load()}
-          disabled={loading}
-          aria-label="รีเฟรช"
         >
           <RefreshCw size={16} />
+          รีเฟรช
         </button>
       </div>
-      <h2 id="analytics-title" className="sr-only">
-        รายงานเชิงลึก
-      </h2>
 
-      {error ? (
-        <AsyncError error={error} retry={() => void load()} />
-      ) : !data || !summary ? (
-        <div className="dashboard-empty">
-          <strong>กำลังโหลดรายงาน…</strong>
+      <div className="analytics-body">
+        <div className="analytics-filter">
+          <label>
+            <span>ตั้งแต่</span>
+            <input
+              type="date"
+              value={from}
+              max={to || TODAY}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </label>
+          <label>
+            <span>ถึง</span>
+            <input
+              type="date"
+              value={to}
+              min={from || undefined}
+              max={TODAY}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </label>
+          <button
+            className="button primary"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            ดูรายงาน
+          </button>
         </div>
-      ) : (
-        <>
-          <div className="analytics-kpis">
+
+        {error ? (
+          <AsyncError error={error} retry={() => void load()} />
+        ) : !data || !summary ? (
+          <div className="dashboard-empty">
+            <strong>กำลังโหลดรายงาน…</strong>
+          </div>
+        ) : (
+          <>
+            <div className="analytics-kpis">
             <Kpi label="ยอดขาย" value={money.format(summary.revenue)} />
             <Kpi
               label="จำนวนที่ขาย"
@@ -226,8 +234,9 @@ export function AnalyticsPanel({
               </div>
             </div>
           )}
-        </>
-      )}
+          </>
+        )}
+      </div>
     </section>
   );
 }
