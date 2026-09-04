@@ -48,6 +48,7 @@ import type {
   Plan,
   SalePayload,
   SaleRecord,
+  SalesSeries,
   SessionUser,
   ShopDetails,
   TeamMember,
@@ -169,6 +170,10 @@ export function MerchantApp() {
     [dashboard, setDashboardData] = useState<DashboardData | null>(null),
     [storefrontViews, setStorefrontViews] = useState<ViewSeries | null>(null),
     [viewGranularity, setViewGranularity] = useState<
+      "day" | "month" | "year"
+    >("day"),
+    [salesReport, setSalesReport] = useState<SalesSeries | null>(null),
+    [salesGranularity, setSalesGranularity] = useState<
       "day" | "month" | "year"
     >("day"),
     [loadError, setLoadError] = useState("");
@@ -377,6 +382,17 @@ export function MerchantApp() {
     },
     [shop, canViewAnalytics],
   );
+  const refreshSalesReport = useCallback(
+    async (granularity: "day" | "month" | "year") => {
+      if (!shop) return;
+      const result = await shopRequest<SalesSeries>(
+        `/reports/sales?granularity=${granularity}`,
+        shop.id,
+      );
+      setSalesReport(result);
+    },
+    [shop],
+  );
   const refreshHistory = useCallback(async () => {
     if (!shop || !["sales", "customers"].includes(page) || saleDetailId) return;
     const endpoint =
@@ -468,6 +484,10 @@ export function MerchantApp() {
     if (!shop || page !== "dashboard" || !canViewAnalytics) return;
     void refreshStorefrontViews(viewGranularity).catch(() => undefined);
   }, [refreshStorefrontViews, viewGranularity, page, shop, canViewAnalytics]);
+  useEffect(() => {
+    if (!shop || page !== "dashboard") return;
+    void refreshSalesReport(salesGranularity).catch(() => undefined);
+  }, [refreshSalesReport, salesGranularity, page, shop]);
   useEffect(() => {
     if (!shop) return;
     void shopRequest<{ data: ShopDetails }>("/shop", shop.id)
@@ -1590,13 +1610,17 @@ export function MerchantApp() {
             storefrontViews={storefrontViews}
             viewGranularity={viewGranularity}
             onViewGranularityChange={setViewGranularity}
+            salesReport={salesReport}
+            salesGranularity={salesGranularity}
+            onSalesGranularityChange={setSalesGranularity}
             onOpenInventory={() => go("inventory")}
             onOpenImport={() => go("imports")}
             onOpenAdd={() => setDialog("add")}
             onRefresh={() =>
-              void refreshDashboardData().catch(() =>
-                notify("ไม่สามารถรีเฟรช DashboardData ได้"),
-              )
+              void Promise.all([
+                refreshDashboardData(),
+                refreshSalesReport(salesGranularity),
+              ]).catch(() => notify("ไม่สามารถรีเฟรชข้อมูลได้"))
             }
           />
         )}

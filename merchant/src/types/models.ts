@@ -116,6 +116,18 @@ export type ViewSeries = {
   data: Array<{ period: string; views: number }>;
 };
 
+export type SalesSeries = {
+  granularity: "day" | "month" | "year";
+  totals: { revenue: number; sales: number; profit: number | null };
+  previous: { revenue: number; sales: number; profit: number | null };
+  data: Array<{
+    period: string;
+    revenue: number;
+    sales: number;
+    profit: number | null;
+  }>;
+};
+
 export type PlanFeatureKey =
   | "storefront"
   | "bulk_import"

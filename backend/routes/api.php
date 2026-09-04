@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\InventoryTimelineController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PublicMediaController;
 use App\Http\Controllers\Api\PublicStorefrontController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SensitiveAccessController;
@@ -145,6 +146,8 @@ Route::prefix('v1')->group(function () {
 
             Route::get('/activity', [ActivityController::class, 'index'])->middleware(['shop.permission:team.manage', 'plan.feature:activity_log']);
             Route::get('/storefront/views', [StorefrontAnalyticsController::class, 'views'])->middleware('plan.feature:analytics');
+            // Not plan-gated: revenue/count are the shop's own data; profit is gated in the controller.
+            Route::get('/reports/sales', [ReportController::class, 'sales']);
             Route::get('/team', [TeamController::class, 'index'])->middleware('shop.permission:team.manage');
             Route::post('/team', [TeamController::class, 'store'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::put('/team/{member}', [TeamController::class, 'update'])->middleware(['shop.writable', 'shop.permission:team.manage']);

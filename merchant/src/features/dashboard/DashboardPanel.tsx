@@ -8,14 +8,25 @@ import {
   Eye,
   PackagePlus,
   RefreshCw,
+  TrendingDown,
   TrendingUp,
   WalletCards,
 } from "lucide-react";
 import { formatDate, money } from "../../shared/lib/format";
 import { activityIcon, activityLabel } from "../../shared/lib/activity";
-import type { DashboardData, ViewSeries } from "../../types/models";
+import type {
+  DashboardData,
+  SalesSeries,
+  ViewSeries,
+} from "../../types/models";
 
 type Granularity = "day" | "month" | "year";
+
+const RANGE_LABEL: Record<Granularity, string> = {
+  day: "30 วันล่าสุด",
+  month: "12 เดือนล่าสุด",
+  year: "5 ปีล่าสุด",
+};
 
 export function DashboardPanel({
   dashboard,
@@ -25,6 +36,9 @@ export function DashboardPanel({
   storefrontViews,
   viewGranularity,
   onViewGranularityChange,
+  salesReport,
+  salesGranularity,
+  onSalesGranularityChange,
   onOpenInventory,
   onOpenImport,
   onOpenAdd,
@@ -43,13 +57,14 @@ export function DashboardPanel({
   storefrontViews: ViewSeries | null;
   viewGranularity: Granularity;
   onViewGranularityChange: (g: Granularity) => void;
+  salesReport: SalesSeries | null;
+  salesGranularity: Granularity;
+  onSalesGranularityChange: (g: Granularity) => void;
   onOpenInventory: () => void;
   onOpenImport: () => void;
   onOpenAdd: () => void;
   onRefresh: () => void;
 }) {
-  const trend = dashboard?.sales_last_7_days ?? [];
-  const maxRevenue = Math.max(1, ...trend.map((point) => point.revenue));
   const stockTotal = summary.available + summary.reserved + summary.soldTotal;
   const daysUntilTrial = dashboard?.subscription.trial_ends_at
     ? Math.max(
@@ -61,6 +76,16 @@ export function DashboardPanel({
         ),
       )
     : null;
+  // Revenue / profit KPIs track the chart's window when the report has loaded,
+  // otherwise fall back to the always-present "this month" figures.
+  const windowRevenue =
+    salesReport?.totals.revenue ??
+    Number(dashboard?.summary.revenue_this_month ?? 0);
+  const windowProfit =
+    salesReport?.totals.profit ??
+    (canViewProfit ? Number(dashboard?.summary.profit_this_month ?? 0) : null);
+  const revenueRange = salesReport ? RANGE_LABEL[salesGranularity] : "เดือนนี้";
+
   const task =
     summary.reserved > 0
       ? {
@@ -77,178 +102,119 @@ export function DashboardPanel({
             label: "นำเข้าข้อมูล",
             action: onOpenImport,
           }
-        : {
-            title: `มี ${summary.available} ไอดีพร้อมขาย`,
-            detail: "ตรวจสอบราคาและรายละเอียดให้พร้อมก่อนส่งต่อให้ลูกค้า",
-            label: "เปิดคลังไอดี",
-            action: onOpenInventory,
-          };
+        : null;
+
   return (
     <div className="shop-dashboard">
-      <section
-        className="dashboard-snapshot"
-        aria-labelledby="dashboard-snapshot-title"
-      >
-        <div>
-          <span className="eyebrow">SHOP PULSE · เดือนนี้</span>
-          <h2 id="dashboard-snapshot-title">ภาพรวมที่ช่วยให้ตัดสินใจได้เร็ว</h2>
-          <p>ติดตามสต็อก การจอง และยอดขายจากข้อมูลของร้านแบบล่าสุด</p>
+      <section className="dashboard-stats-wrap" aria-label="ตัวเลขภาพรวมร้าน">
+        <div className="dashboard-stats-head">
+          <span className="eyebrow">ภาพรวมร้าน</span>
+          <button
+            className="icon-button"
+            onClick={onRefresh}
+            aria-label="รีเฟรชข้อมูล"
+          >
+            <RefreshCw size={16} />
+          </button>
         </div>
-        <button className="button" onClick={onRefresh}>
-          <RefreshCw size={17} />
-          รีเฟรชข้อมูล
-        </button>
+        <div className="dashboard-stats">
+          <DashboardMetric
+            label="พร้อมขาย"
+            value={summary.available.toLocaleString("th-TH")}
+            detail="รายการที่พร้อมเสนอขาย"
+            icon={<Box size={18} />}
+          />
+          <DashboardMetric
+            label="กำลังจอง"
+            value={summary.reserved.toLocaleString("th-TH")}
+            detail="ต้องติดตามก่อนหมดเวลา"
+            icon={<Clock3 size={18} />}
+          />
+          <DashboardMetric
+            label="ยอดขาย"
+            value={money.format(windowRevenue)}
+            detail={
+              <DeltaLine
+                range={revenueRange}
+                current={salesReport?.totals.revenue}
+                previous={salesReport?.previous.revenue}
+              />
+            }
+            icon={<WalletCards size={18} />}
+          />
+          <DashboardMetric
+            label="กำไร"
+            value={canViewProfit ? money.format(windowProfit ?? 0) : "–"}
+            detail={
+              canViewProfit ? (
+                <DeltaLine
+                  range={revenueRange}
+                  current={salesReport?.totals.profit ?? undefined}
+                  previous={salesReport?.previous.profit ?? undefined}
+                />
+              ) : (
+                "ไม่มีสิทธิ์ดูต้นทุนและกำไร"
+              )
+            }
+            icon={<TrendingUp size={18} />}
+          />
+          <DashboardMetric
+            label="ยอดเข้าชมร้าน"
+            value={
+              canViewAnalytics
+                ? Number(
+                    dashboard?.summary.storefront_views ?? 0,
+                  ).toLocaleString("th-TH")
+                : "—"
+            }
+            detail={
+              canViewAnalytics
+                ? "รวมจากหน้าร้านสาธารณะ"
+                : "ปลดล็อกด้วยแพ็ก Growth ขึ้นไป"
+            }
+            icon={<Eye size={18} />}
+          />
+        </div>
       </section>
-      <section className="dashboard-stats" aria-label="ตัวเลขภาพรวมร้าน">
-        <DashboardMetric
-          label="พร้อมขาย"
-          value={summary.available.toLocaleString("th-TH")}
-          detail="รายการที่พร้อมเสนอขาย"
-          icon={<Box size={18} />}
-        />
-        <DashboardMetric
-          label="กำลังจอง"
-          value={summary.reserved.toLocaleString("th-TH")}
-          detail="ต้องติดตามก่อนหมดเวลา"
-          icon={<Clock3 size={18} />}
-        />
-        <DashboardMetric
-          label="ยอดขายเดือนนี้"
-          value={money.format(
-            Number(dashboard?.summary.revenue_this_month ?? 0),
-          )}
-          detail={`${summary.sold.toLocaleString("th-TH")} รายการที่ปิดการขาย`}
-          icon={<WalletCards size={18} />}
-        />
-        <DashboardMetric
-          label="กำไรเดือนนี้"
-          value={
-            canViewProfit
-              ? money.format(Number(dashboard?.summary.profit_this_month ?? 0))
-              : "–"
-          }
-          detail={
-            canViewProfit
-              ? "คำนวณจากยอดขายเดือนปัจจุบัน"
-              : "ไม่มีสิทธิ์ดูต้นทุนและกำไร"
-          }
-          icon={<TrendingUp size={18} />}
-        />
-        <DashboardMetric
-          label="ยอดเข้าชมร้าน"
-          value={
-            canViewAnalytics
-              ? Number(dashboard?.summary.storefront_views ?? 0).toLocaleString(
-                  "th-TH",
-                )
-              : "—"
-          }
-          detail={
-            canViewAnalytics
-              ? "รวมจากหน้าร้านสาธารณะ"
-              : "ปลดล็อกด้วยแพ็ก Growth ขึ้นไป"
-          }
-          icon={<Eye size={18} />}
-        />
-      </section>
-      <div className="dashboard-main-grid">
-        <section
-          className="panel dashboard-trend"
-          aria-labelledby="trend-title"
-        >
-          <div className="panel-head">
-            <div>
-              <h2 id="trend-title">ยอดขาย 7 วันล่าสุด</h2>
-              <small>
-                {money.format(
-                  trend.reduce((total, point) => total + point.revenue, 0),
-                )}{" "}
-                ในรอบ 7 วัน
-              </small>
-            </div>
-          </div>
-          <div className="trend-body">
-            {trend.length === 0 ? (
-              <div className="dashboard-empty">
-                <BarChart3 size={24} />
-                <strong>ยังไม่มีข้อมูลยอดขายใน 7 วันล่าสุด</strong>
-                <span>เมื่อบันทึกการขาย กราฟจะแสดงผลที่นี่</span>
-              </div>
-            ) : (
-              <>
-                <div className="trend-bars" aria-label="กราฟรายได้ 7 วันล่าสุด">
-                  {trend.map((point) => {
-                    const height = Math.max(
-                      6,
-                      Math.round((point.revenue / maxRevenue) * 100),
-                    );
-                    const label = new Intl.DateTimeFormat("th-TH", {
-                      weekday: "short",
-                      timeZone: "Asia/Bangkok",
-                    }).format(new Date(`${point.date}T12:00:00`));
-                    return (
-                      <div className="trend-column" key={point.date}>
-                        <span className="trend-tooltip">
-                          {money.format(point.revenue)} · {point.sales} รายการ
-                        </span>
-                        <i style={{ height: `${height}%` }} />
-                        <span>{label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="trend-summary">
-                  รวม{" "}
-                  <strong>
-                    {trend
-                      .reduce((total, point) => total + point.sales, 0)
-                      .toLocaleString("th-TH")}{" "}
-                    รายการ
-                  </strong>{" "}
-                  · ยอดขายจะอัปเดตหลังบันทึกขายสำเร็จ
-                </p>
-              </>
-            )}
-          </div>
-        </section>
-        <section className="panel dashboard-task" aria-labelledby="task-title">
-          <div className="panel-head">
-            <div>
-              <h2 id="task-title">สิ่งที่ควรทำต่อ</h2>
-              <small>จัดลำดับงานจากสต็อกปัจจุบัน</small>
-            </div>
-          </div>
-          <div className="task-body">
-            <span className="task-icon">
-              <ClipboardCheck size={20} />
-            </span>
-            <h3>{task.title}</h3>
+
+      {task && (
+        <section className="dashboard-task-strip" aria-labelledby="task-title">
+          <span className="task-icon">
+            <ClipboardCheck size={18} />
+          </span>
+          <div>
+            <h2 id="task-title">{task.title}</h2>
             <p>{task.detail}</p>
-            <button className="button blue" onClick={task.action}>
-              {task.label}
-              <ChevronRight size={16} />
-            </button>
           </div>
+          <button className="button blue" onClick={task.action}>
+            {task.label}
+            <ChevronRight size={16} />
+          </button>
         </section>
-      </div>
+      )}
+
+      <SalesTrendPanel
+        series={salesReport}
+        granularity={salesGranularity}
+        onGranularity={onSalesGranularityChange}
+      />
+
       <StorefrontViewsPanel
         series={storefrontViews}
         granularity={viewGranularity}
         onGranularity={onViewGranularityChange}
         canViewAnalytics={canViewAnalytics}
       />
+
       <div className="dashboard-lower-grid">
-        <section
-          className="panel stock-health"
-          aria-labelledby="stock-health-title"
-        >
+        <section className="panel stock-plan" aria-labelledby="stock-plan-title">
           <div className="panel-head">
             <div>
-              <h2 id="stock-health-title">สถานะคลัง</h2>
+              <h2 id="stock-plan-title">สถานะคลังและร้าน</h2>
               <small>{stockTotal.toLocaleString("th-TH")} รายการทั้งหมด</small>
             </div>
           </div>
-          <div className="stock-health-body">
+          <div className="stock-plan-body">
             <div
               className="stock-track"
               aria-label={`พร้อมขาย ${summary.available} รายการ, ถูกจอง ${summary.reserved} รายการ, ขายแล้ว ${summary.soldTotal} รายการ`}
@@ -292,6 +258,30 @@ export function DashboardPanel({
                 <strong>{money.format(Number(summary.value ?? 0))}</strong>
               </div>
             )}
+            <div className="stock-plan-divider" />
+            <div className="subscription-inline">
+              <span
+                className={`subscription-state ${dashboard?.subscription.writable === false ? "limited" : "active"}`}
+              >
+                {dashboard?.subscription.writable === false
+                  ? "อ่านอย่างเดียว"
+                  : "พร้อมใช้งาน"}
+              </span>
+              <h3>
+                {dashboard?.subscription.status === "trialing"
+                  ? "ช่วงทดลองใช้ฟรี"
+                  : "แพ็กเกจร้านค้า"}
+              </h3>
+              <p>
+                {daysUntilTrial !== null
+                  ? `เหลือเวลาใช้งานแบบเขียนข้อมูล ${daysUntilTrial.toLocaleString("th-TH")} วัน`
+                  : "ตรวจสอบแพ็กเกจและการชำระเงินได้จากเมนูจัดการร้าน"}
+              </p>
+              <button className="button" onClick={onOpenAdd}>
+                <PackagePlus size={16} />
+                เพิ่มไอดีใหม่
+              </button>
+            </div>
           </div>
         </section>
         <section
@@ -323,44 +313,134 @@ export function DashboardPanel({
             )}
           </div>
         </section>
-        <section
-          className="panel dashboard-subscription"
-          aria-labelledby="subscription-title"
-        >
-          <div className="panel-head">
-            <div>
-              <h2 id="subscription-title">สถานะร้าน</h2>
-              <small>สิทธิ์การใช้งานปัจจุบัน</small>
-            </div>
-          </div>
-          <div className="subscription-body">
-            <span
-              className={`subscription-state ${dashboard?.subscription.writable === false ? "limited" : "active"}`}
-            >
-              {dashboard?.subscription.writable === false
-                ? "อ่านอย่างเดียว"
-                : "พร้อมใช้งาน"}
-            </span>
-            <h3>
-              {dashboard?.subscription.status === "trialing"
-                ? "ช่วงทดลองใช้ฟรี"
-                : "แพ็กเกจร้านค้า"}
-            </h3>
-            <p>
-              {daysUntilTrial !== null
-                ? `เหลือเวลาใช้งานแบบเขียนข้อมูล ${daysUntilTrial.toLocaleString("th-TH")} วัน`
-                : "ตรวจสอบแพ็กเกจและการชำระเงินได้จากเมนูจัดการร้าน"}
-            </p>
-            <button className="button" onClick={onOpenAdd}>
-              <PackagePlus size={16} />
-              เพิ่มไอดีใหม่
-            </button>
-          </div>
-        </section>
       </div>
     </div>
   );
 }
+
+function fmtPeriod(period: string, granularity: Granularity): string {
+  if (granularity === "year") return String(Number(period) + 543);
+  if (granularity === "month") {
+    const [y, m] = period.split("-").map(Number);
+    return new Intl.DateTimeFormat("th-TH", { month: "short" }).format(
+      new Date(y, m - 1, 1),
+    );
+  }
+  return new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "numeric",
+  }).format(new Date(`${period}T12:00:00`));
+}
+
+function GranularityTabs({
+  granularity,
+  onGranularity,
+}: {
+  granularity: Granularity;
+  onGranularity: (g: Granularity) => void;
+}) {
+  return (
+    <div className="cycle-toggle" role="tablist" aria-label="ช่วงเวลา">
+      {(["day", "month", "year"] as Granularity[]).map((g) => (
+        <button
+          key={g}
+          type="button"
+          role="tab"
+          aria-selected={granularity === g}
+          className={granularity === g ? "is-on" : ""}
+          onClick={() => onGranularity(g)}
+        >
+          {g === "day" ? "วัน" : g === "month" ? "เดือน" : "ปี"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SalesTrendPanel({
+  series,
+  granularity,
+  onGranularity,
+}: {
+  series: SalesSeries | null;
+  granularity: Granularity;
+  onGranularity: (g: Granularity) => void;
+}) {
+  const points = series?.data ?? [];
+  const maxRevenue = Math.max(1, ...points.map((p) => p.revenue));
+  const empty = points.length === 0 || points.every((p) => p.revenue === 0);
+
+  return (
+    <section className="panel dashboard-sales" aria-labelledby="sales-title">
+      <div className="panel-head">
+        <div>
+          <h2 id="sales-title">ยอดขาย</h2>
+          <small>
+            {money.format(series?.totals.revenue ?? 0)} · {RANGE_LABEL[granularity]}{" "}
+            · {(series?.totals.sales ?? 0).toLocaleString("th-TH")} รายการ
+          </small>
+        </div>
+        <GranularityTabs granularity={granularity} onGranularity={onGranularity} />
+      </div>
+      <div className="views-body">
+        {empty ? (
+          <div className="dashboard-empty">
+            <BarChart3 size={24} />
+            <strong>ยังไม่มียอดขายในช่วงนี้</strong>
+            <span>เมื่อบันทึกการขาย กราฟจะแสดงผลที่นี่</span>
+          </div>
+        ) : (
+          <div
+            className={`sales-bars gran-${granularity}`}
+            aria-label={`กราฟยอดขายราย${
+              granularity === "day"
+                ? "วัน"
+                : granularity === "month"
+                  ? "เดือน"
+                  : "ปี"
+            }`}
+          >
+            {points.map((point) => {
+              const height = Math.max(
+                4,
+                Math.round((point.revenue / maxRevenue) * 100),
+              );
+              const profitPct =
+                point.profit != null && point.revenue > 0
+                  ? Math.min(
+                      100,
+                      Math.round((point.profit / point.revenue) * 100),
+                    )
+                  : null;
+              return (
+                <div className="sales-column" key={point.period}>
+                  <span className="sales-tooltip">
+                    {money.format(point.revenue)}
+                    {point.profit != null &&
+                      ` · กำไร ${money.format(point.profit)}`}
+                    {` · ${point.sales.toLocaleString("th-TH")} รายการ · ${fmtPeriod(
+                      point.period,
+                      granularity,
+                    )}`}
+                  </span>
+                  <i style={{ height: `${height}%` }}>
+                    {profitPct != null && (
+                      <b style={{ height: `${profitPct}%` }} />
+                    )}
+                  </i>
+                  <span className="views-label">
+                    {fmtPeriod(point.period, granularity)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function StorefrontViewsPanel({
   series,
   granularity,
@@ -372,19 +452,6 @@ function StorefrontViewsPanel({
   onGranularity: (g: Granularity) => void;
   canViewAnalytics: boolean;
 }) {
-  const fmtPeriod = (period: string): string => {
-    if (granularity === "year") return String(Number(period) + 543);
-    if (granularity === "month") {
-      const [y, m] = period.split("-").map(Number);
-      return new Intl.DateTimeFormat("th-TH", { month: "short" }).format(
-        new Date(y, m - 1, 1),
-      );
-    }
-    return new Intl.DateTimeFormat("th-TH", {
-      day: "numeric",
-      month: "numeric",
-    }).format(new Date(`${period}T12:00:00`));
-  };
   const points = series?.data ?? [];
   const maxViews = Math.max(1, ...points.map((p) => p.views));
   const empty = points.length === 0 || points.every((p) => p.views === 0);
@@ -401,20 +468,10 @@ function StorefrontViewsPanel({
           </small>
         </div>
         {canViewAnalytics && (
-          <div className="cycle-toggle" role="tablist" aria-label="ช่วงเวลา">
-            {(["day", "month", "year"] as Granularity[]).map((g) => (
-              <button
-                key={g}
-                type="button"
-                role="tab"
-                aria-selected={granularity === g}
-                className={granularity === g ? "is-on" : ""}
-                onClick={() => onGranularity(g)}
-              >
-                {g === "day" ? "วัน" : g === "month" ? "เดือน" : "ปี"}
-              </button>
-            ))}
-          </div>
+          <GranularityTabs
+            granularity={granularity}
+            onGranularity={onGranularity}
+          />
         )}
       </div>
       <div className="views-body">
@@ -434,7 +491,11 @@ function StorefrontViewsPanel({
           <div
             className={`views-bars gran-${granularity}`}
             aria-label={`กราฟยอดเข้าชมราย${
-              granularity === "day" ? "วัน" : granularity === "month" ? "เดือน" : "ปี"
+              granularity === "day"
+                ? "วัน"
+                : granularity === "month"
+                  ? "เดือน"
+                  : "ปี"
             }`}
           >
             {points.map((point) => {
@@ -446,10 +507,12 @@ function StorefrontViewsPanel({
                 <div className="views-column" key={point.period}>
                   <span className="views-tooltip">
                     {point.views.toLocaleString("th-TH")} ครั้ง ·{" "}
-                    {fmtPeriod(point.period)}
+                    {fmtPeriod(point.period, granularity)}
                   </span>
                   <i style={{ height: `${height}%` }} />
-                  <span className="views-label">{fmtPeriod(point.period)}</span>
+                  <span className="views-label">
+                    {fmtPeriod(point.period, granularity)}
+                  </span>
                 </div>
               );
             })}
@@ -457,6 +520,36 @@ function StorefrontViewsPanel({
         )}
       </div>
     </section>
+  );
+}
+
+function DeltaLine({
+  range,
+  current,
+  previous,
+}: {
+  range: string;
+  current: number | undefined;
+  previous: number | undefined;
+}) {
+  if (current == null || previous == null || previous === 0) {
+    return <>{range}</>;
+  }
+  const change = Math.round(((current - previous) / previous) * 100);
+  const dir = change > 0 ? "up" : change < 0 ? "down" : "flat";
+  return (
+    <span className="kpi-delta">
+      {range} ·
+      <span className={dir}>
+        {dir === "up" ? (
+          <TrendingUp size={12} />
+        ) : dir === "down" ? (
+          <TrendingDown size={12} />
+        ) : null}
+        {change > 0 ? "+" : ""}
+        {change}% เทียบช่วงก่อน
+      </span>
+    </span>
   );
 }
 
@@ -468,7 +561,7 @@ function DashboardMetric({
 }: {
   label: string;
   value: string;
-  detail: string;
+  detail: ReactNode;
   icon: ReactNode;
 }) {
   return (
