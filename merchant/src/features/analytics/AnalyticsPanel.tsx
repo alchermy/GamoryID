@@ -4,6 +4,7 @@ import { shopRequest } from "../../api";
 import { AsyncError } from "../../shared/ui/async-state";
 import { formatDate, money } from "../../shared/lib/format";
 import type { AnalyticsReport } from "../../types/models";
+import { RevenueBarChart } from "./RevenueBarChart";
 
 function ymd(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
@@ -154,21 +155,13 @@ export function AnalyticsPanel({
             </div>
           ) : (
             <div className="analytics-grid">
-              <BarCard
+              <ChartCard
                 title="ยอดขายตามแรงก์"
-                rows={data.by_rank.map((r) => ({
-                  label: r.label,
-                  revenue: r.revenue,
-                  note: `${r.sales.toLocaleString("th-TH")} รายการ`,
-                }))}
+                rows={data.by_rank}
               />
-              <BarCard
+              <ChartCard
                 title="ยอดขายตามช่วงราคา"
-                rows={data.by_price_band.map((b) => ({
-                  label: b.label,
-                  revenue: b.revenue,
-                  note: `${b.sales.toLocaleString("th-TH")} รายการ`,
-                }))}
+                rows={data.by_price_band}
               />
               <div className="panel analytics-card">
                 <div className="panel-head">
@@ -250,14 +243,13 @@ function Kpi({ label, value }: { label: string; value: string }) {
   );
 }
 
-function BarCard({
+function ChartCard({
   title,
   rows,
 }: {
   title: string;
-  rows: Array<{ label: string; revenue: number; note: string }>;
+  rows: Array<{ label: string; revenue: number; sales: number }>;
 }) {
-  const max = Math.max(1, ...rows.map((r) => r.revenue));
   const shown = rows.filter((r) => r.revenue > 0);
   return (
     <div className="panel analytics-card">
@@ -267,20 +259,11 @@ function BarCard({
       {shown.length === 0 ? (
         <p className="analytics-card-empty">ยังไม่มีข้อมูลในช่วงนี้</p>
       ) : (
-        <ul className="analytics-bar-list">
-          {shown.map((row) => (
-            <li key={row.label}>
-              <div className="analytics-bar-head">
-                <span>{row.label}</span>
-                <strong>{money.format(row.revenue)}</strong>
-              </div>
-              <div className="analytics-bar-track">
-                <i style={{ width: `${Math.round((row.revenue / max) * 100)}%` }} />
-              </div>
-              <small>{row.note}</small>
-            </li>
-          ))}
-        </ul>
+        <RevenueBarChart
+          labels={shown.map((r) => r.label)}
+          values={shown.map((r) => r.revenue)}
+          counts={shown.map((r) => r.sales)}
+        />
       )}
     </div>
   );

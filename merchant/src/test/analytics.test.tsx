@@ -12,6 +12,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AnalyticsPanel } from "../features/analytics/AnalyticsPanel";
 import type { AnalyticsReport } from "../types/models";
 
+// jsdom has no canvas 2d context; RevenueBarChart bails when it's null.
+HTMLCanvasElement.prototype.getContext = () => null;
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -88,6 +91,9 @@ describe("AnalyticsPanel", () => {
     const kpis = container.querySelector(".analytics-kpis") as HTMLElement;
     expect(kpis.textContent).toContain("฿20,900");
     expect(kpis.textContent).toContain("34.9%");
+    // rank / price-band cards render a chart canvas (not the old CSS bars)
+    expect(container.querySelectorAll(".analytics-chart canvas").length).toBe(2);
+    expect(container.querySelector(".analytics-bar-track")).toBeNull();
     // staff profit column present when allowed
     const staffCard = screen
       .getByRole("heading", { name: "ผลงานทีมขาย" })
