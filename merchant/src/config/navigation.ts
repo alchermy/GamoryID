@@ -4,6 +4,7 @@ import {
   FileUp,
   ReceiptText,
   MessagesSquare,
+  PieChart,
   ScrollText,
   Settings,
   ShieldCheck,
@@ -27,6 +28,7 @@ export const PAGE_PATHS: Record<MerchantPage, string> = {
   settings: "/settings",
   manual: "/manual",
   onboarding: "/onboarding",
+  analytics: "/analytics",
 };
 
 export const PATH_PAGES = new Map(
@@ -47,6 +49,7 @@ export const mainNavigation = [
 export const managementNavigation = [
   ["team", "ทีมและสิทธิ์", ShieldCheck],
   ["activity", "บันทึกกิจกรรม", ScrollText],
+  ["analytics", "รายงานเชิงลึก", PieChart],
   ["billing", "แพ็กเกจ", CreditCard],
   ["transactions", "ประวัติธุรกรรม", ReceiptText],
   ["discord", "Discord", MessagesSquare],

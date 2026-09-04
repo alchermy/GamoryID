@@ -21,6 +21,7 @@ const merchantPaths = [
   "/settings",
   "/manual",
   "/onboarding",
+  "/analytics",
 ];
 
 function AppRoutes() {

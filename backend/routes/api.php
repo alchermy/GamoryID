@@ -148,6 +148,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/storefront/views', [StorefrontAnalyticsController::class, 'views'])->middleware('plan.feature:analytics');
             // Not plan-gated: revenue/count are the shop's own data; profit is gated in the controller.
             Route::get('/reports/sales', [ReportController::class, 'sales']);
+            Route::get('/reports/analytics', [ReportController::class, 'analytics'])->middleware('plan.feature:analytics');
             Route::get('/team', [TeamController::class, 'index'])->middleware('shop.permission:team.manage');
             Route::post('/team', [TeamController::class, 'store'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::put('/team/{member}', [TeamController::class, 'update'])->middleware(['shop.writable', 'shop.permission:team.manage']);

@@ -23,7 +23,8 @@ export type MerchantPage =
   | "discord"
   | "settings"
   | "manual"
-  | "onboarding";
+  | "onboarding"
+  | "analytics";
 
 export type ActivityEntry = {
   id: number;
@@ -125,6 +126,44 @@ export type SalesSeries = {
     revenue: number;
     sales: number;
     profit: number | null;
+  }>;
+};
+
+export type AnalyticsReport = {
+  range: { from: string; to: string };
+  summary: {
+    revenue: number;
+    sales: number;
+    profit: number | null;
+    margin_pct: number | null;
+    avg_price: number;
+    avg_days_to_sell: number | null;
+  };
+  by_rank: Array<{
+    label: string;
+    sales: number;
+    revenue: number;
+    profit: number | null;
+  }>;
+  by_price_band: Array<{
+    label: string;
+    min: number;
+    sales: number;
+    revenue: number;
+  }>;
+  by_staff: Array<{
+    id: number | null;
+    name: string;
+    sales: number;
+    revenue: number;
+    profit: number | null;
+  }>;
+  top_customers: Array<{
+    id: number;
+    name: string;
+    sales: number;
+    revenue: number;
+    last_bought_at: string;
   }>;
 };
 

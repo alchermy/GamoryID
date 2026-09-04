@@ -78,6 +78,7 @@ import type { OnboardingCtaAction } from "../onboarding/steps";
 import { loadDiscordSettings } from "../discord/discord-api";
 import { ExportDialog } from "./ExportDialog";
 import { ActivityPanel } from "../activity/ActivityPanel";
+import { AnalyticsPanel } from "../analytics/AnalyticsPanel";
 import { SettingsPanel } from "../settings/SettingsPanel";
 import { DashboardPanel, Kpi } from "../dashboard/DashboardPanel";
 import {
@@ -243,6 +244,11 @@ export function MerchantApp() {
   const canAccessManagementPage = (key: MerchantPage) => {
     if (key === "activity")
       return hasShopPermission("team.manage") && planFeature("activity_log");
+    if (key === "analytics")
+      return (
+        planFeature("analytics") &&
+        (hasShopPermission("profit.view") || hasShopPermission("team.manage"))
+      );
     if (key === "team" || key === "settings")
       return hasShopPermission("team.manage");
     if (key === "billing" || key === "transactions")
@@ -1542,6 +1548,12 @@ export function MerchantApp() {
           />
         )}{" "}
         {page === "activity" && shop && <ActivityPanel shopId={shop.id} />}{" "}
+        {page === "analytics" && shop && (
+          <AnalyticsPanel
+            shopId={shop.id}
+            canViewProfit={hasShopPermission("profit.view")}
+          />
+        )}{" "}
         {page === "discord" && (
           <DiscordSettingsPanel
             shopId={shop?.id}
