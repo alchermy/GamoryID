@@ -145,10 +145,10 @@ describe("OnboardingCard", () => {
       <OnboardingCard steps={steps()} onOpen={onOpen} onDismiss={onDismiss} />,
     );
 
-    expect(screen.getByText("เสร็จแล้ว 1/7 ข้อ")).toBeInTheDocument();
-    // locked storefront step is skipped in the "next" list
-    expect(screen.queryByText("เปิดหน้าร้านสาธารณะ")).toBeNull();
-    expect(screen.getByText("เพิ่มไอดีลงคลัง")).toBeInTheDocument();
+    expect(screen.getByText(/1\/7 ข้อ/)).toBeInTheDocument();
+    // locked storefront step is skipped in the "next" line
+    expect(screen.queryByText(/เปิดหน้าร้านสาธารณะ/)).toBeNull();
+    expect(screen.getByText(/ถัดไป:.*เพิ่มไอดีลงคลัง/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /ดูทั้งหมด/ }));
     expect(onOpen).toHaveBeenCalled();

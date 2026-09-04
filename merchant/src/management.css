@@ -1842,18 +1842,61 @@ ul.plan-feature-list li svg {
 
 /* dashboard nudge card */
 .onboarding-card {
-  position: relative;
-  margin-bottom: 20px;
-  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px 10px 14px;
   border: 1px solid #cfe0f5;
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, #f5f9ff, var(--surface));
-  box-shadow: 0 16px 40px -28px rgb(7 26 51 / 0.24);
+}
+.onboarding-card-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--primary), var(--signal));
+  color: #fff;
+}
+.onboarding-card-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+.onboarding-card-text strong {
+  font-size: 13px;
+  color: var(--ink);
+}
+.onboarding-card-text span {
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.onboarding-card-bar {
+  flex: 0 0 120px;
+  height: 6px;
+  background: #e6eef8;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.onboarding-card-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(135deg, var(--primary), var(--signal));
+}
+.onboarding-card .button.ghost {
+  flex: 0 0 auto;
+  gap: 6px;
+  font-size: 12.5px;
+  padding-block: 7px;
 }
 .onboarding-card-close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
   width: 26px;
@@ -1867,68 +1910,10 @@ ul.plan-feature-list li svg {
   background: #e9f0fa;
   color: var(--ink);
 }
-.onboarding-card-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.onboarding-card-icon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--primary), var(--signal));
-  color: #fff;
-}
-.onboarding-card-head strong {
-  display: block;
-  font-size: 14.5px;
-  color: var(--ink);
-}
-.onboarding-card-head span {
-  font-size: 12px;
-  color: var(--muted);
-}
-.onboarding-card-bar {
-  height: 6px;
-  margin: 14px 0 12px;
-  background: #e6eef8;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.onboarding-card-bar i {
-  display: block;
-  height: 100%;
-  background: linear-gradient(135deg, var(--primary), var(--signal));
-}
-.onboarding-card-next {
-  display: grid;
-  gap: 6px;
-  margin: 0 0 14px;
-  padding: 0;
-  list-style: none;
-}
-.onboarding-card-next li {
-  position: relative;
-  padding-left: 18px;
-  font-size: 12.5px;
-  color: #40536b;
-}
-.onboarding-card-next li::before {
-  content: "";
-  position: absolute;
-  left: 4px;
-  top: 7px;
-  width: 6px;
-  height: 6px;
-  border-radius: 2px;
-  background: var(--primary);
-  transform: rotate(45deg);
-}
-.onboarding-card .button.ghost {
-  gap: 6px;
-  font-size: 12.5px;
+@media (max-width: 900px) {
+  .onboarding-card-bar {
+    display: none;
+  }
 }
 
 /* sidebar count badge */

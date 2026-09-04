@@ -107,16 +107,13 @@ export function DashboardPanel({
   return (
     <div className="shop-dashboard">
       <section className="dashboard-stats-wrap" aria-label="ตัวเลขภาพรวมร้าน">
-        <div className="dashboard-stats-head">
-          <span className="eyebrow">ภาพรวมร้าน</span>
-          <button
-            className="icon-button"
-            onClick={onRefresh}
-            aria-label="รีเฟรชข้อมูล"
-          >
-            <RefreshCw size={16} />
-          </button>
-        </div>
+        <button
+          className="dashboard-refresh"
+          onClick={onRefresh}
+          aria-label="รีเฟรชข้อมูล"
+        >
+          <RefreshCw size={15} />
+        </button>
         <div className="dashboard-stats">
           <DashboardMetric
             label="พร้อมขาย"
@@ -193,20 +190,21 @@ export function DashboardPanel({
         </section>
       )}
 
-      <SalesTrendPanel
-        series={salesReport}
-        granularity={salesGranularity}
-        onGranularity={onSalesGranularityChange}
-      />
-
-      <StorefrontViewsPanel
-        series={storefrontViews}
-        granularity={viewGranularity}
-        onGranularity={onViewGranularityChange}
-        canViewAnalytics={canViewAnalytics}
-      />
-
-      <div className="dashboard-lower-grid">
+      <div className="dashboard-grid">
+        <div className="dashboard-col dashboard-col-charts">
+          <SalesTrendPanel
+            series={salesReport}
+            granularity={salesGranularity}
+            onGranularity={onSalesGranularityChange}
+          />
+          <StorefrontViewsPanel
+            series={storefrontViews}
+            granularity={viewGranularity}
+            onGranularity={onViewGranularityChange}
+            canViewAnalytics={canViewAnalytics}
+          />
+        </div>
+        <div className="dashboard-col dashboard-col-side">
         <section className="panel stock-plan" aria-labelledby="stock-plan-title">
           <div className="panel-head">
             <div>
@@ -313,6 +311,7 @@ export function DashboardPanel({
             )}
           </div>
         </section>
+        </div>
       </div>
     </div>
   );
