@@ -41,6 +41,7 @@ class InventoryController extends Controller
                     ->orWhere('title', 'like', "%{$q}%")
                     ->orWhere('riot_id', 'like', "%{$q}%")
                     ->orWhere('username', 'like', "%{$q}%")
+                    ->orWhere('email', 'like', "%{$q}%")
                     ->orWhere('rank', 'like', "%{$q}%");
             });
         }

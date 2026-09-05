@@ -424,6 +424,7 @@ class DiscordShopCommandHandler
             'title' => $riotId,
             'riot_id' => $riotId,
             'username' => $this->blankToNull($this->optionValue($interaction, 'username', 'ยูสเซอร์เนม')),
+            'email' => $this->blankToNull($this->optionValue($interaction, 'email', 'อีเมล')),
             'region' => 'TH',
             'rank' => $this->blankToNull($this->optionValue($interaction, 'แรงก์', 'rank')),
             'level' => $this->nullableInteger($this->optionValue($interaction, 'เลเวล', 'level')),

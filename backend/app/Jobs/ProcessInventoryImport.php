@@ -102,6 +102,7 @@ class ProcessInventoryImport implements ShouldQueue
                         'title' => trim((string) ($mapped['title'] ?? $mapped['riot_id'])),
                         'riot_id' => $this->blankToNull($mapped['riot_id'] ?? null),
                         'username' => $this->blankToNull($mapped['username'] ?? null),
+                        'email' => $this->blankToNull($mapped['email'] ?? null),
                         'region' => 'TH',
                         'rank' => $this->blankToNull($mapped['rank'] ?? null),
                         'level' => filled($mapped['level'] ?? null) ? (int) $mapped['level'] : null,

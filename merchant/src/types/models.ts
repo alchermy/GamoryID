@@ -52,6 +52,7 @@ export type InventoryItem = {
   title: string;
   riotId: string;
   username: string;
+  email: string;
   rank: string;
   level: number;
   skins: number;
@@ -204,6 +205,7 @@ export type InventoryResponse = {
     title: string;
     riot_id: string | null;
     username: string | null;
+    email: string | null;
     rank: string | null;
     level: number | null;
     skin_count: number;

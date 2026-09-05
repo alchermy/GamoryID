@@ -17,6 +17,7 @@ class StoreInventoryRequest extends FormRequest
             'title' => ['nullable', 'string', 'max:190', 'required_without:riot_id'],
             'riot_id' => ['nullable', 'string', 'max:190', 'required_without:title'],
             'username' => ['nullable', 'string', 'max:500'],
+            'email' => ['nullable', 'string', 'max:254'],
             'rank' => ['nullable', 'string', 'max:80'],
             'level' => ['nullable', 'integer', 'min:0'],
             'skin_count' => ['nullable', 'integer', 'min:0'],

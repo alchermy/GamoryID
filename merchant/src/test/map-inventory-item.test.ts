@@ -11,6 +11,7 @@ function apiRecord(over: Partial<ApiRecord> = {}): ApiRecord {
     title: "Test#TH01",
     riot_id: "Test#TH01",
     username: null,
+    email: null,
     rank: null,
     level: null,
     skin_count: 0,

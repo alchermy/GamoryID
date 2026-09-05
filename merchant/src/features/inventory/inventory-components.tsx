@@ -557,6 +557,9 @@ export function AddDialog({
             <Field label="Username">
               <input name="username" required autoComplete="username" />
             </Field>
+            <Field label="Email">
+              <input name="email" type="email" autoComplete="email" />
+            </Field>
             <Field label="Password">
               <PasswordInput
                 name="password"
@@ -662,6 +665,14 @@ export function EditDialog({
                 required
                 autoComplete="username"
                 defaultValue={editableValue(item.username)}
+              />
+            </Field>
+            <Field label="Email">
+              <input
+                name="email"
+                type="email"
+                autoComplete="email"
+                defaultValue={editableValue(item.email)}
               />
             </Field>
             <Field label="Password">
@@ -1136,6 +1147,7 @@ export function InventoryDetailPage({
             </div>
             <div className="inventory-detail-stats">
               <Data label="Username" value={item.username} />
+              <Data label="Email" value={item.email} />
               <Data label="แรงก์" value={item.rank} />
               <Data label="เลเวล" value={item.level.toLocaleString("th-TH")} />
               <Data label="ต้นทุน" value={money.format(item.cost)} />

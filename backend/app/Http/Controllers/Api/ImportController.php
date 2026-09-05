@@ -20,7 +20,7 @@ use Throwable;
 class ImportController extends Controller
 {
     private const MAPPABLE_FIELDS = [
-        'title', 'riot_id', 'username', 'rank', 'level', 'skin_count', 'cost', 'list_price',
+        'title', 'riot_id', 'username', 'email', 'rank', 'level', 'skin_count', 'cost', 'list_price',
         'description', 'notes', 'password', 'recovery_email',
     ];
 

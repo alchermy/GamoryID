@@ -44,12 +44,12 @@ class InventoryApiTest extends TestCase
         config()->set('app.frontend_url', 'http://localhost:5173');
         [$user, $shop] = $this->owner('owner@example.test', 'Nexus Store');
         $response = $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)->postJson('/api/v1/inventory', [
-            'riot_id' => 'Gammy#TH01', 'username' => 'gammy.ops01', 'rank' => 'Diamond 3',
+            'riot_id' => 'Gammy#TH01', 'username' => 'gammy.ops01', 'email' => 'gammy.account@example.test', 'rank' => 'Diamond 3',
             'cost' => 4000, 'list_price' => 6500,
             'credentials' => ['username' => 'secret@example.test', 'password' => 'very-secret'],
         ]);
 
-        $response->assertCreated()->assertJsonPath('data.has_credentials', true)->assertJsonPath('data.riot_id', 'Gammy#TH01')->assertJsonPath('data.username', 'gammy.ops01')->assertJsonMissing(['password' => 'very-secret']);
+        $response->assertCreated()->assertJsonPath('data.has_credentials', true)->assertJsonPath('data.riot_id', 'Gammy#TH01')->assertJsonPath('data.username', 'gammy.ops01')->assertJsonPath('data.email', 'gammy.account@example.test')->assertJsonMissing(['password' => 'very-secret']);
         // Regression: skin_count wasn't sent, but Eloquent doesn't pick up the
         // column's DB-level default(0) on the in-memory model returned by
         // create() — the response used to carry skin_count: null here, which
@@ -57,7 +57,7 @@ class InventoryApiTest extends TestCase
         $response->assertJsonPath('data.skin_count', 0);
         $this->assertMatchesRegularExpression('/^#[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{5}$/', $response->json('data.tag'));
         $this->assertDatabaseCount('inventory_credentials', 1);
-        $this->assertDatabaseHas('inventory_items', ['riot_id' => 'Gammy#TH01', 'username' => 'gammy.ops01', 'region' => 'TH']);
+        $this->assertDatabaseHas('inventory_items', ['riot_id' => 'Gammy#TH01', 'username' => 'gammy.ops01', 'email' => 'gammy.account@example.test', 'region' => 'TH']);
         Queue::assertPushed(SendDiscordShopNotification::class, function (SendDiscordShopNotification $job) use ($user) {
             return $job->purpose === 'inventory'
                 && str_contains($job->description, 'เพิ่มโดย: '.$user->name)

@@ -16,7 +16,7 @@ class InventoryItem extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'shop_id', 'created_by', 'tag', 'title', 'riot_id', 'username', 'region', 'rank', 'level', 'skin_count',
+        'shop_id', 'created_by', 'tag', 'title', 'riot_id', 'username', 'email', 'region', 'rank', 'level', 'skin_count',
         'battlepass_level', 'description', 'notes', 'cost', 'list_price', 'status',
         'custom_values', 'lock_version', 'archived_at', 'hidden_from_directory',
     ];

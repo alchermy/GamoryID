@@ -17,6 +17,7 @@ function item(over: Partial<InventoryItem> = {}): InventoryItem {
     // detail views have something to show — that sentinel must not leak
     // into this form's starting value.
     username: "–",
+    email: "–",
     rank: "–",
     level: 1,
     skins: 0,
@@ -41,13 +42,18 @@ describe("EditDialog", () => {
     );
 
     expect(screen.getByLabelText("Username")).toHaveValue("");
+    expect(screen.getByLabelText("Email")).toHaveValue("");
     expect(screen.getByLabelText("แรงก์")).toHaveValue("");
   });
 
   it("keeps a real rank/username value as-is", () => {
     render(
       <EditDialog
-        item={item({ username: "gammy.ops01", rank: "Diamond 3" })}
+        item={item({
+          username: "gammy.ops01",
+          email: "gammy.account@mail.test",
+          rank: "Diamond 3",
+        })}
         close={vi.fn()}
         submit={vi.fn()}
         busy={false}
@@ -55,6 +61,7 @@ describe("EditDialog", () => {
     );
 
     expect(screen.getByLabelText("Username")).toHaveValue("gammy.ops01");
+    expect(screen.getByLabelText("Email")).toHaveValue("gammy.account@mail.test");
     expect(screen.getByLabelText("แรงก์")).toHaveValue("Diamond 3");
   });
 });

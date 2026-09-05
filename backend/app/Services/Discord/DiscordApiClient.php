@@ -256,6 +256,7 @@ class DiscordApiClient
                             'min_value' => 0,
                         ],
                         $this->stringOption('username', 'ชื่อผู้ใช้สำหรับล็อกอิน (ห้ามใส่รหัสผ่าน)'),
+                        $this->stringOption('email', 'อีเมลของบัญชีเกม (ห้ามใส่รหัสผ่าน)'),
                         [
                             'type' => 3,
                             'name' => 'แรงก์',
