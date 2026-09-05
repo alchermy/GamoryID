@@ -318,17 +318,27 @@ export function DashboardPanel({
 }
 
 function fmtPeriod(period: string, granularity: Granularity): string {
-  if (granularity === "year") return String(Number(period) + 543);
+  // While the granularity tab and the fetched series are briefly out of sync
+  // (rapid วัน/เดือน/ปี toggling), `period` can be in another granularity's
+  // shape. Never let a bad Date reach Intl.format — it throws RangeError and
+  // takes the whole page down. Fall back to the raw period string.
+  const label = (date: Date, opts: Intl.DateTimeFormatOptions) =>
+    Number.isNaN(date.getTime())
+      ? period
+      : new Intl.DateTimeFormat("th-TH", opts).format(date);
+
+  if (granularity === "year") {
+    const y = Number(period);
+    return Number.isFinite(y) ? String(y + 543) : period;
+  }
   if (granularity === "month") {
     const [y, m] = period.split("-").map(Number);
-    return new Intl.DateTimeFormat("th-TH", { month: "short" }).format(
-      new Date(y, m - 1, 1),
-    );
+    return label(new Date(y, m - 1, 1), { month: "short" });
   }
-  return new Intl.DateTimeFormat("th-TH", {
+  return label(new Date(`${period}T12:00:00`), {
     day: "numeric",
     month: "numeric",
-  }).format(new Date(`${period}T12:00:00`));
+  });
 }
 
 function GranularityTabs({
@@ -366,6 +376,9 @@ function SalesTrendPanel({
   onGranularity: (g: Granularity) => void;
 }) {
   const points = series?.data ?? [];
+  // Format labels with the granularity the data actually belongs to, not the
+  // selected tab — the two lag each other for a frame on rapid toggles.
+  const dataGran = series?.granularity ?? granularity;
   const maxRevenue = Math.max(1, ...points.map((p) => p.revenue));
   const empty = points.length === 0 || points.every((p) => p.revenue === 0);
 
@@ -419,7 +432,7 @@ function SalesTrendPanel({
                       ` · กำไร ${money.format(point.profit)}`}
                     {` · ${point.sales.toLocaleString("th-TH")} รายการ · ${fmtPeriod(
                       point.period,
-                      granularity,
+                      dataGran,
                     )}`}
                   </span>
                   <i style={{ height: `${height}%` }}>
@@ -428,7 +441,7 @@ function SalesTrendPanel({
                     )}
                   </i>
                   <span className="views-label">
-                    {fmtPeriod(point.period, granularity)}
+                    {fmtPeriod(point.period, dataGran)}
                   </span>
                 </div>
               );
@@ -452,6 +465,7 @@ function StorefrontViewsPanel({
   canViewAnalytics: boolean;
 }) {
   const points = series?.data ?? [];
+  const dataGran = series?.granularity ?? granularity;
   const maxViews = Math.max(1, ...points.map((p) => p.views));
   const empty = points.length === 0 || points.every((p) => p.views === 0);
 
@@ -506,11 +520,11 @@ function StorefrontViewsPanel({
                 <div className="views-column" key={point.period}>
                   <span className="views-tooltip">
                     {point.views.toLocaleString("th-TH")} ครั้ง ·{" "}
-                    {fmtPeriod(point.period, granularity)}
+                    {fmtPeriod(point.period, dataGran)}
                   </span>
                   <i style={{ height: `${height}%` }} />
                   <span className="views-label">
-                    {fmtPeriod(point.period, granularity)}
+                    {fmtPeriod(point.period, dataGran)}
                   </span>
                 </div>
               );

@@ -145,4 +145,24 @@ describe("DashboardPanel redesign", () => {
     expect(panel.textContent).toContain("แพ็ก Growth");
     expect(panel.querySelector('[role="tab"]')).toBeNull();
   });
+
+  it("does not crash when the selected granularity is ahead of the fetched series", () => {
+    // Rapid วัน→ปี toggle: the year tab is active but the report still holds
+    // day-shaped periods. fmtPeriod used to feed those to Intl and throw
+    // RangeError, white-screening the page.
+    const dayShapedButYearTab: SalesSeries = { ...salesReport, granularity: "day" };
+    expect(() =>
+      render(
+        <DashboardPanel
+          {...panelProps({
+            salesReport: dayShapedButYearTab,
+            salesGranularity: "year" as const,
+            storefrontViews: { ...views, granularity: "day" as const },
+            viewGranularity: "year" as const,
+          })}
+        />,
+      ),
+    ).not.toThrow();
+    expect(screen.getByRole("heading", { name: "ยอดขาย" })).toBeInTheDocument();
+  });
 });
