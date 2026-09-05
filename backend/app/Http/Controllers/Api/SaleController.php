@@ -137,6 +137,7 @@ class SaleController extends Controller
             'sales',
             'ปิดการขายสำเร็จ',
             $discordMessages->saleCompleted($sale),
+            $discordMessages->saleLink($sale),
         );
 
         return response()->json(['data' => $sale], 201);

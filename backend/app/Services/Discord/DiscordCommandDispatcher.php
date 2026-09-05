@@ -207,7 +207,7 @@ class DiscordCommandDispatcher
         }
 
         return [
-            $this->ephemeral($result['content']),
+            $this->ephemeral($result['content'], $result['link'] ?? null),
             ['shop_id' => $installation->shop_id, 'user_id' => $link->user_id, 'status' => $result['status']],
         ];
     }
@@ -264,16 +264,29 @@ class DiscordCommandDispatcher
         return null;
     }
 
-    private function ephemeral(string $content): array
+    /**
+     * @param  array{label: string, url: string}|null  $link
+     */
+    private function ephemeral(string $content, ?array $link = null): array
     {
-        return [
-            'type' => 4,
-            'data' => [
-                'content' => $content,
-                'flags' => 64,
-                'allowed_mentions' => ['parse' => []],
-            ],
+        $data = [
+            'content' => $content,
+            'flags' => 64,
+            'allowed_mentions' => ['parse' => []],
         ];
+        if ($link && filter_var($link['url'] ?? null, FILTER_VALIDATE_URL) && preg_match('#^https?://#', (string) $link['url'])) {
+            $data['components'] = [[
+                'type' => 1,
+                'components' => [[
+                    'type' => 2,
+                    'style' => 5,
+                    'label' => mb_substr($link['label'], 0, 80),
+                    'url' => $link['url'],
+                ]],
+            ]];
+        }
+
+        return ['type' => 4, 'data' => $data];
     }
 
     private function log(array $interaction, string $command, array $context, int $latencyMs): void

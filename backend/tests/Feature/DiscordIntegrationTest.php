@@ -319,7 +319,9 @@ class DiscordIntegrationTest extends TestCase
         $member->update(['permissions' => ['inventory.manage']]);
         $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('add-manager', 'เพิ่มไอดี', ['riot-id' => 'Added#TH01', 'ต้นทุน' => 700, 'ราคา' => 1500, 'username' => 'added-login', 'แรงก์' => 'Platinum 1', 'เลเวล' => 88], 'guild-commands', 'commands-room', 'discord-staff'))
             ->assertOk()
-            ->assertJsonPath('data.content', fn ($content) => str_contains($content, 'เข้าคลังแล้ว'));
+            ->assertJsonPath('data.content', fn ($content) => str_contains($content, 'เข้าคลังแล้ว'))
+            ->assertJsonPath('data.components.0.components.0.style', 5)
+            ->assertJsonPath('data.components.0.components.0.label', 'เปิดข้อมูลไอดีใน GamoryID');
         $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'riot_id' => 'Added#TH01', 'username' => 'added-login', 'rank' => 'Platinum 1', 'level' => 88]);
         $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('reserve-denied', 'จอง', ['แท็ก' => '#BOOK1'], 'guild-commands', 'commands-room', 'discord-staff'))
             ->assertOk()

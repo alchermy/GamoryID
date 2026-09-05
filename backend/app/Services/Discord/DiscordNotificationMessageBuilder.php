@@ -10,16 +10,22 @@ class DiscordNotificationMessageBuilder
 {
     public function inventoryCreated(InventoryItem $item, User $actor): string
     {
-        $detailUrl = $this->frontendUrl('/inventory?item='.$item->id);
-
         return implode("\n", [
             "**#{$item->tag} · {$this->escape($item->riot_id ?: $item->title)}**",
             'แรงก์: '.$this->escape($item->rank ?: 'ไม่ระบุ'),
             'เลเวล: '.($item->level !== null ? number_format((int) $item->level) : 'ไม่ระบุ'),
             'ราคาขาย: '.number_format((float) $item->list_price, 2).' บาท',
             'เพิ่มโดย: '.$this->escape($actor->name),
-            "[เปิดข้อมูลไอดีใน GamoryID]({$detailUrl})",
         ]);
+    }
+
+    /** @return array{label: string, url: string} */
+    public function inventoryLink(InventoryItem $item): array
+    {
+        return [
+            'label' => 'เปิดข้อมูลไอดีใน GamoryID',
+            'url' => $this->frontendUrl('/inventory?item='.$item->id),
+        ];
     }
 
     public function saleCompleted(Sale $sale): string
@@ -27,7 +33,6 @@ class DiscordNotificationMessageBuilder
         $item = $sale->inventoryItem;
         $customer = $sale->customer;
         $creator = $sale->creator;
-        $detailUrl = $this->frontendUrl('/sales/'.$sale->id);
         $warranty = $sale->has_warranty
             ? 'มีประกันถึง '.($sale->warranty_ends_at?->timezone('Asia/Bangkok')->format('d/m/Y') ?? 'ไม่ระบุวัน')
             : 'ไม่มีประกัน';
@@ -41,8 +46,16 @@ class DiscordNotificationMessageBuilder
             'ราคาขาย: '.number_format((float) $sale->sold_price, 2).' บาท',
             'ประกัน: '.$warranty,
             'เวลาขาย: '.$sale->sold_at->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.',
-            "[ตรวจสอบรายละเอียดการขายใน GamoryID]({$detailUrl})",
         ]);
+    }
+
+    /** @return array{label: string, url: string} */
+    public function saleLink(Sale $sale): array
+    {
+        return [
+            'label' => 'ตรวจสอบรายละเอียดการขายใน GamoryID',
+            'url' => $this->frontendUrl('/sales/'.$sale->id),
+        ];
     }
 
     private function frontendUrl(string $path): string

@@ -12,7 +12,10 @@ class DiscordNotificationService
 {
     public function __construct(private readonly DiscordApiClient $client) {}
 
-    public function send(Shop $shop, string $purpose, string $title, string $description): bool
+    /**
+     * @param  array{label: string, url: string}|null  $link  rendered as a Discord link button under the embed
+     */
+    public function send(Shop $shop, string $purpose, string $title, string $description, ?array $link = null): bool
     {
         $log = Log::channel('discord')->withContext(['shop_id' => $shop->id, 'purpose' => $purpose]);
 
@@ -40,16 +43,29 @@ class DiscordNotificationService
             return true;
         }
 
-        try {
-            $this->client->sendMessage($binding->channel_id, [
-                'embeds' => [[
-                    'title' => $title,
-                    'description' => $description,
-                    'color' => 748543,
-                    'footer' => ['text' => 'GamoryID · ไม่ส่งชื่อผู้ใช้ รหัสผ่าน ต้นทุน หรือโน้ตภายใน'],
-                    'timestamp' => now()->toIso8601String(),
+        $payload = [
+            'embeds' => [[
+                'title' => $title,
+                'description' => $description,
+                'color' => 748543,
+                'footer' => ['text' => 'GamoryID · ไม่ส่งชื่อผู้ใช้ รหัสผ่าน ต้นทุน หรือโน้ตภายใน'],
+                'timestamp' => now()->toIso8601String(),
+            ]],
+        ];
+        if ($link && filter_var($link['url'] ?? null, FILTER_VALIDATE_URL) && preg_match('#^https?://#', (string) $link['url'])) {
+            $payload['components'] = [[
+                'type' => 1,
+                'components' => [[
+                    'type' => 2,
+                    'style' => 5,
+                    'label' => mb_substr($link['label'], 0, 80),
+                    'url' => $link['url'],
                 ]],
-            ]);
+            ]];
+        }
+
+        try {
+            $this->client->sendMessage($binding->channel_id, $payload);
         } catch (Throwable $exception) {
             $log->error('ส่งแจ้งเตือน Discord ไม่สำเร็จ', [
                 'channel_id' => $binding->channel_id,

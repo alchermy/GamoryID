@@ -370,6 +370,7 @@ class DiscordShopCommandHandler
             'sales',
             'ปิดการขายสำเร็จ',
             $this->notifications->saleCompleted($sale),
+            $this->notifications->saleLink($sale),
         );
 
         return $this->success("ปิดการขาย **#{$sale->inventoryItem?->tag}** สำเร็จ\nราคาขาย ".number_format((float) $sale->sold_price, 2).' บาท');
@@ -442,12 +443,14 @@ class DiscordShopCommandHandler
                 'inventory',
                 'เพิ่มไอดีใหม่เข้าคลัง',
                 $this->notifications->inventoryCreated($item, $link->user),
+                $this->notifications->inventoryLink($item),
             );
         }
 
         return $this->success(
             "เพิ่ม **#{$item->tag} · {$this->escape($item->riot_id)}** เข้าคลังแล้ว\n".
-            'ข้อมูลชื่อผู้ใช้และรหัสผ่านต้องเพิ่มจากหน้ารายละเอียดไอดีใน GamoryID เท่านั้น',
+            'รหัสผ่านต้องเพิ่มจากหน้ารายละเอียดไอดีใน GamoryID เท่านั้น',
+            $this->notifications->inventoryLink($item),
         );
     }
 
@@ -546,9 +549,16 @@ class DiscordShopCommandHandler
     }
 
     /** @return array{content: string, status: string} */
-    private function success(string $content): array
+    /**
+     * @param  array{label: string, url: string}|null  $link  rendered as a link button under the reply
+     */
+    private function success(string $content, ?array $link = null): array
     {
-        return ['content' => $content, 'status' => 'success'];
+        return array_filter([
+            'content' => $content,
+            'status' => 'success',
+            'link' => $link,
+        ], fn ($value) => $value !== null);
     }
 
     /** @return array{content: string, status: string} */

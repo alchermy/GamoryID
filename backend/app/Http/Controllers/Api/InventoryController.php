@@ -88,6 +88,7 @@ class InventoryController extends Controller
             'inventory',
             'เพิ่มไอดีใหม่เข้าคลัง',
             $discordMessages->inventoryCreated($item, $request->user()),
+            $discordMessages->inventoryLink($item),
         );
 
         return (new InventoryItemResource($item->load(['shop', 'media'])))->response()->setStatusCode(201);

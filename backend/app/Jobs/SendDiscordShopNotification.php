@@ -21,11 +21,15 @@ class SendDiscordShopNotification implements ShouldQueue
     /** @var array<int, int> */
     public array $backoff = [10, 60, 180];
 
+    /**
+     * @param  array{label: string, url: string}|null  $link  optional link-button appended to the message
+     */
     public function __construct(
         public readonly int $shopId,
         public readonly string $purpose,
         public readonly string $title,
         public readonly string $description,
+        public readonly ?array $link = null,
     ) {
         $this->onQueue('notifications');
     }
@@ -43,7 +47,7 @@ class SendDiscordShopNotification implements ShouldQueue
             return;
         }
 
-        $notifications->send($shop, $this->purpose, $this->title, $this->description);
+        $notifications->send($shop, $this->purpose, $this->title, $this->description, $this->link);
     }
 
     public function failed(Throwable $exception): void

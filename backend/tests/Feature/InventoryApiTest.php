@@ -61,7 +61,7 @@ class InventoryApiTest extends TestCase
         Queue::assertPushed(SendDiscordShopNotification::class, function (SendDiscordShopNotification $job) use ($user) {
             return $job->purpose === 'inventory'
                 && str_contains($job->description, 'เพิ่มโดย: '.$user->name)
-                && str_contains($job->description, 'http://localhost:5173/inventory?item=')
+                && str_contains((string) ($job->link['url'] ?? ''), 'http://localhost:5173/inventory?item=')
                 && ! str_contains($job->description, 'very-secret')
                 && ! str_contains($job->description, 'secret@example.test');
         });
@@ -288,7 +288,7 @@ class InventoryApiTest extends TestCase
             return $job->purpose === 'sales'
                 && str_contains($job->description, 'ขายให้: ลูกค้า')
                 && str_contains($job->description, 'ผู้ขาย: '.$user->name)
-                && str_contains($job->description, 'http://localhost:5173/sales/')
+                && str_contains((string) ($job->link['url'] ?? ''), 'http://localhost:5173/sales/')
                 && ! str_contains($job->description, '0812345678')
                 && ! str_contains($job->description, 'customer-line');
         });
