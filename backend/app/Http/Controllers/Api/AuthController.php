@@ -68,7 +68,13 @@ class AuthController extends Controller
 
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
-        $user->sendEmailVerificationNotification();
+        // A mail-provider hiccup must not 500 the whole signup and strand a
+        // half-created account — the owner can re-send the verification later.
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            report($e);
+        }
         app(AuditLogger::class)->recordAuth($request, 'auth.registered', ['role' => 'owner']);
 
         return response()->json(['user' => $this->userPayload($user), 'shop' => $shop], 201);

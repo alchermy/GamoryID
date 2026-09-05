@@ -67,6 +67,32 @@ class MerchantRegistrationTest extends TestCase
         Notification::assertSentTo($user, VerifyEmailNotification::class);
     }
 
+    public function test_registration_still_succeeds_when_the_verification_email_fails_to_send(): void
+    {
+        // A mail-provider rejection (e.g. an unverified sending domain) used to
+        // 500 the whole signup after the account was already committed. Point
+        // the mailer at a dead SMTP endpoint so the real send throws.
+        config([
+            'mail.default' => 'smtp',
+            'mail.mailers.smtp.host' => '127.0.0.1',
+            'mail.mailers.smtp.port' => 2,
+            'mail.mailers.smtp.timeout' => 1,
+        ]);
+
+        $this
+            ->withHeaders(['Origin' => 'http://localhost:5173', 'Referer' => 'http://localhost:5173/register'])
+            ->postJson('/api/v1/auth/register', [
+                'name' => 'พีท',
+                'shop_name' => 'ร้านอีเมลล่ม',
+                'email' => 'mail-down@example.test',
+                'password' => 'strong-pass-123',
+                'password_confirmation' => 'strong-pass-123',
+                'accept_terms' => true,
+            ])->assertCreated();
+
+        $this->assertDatabaseHas('users', ['email' => 'mail-down@example.test']);
+    }
+
     public function test_unverified_merchant_cannot_reach_the_app(): void
     {
         $user = User::create([
