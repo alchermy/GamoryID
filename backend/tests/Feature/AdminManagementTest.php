@@ -10,6 +10,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Notifications\PaymentReviewedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -228,6 +229,41 @@ class AdminManagementTest extends TestCase
             ->get(route('admin.shops.branding', [$shop, 'logo']))->assertOk();
         $this->withSession(['admin_user_id' => $admin->id])
             ->get(route('admin.shops.branding', [$shop, 'banner']))->assertNotFound();
+    }
+
+    public function test_super_admin_can_change_their_own_password(): void
+    {
+        $admin = $this->admin();
+
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->get(route('admin.profile.edit'))
+            ->assertOk()
+            ->assertSee($admin->email);
+
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->patch(route('admin.profile.password'), [
+                'current_password' => 'password',
+                'password' => 'a-new-strong-password',
+                'password_confirmation' => 'a-new-strong-password',
+            ])
+            ->assertRedirect(route('admin.profile.edit'));
+
+        $this->assertTrue(Hash::check('a-new-strong-password', $admin->fresh()->password));
+    }
+
+    public function test_changing_password_requires_the_correct_current_password(): void
+    {
+        $admin = $this->admin();
+
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->patch(route('admin.profile.password'), [
+                'current_password' => 'wrong-password',
+                'password' => 'a-new-strong-password',
+                'password_confirmation' => 'a-new-strong-password',
+            ])
+            ->assertSessionHasErrors('current_password');
+
+        $this->assertTrue(Hash::check('password', $admin->fresh()->password));
     }
 
     private function admin(): User

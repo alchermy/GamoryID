@@ -43,6 +43,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/top-ups/{payment}', [AdminController::class, 'showTopUp'])->name('top-ups.show');
         Route::get('/top-ups/{payment}/slip', [AdminController::class, 'slip'])->name('top-ups.slip');
         Route::get('/logs', [AdminController::class, 'logs'])->name('logs.index');
+        Route::get('/profile', [AdminController::class, 'profile'])->name('profile.edit');
+        Route::patch('/profile/password', [AdminController::class, 'updatePassword'])->name('profile.password');
         Route::post('/plans', [AdminController::class, 'storePlan'])->name('plans.store');
         Route::patch('/plans/{plan}', [AdminController::class, 'updatePlan'])->name('plans.update');
         Route::patch('/top-ups/{payment}', [AdminController::class, 'reviewTopUp'])->name('top-ups.review');

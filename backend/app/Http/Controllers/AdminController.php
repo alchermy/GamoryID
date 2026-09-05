@@ -338,6 +338,29 @@ class AdminController extends Controller
         return Storage::disk($payment->slip_disk)->response($payment->slip_path);
     }
 
+    public function profile(Request $request)
+    {
+        return $this->page('profile', 'บัญชีของฉัน', [
+            'admin' => User::findOrFail($request->session()->get('admin_user_id')),
+        ]);
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $admin = User::findOrFail($request->session()->get('admin_user_id'));
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:10', 'confirmed'],
+        ]);
+        if (! Hash::check($data['current_password'], $admin->password)) {
+            return back()->withErrors(['current_password' => 'รหัสผ่านปัจจุบันไม่ถูกต้อง']);
+        }
+        $admin->update(['password' => $data['password']]);
+        $this->recordAdminLog($request, null, 'admin.password_changed', $admin);
+
+        return redirect()->route('admin.profile.edit')->with('message', 'เปลี่ยนรหัสผ่านแล้ว');
+    }
+
     public function logout(Request $request)
     {
         $this->recordAdminLog($request, null, 'admin.logged_out', null);

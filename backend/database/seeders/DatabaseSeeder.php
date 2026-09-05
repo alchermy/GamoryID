@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
         SubscriptionPlan::syncDefaults();
 
         User::updateOrCreate(
-            ['email' => 'admin@gamoryid.local'],
+            ['email' => 'admin@gamoryid.com'],
             ['name' => 'GamoryID Admin', 'password' => 'password'],
         )->forceFill(['is_super_admin' => true])->save();
     }

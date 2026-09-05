@@ -29,6 +29,7 @@
         'top-ups' => 'ตรวจสลิปและบันทึกเหตุผลก่อนเพิ่มเครดิตให้ร้านค้า',
         'top-up-show' => 'ตรวจข้อมูล สลิป และตัดสินใจรายการเติมเครดิต',
         'logs' => 'ติดตามเหตุการณ์สำคัญของระบบและผู้ดูแล',
+        'profile' => 'จัดการบัญชีผู้ดูแลระบบของตัวเอง',
     ];
 @endphp
 <div class="shell">
@@ -44,6 +45,7 @@
                 @if($totals['pending_top_ups'])<i class="dot" aria-label="{{ $totals['pending_top_ups'] }} รายการรอตรวจ"></i>@endif
             </a>
             <a class="{{ $page === 'logs' ? 'active' : '' }}" href="{{ route('admin.logs.index') }}" @if($page === 'logs') aria-current="page" @endif>Log</a>
+            <a class="{{ $page === 'profile' ? 'active' : '' }}" href="{{ route('admin.profile.edit') }}" @if($page === 'profile') aria-current="page" @endif>บัญชีของฉัน</a>
         </nav>
         <div class="sidebar-bottom">1 เครดิต = 1 บาท</div>
     </aside>
