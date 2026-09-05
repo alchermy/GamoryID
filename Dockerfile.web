@@ -1,7 +1,18 @@
 # GamoryID edge image — Caddy, serving the two static SPAs and terminating
 # HTTPS for every domain. This is the only container with 80/443 published.
+#
+# Vite inlines VITE_* vars into the built JS at BUILD time, not runtime —
+# unlike the backend, these can't be fixed later by editing .env. Both
+# builds default to this project's real production domains; override with
+# --build-arg only if deploying this image elsewhere. ARG alone isn't
+# enough — `npm run build` only sees real environment variables, so each
+# is promoted with ENV right after.
 
 FROM node:20-alpine AS merchant-build
+ARG VITE_API_URL=https://api.gamoryid.com/api/v1
+ARG VITE_PUBLIC_WEB_URL=https://gamoryid.com
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_PUBLIC_WEB_URL=${VITE_PUBLIC_WEB_URL}
 WORKDIR /app
 COPY merchant/package.json merchant/package-lock.json ./
 RUN npm ci
@@ -9,6 +20,10 @@ COPY merchant/ ./
 RUN npm run build
 
 FROM node:20-alpine AS publicweb-build
+ARG VITE_API_URL=https://api.gamoryid.com/api/v1
+ARG VITE_MERCHANT_APP_URL=https://app.gamoryid.com
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_MERCHANT_APP_URL=${VITE_MERCHANT_APP_URL}
 WORKDIR /app
 COPY public-web/package.json public-web/package-lock.json ./
 RUN npm ci
