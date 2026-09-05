@@ -1,0 +1,35 @@
+{
+	email {$ACME_EMAIL:thanawat.won01@gmail.com}
+}
+
+# Merchant SPA (React) — client-side routed, so unknown paths fall back to index.html.
+app.gamoryid.com {
+	root * /srv/app
+	encode gzip
+	try_files {path} /index.html
+	file_server
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
+
+# Backend API — plain HTTP inside the docker network, Caddy is the only
+# thing that ever speaks TLS to the outside world.
+api.gamoryid.com {
+	encode gzip
+	reverse_proxy app:8000
+}
+
+# Public storefront (React) — same SPA fallback pattern as the merchant app.
+gamoryid.com, www.gamoryid.com {
+	root * /srv/public
+	encode gzip
+	try_files {path} /index.html
+	file_server
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

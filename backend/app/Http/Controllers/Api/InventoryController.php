@@ -64,6 +64,12 @@ class InventoryController extends Controller
             $data['region'] = 'TH';
             $data['title'] = $data['title'] ?? $data['riot_id'];
             $data['username'] = $data['username'] ?? $credentials['username'] ?? null;
+            // skin_count is nullable in the request but the column defaults to 0 —
+            // Eloquent doesn't know about that DB-level default until the model is
+            // reloaded, so without this the freshly-created item's API response
+            // (built from the in-memory instance below, not a fresh fetch) carries
+            // skin_count: null instead of 0, which crashes the merchant UI.
+            $data['skin_count'] = $data['skin_count'] ?? 0;
             $item = InventoryItem::create([...$data, 'shop_id' => $shop->id, 'created_by' => $request->user()->id, 'tag' => $tags->generate(), 'status' => InventoryStatus::Available]);
             if ($credentials) {
                 $encrypted = $cipher->encrypt($credentials);

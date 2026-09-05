@@ -50,6 +50,11 @@ class InventoryApiTest extends TestCase
         ]);
 
         $response->assertCreated()->assertJsonPath('data.has_credentials', true)->assertJsonPath('data.riot_id', 'Gammy#TH01')->assertJsonPath('data.username', 'gammy.ops01')->assertJsonMissing(['password' => 'very-secret']);
+        // Regression: skin_count wasn't sent, but Eloquent doesn't pick up the
+        // column's DB-level default(0) on the in-memory model returned by
+        // create() — the response used to carry skin_count: null here, which
+        // crashed the merchant detail page's item.skins.toLocaleString().
+        $response->assertJsonPath('data.skin_count', 0);
         $this->assertMatchesRegularExpression('/^#[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{5}$/', $response->json('data.tag'));
         $this->assertDatabaseCount('inventory_credentials', 1);
         $this->assertDatabaseHas('inventory_items', ['riot_id' => 'Gammy#TH01', 'username' => 'gammy.ops01', 'region' => 'TH']);

@@ -1,6 +1,7 @@
 /.cache/
 /.idea/
 /.vscode/
+/.env
 /backend/.env
 /backend/vendor/
 /backend/storage/logs/*.log
@@ -12,3 +13,4 @@
 /premium-audit.json
 *.tmp
 *.log
+/outputs/

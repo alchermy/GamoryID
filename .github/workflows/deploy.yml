@@ -1,0 +1,80 @@
+name: Deploy
+
+# Manual only — no dev environment to auto-deploy to, so every release to
+# prod is a deliberate click + approval. See the deploy runbook, Phase 5.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: >
+          Image tag to deploy. Leave empty to build the current commit and
+          deploy it. Set to a previous run's commit sha to roll back
+          without rebuilding.
+        required: false
+
+env:
+  REGISTRY: ghcr.io
+  APP_IMAGE: ghcr.io/alchermy/gamoryid-app
+  WEB_IMAGE: ghcr.io/alchermy/gamoryid-web
+
+jobs:
+  build-and-push:
+    # Skipped for a rollback (an explicit tag was given) — that image is
+    # already sitting in GHCR from whenever it was first built.
+    if: ${{ github.event.inputs.tag == '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        run: echo "value=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ env.APP_IMAGE }}:${{ steps.tag.outputs.value }},${{ env.APP_IMAGE }}:latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.web
+          push: true
+          tags: ${{ env.WEB_IMAGE }}:${{ steps.tag.outputs.value }},${{ env.WEB_IMAGE }}:latest
+
+  deploy:
+    needs: build-and-push
+    if: ${{ always() && !cancelled() && !contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Resolve tag
+        id: resolve
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          if [ -z "$TAG" ]; then TAG="${{ needs.build-and-push.outputs.tag }}"; fi
+          echo "value=$TAG" >> "$GITHUB_OUTPUT"
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: IMAGE_TAG
+          script: |
+            set -e
+            export IMAGE_TAG="${{ steps.resolve.outputs.value }}"
+            cd /opt/gamoryid
+            git pull --ff-only
+            echo "$IMAGE_TAG" > .last-deployed-tag
+            docker compose pull
+            docker compose up -d
+            docker compose exec -T app php artisan migrate --force

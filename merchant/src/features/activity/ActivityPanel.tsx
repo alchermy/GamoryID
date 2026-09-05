@@ -2,25 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw, ScrollText } from "lucide-react";
 import { shopRequest } from "../../api";
 import { formatDate } from "../../shared/lib/format";
-import { activityIcon, activityLabel } from "../../shared/lib/activity";
-import type { ActivityEntry, ActivityResponse } from "../../types/models";
+import {
+  activityIcon,
+  activityLabel,
+  activitySubjectHint,
+} from "../../shared/lib/activity";
+import type { ActivityResponse } from "../../types/models";
 
 const ROLE_LABEL: Record<string, string> = { owner: "เจ้าของร้าน", staff: "พนักงาน" };
-
-function subjectHint(entry: ActivityEntry): string {
-  const meta = entry.metadata ?? {};
-  const pick = (k: string) => (typeof meta[k] === "string" ? (meta[k] as string) : "");
-  return (
-    pick("tag") ||
-    pick("email") ||
-    pick("name") ||
-    (typeof meta["imported_rows"] === "number"
-      ? `${meta["imported_rows"]} รายการ`
-      : "") ||
-    (typeof meta["credits"] === "number" ? `${meta["credits"]} เครดิต` : "") ||
-    (entry.subject_type ? `${entry.subject_type} #${entry.subject_id}` : "")
-  );
-}
 
 export function ActivityPanel({ shopId }: { shopId: number }) {
   const [data, setData] = useState<ActivityResponse | null>(null);
@@ -181,7 +170,7 @@ export function ActivityPanel({ shopId }: { shopId: number }) {
                       </span>
                     </td>
                     <td>
-                      <small>{subjectHint(entry) || "–"}</small>
+                      <small>{activitySubjectHint(entry) || "–"}</small>
                     </td>
                     <td>
                       <small>{entry.ip_address ?? "–"}</small>

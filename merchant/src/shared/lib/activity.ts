@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { createElement } from "react";
+import type { ActivityEntry } from "../../types/models";
 import {
   Check,
   Clock3,
@@ -86,4 +87,20 @@ export function activityIcon(event: string): ReactNode {
   if (event.startsWith("shop.") || event.startsWith("custom_field."))
     return createElement(Settings2, { size });
   return createElement(PackagePlus, { size });
+}
+
+/** Short "what was this about" hint pulled from an activity entry's metadata. */
+export function activitySubjectHint(entry: ActivityEntry): string {
+  const meta = entry.metadata ?? {};
+  const pick = (k: string) => (typeof meta[k] === "string" ? (meta[k] as string) : "");
+  return (
+    pick("tag") ||
+    pick("email") ||
+    pick("name") ||
+    (typeof meta["imported_rows"] === "number"
+      ? `${meta["imported_rows"]} รายการ`
+      : "") ||
+    (typeof meta["credits"] === "number" ? `${meta["credits"]} เครดิต` : "") ||
+    (entry.subject_type ? `${entry.subject_type} #${entry.subject_id}` : "")
+  );
 }

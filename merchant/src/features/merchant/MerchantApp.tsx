@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import {
-  Bell,
   BookOpen,
   Box,
   Check,
@@ -79,6 +78,7 @@ import type { OnboardingCtaAction } from "../onboarding/steps";
 import { loadDiscordSettings } from "../discord/discord-api";
 import { ExportDialog } from "./ExportDialog";
 import { ActivityPanel } from "../activity/ActivityPanel";
+import { NotificationBell } from "../notifications/NotificationBell";
 import { AnalyticsPanel } from "../analytics/AnalyticsPanel";
 import { SettingsPanel } from "../settings/SettingsPanel";
 import { DashboardPanel, Kpi } from "../dashboard/DashboardPanel";
@@ -101,7 +101,7 @@ const inventoryUpdatedFormatter = new Intl.DateTimeFormat("th-TH", {
   timeStyle: "short",
 });
 
-function mapInventoryItem(
+export function mapInventoryItem(
   record: InventoryResponse["data"][number],
 ): InventoryItem {
   return {
@@ -112,7 +112,7 @@ function mapInventoryItem(
     username: record.username ?? "–",
     rank: record.rank ?? "–",
     level: record.level ?? 0,
-    skins: record.skin_count,
+    skins: record.skin_count ?? 0,
     cost: Number(record.cost ?? 0),
     price: Number(record.list_price),
     status: record.status,
@@ -1379,13 +1379,14 @@ export function MerchantApp() {
       </aside>
       <header className="topbar">
         <div className="account">
-          <button
-            className="icon-button"
-            aria-label="การแจ้งเตือน"
-            onClick={() => notify("ยังไม่มีการแจ้งเตือนใหม่")}
-          >
-            <Bell size={19} />
-          </button>
+          {shop && (
+            <NotificationBell
+              shopId={shop.id}
+              canView={canAccessManagementPage("activity")}
+              onViewAll={() => go("activity")}
+              fallbackNotify={notify}
+            />
+          )}
           <div className="avatar">
             {(session?.name ?? "PT").slice(0, 2).toUpperCase()}
           </div>

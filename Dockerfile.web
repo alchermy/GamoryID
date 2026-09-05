@@ -1,0 +1,21 @@
+# GamoryID edge image — Caddy, serving the two static SPAs and terminating
+# HTTPS for every domain. This is the only container with 80/443 published.
+
+FROM node:20-alpine AS merchant-build
+WORKDIR /app
+COPY merchant/package.json merchant/package-lock.json ./
+RUN npm ci
+COPY merchant/ ./
+RUN npm run build
+
+FROM node:20-alpine AS publicweb-build
+WORKDIR /app
+COPY public-web/package.json public-web/package-lock.json ./
+RUN npm ci
+COPY public-web/ ./
+RUN npm run build
+
+FROM caddy:2-alpine
+COPY Caddyfile /etc/caddy/Caddyfile
+COPY --from=merchant-build /app/dist /srv/app
+COPY --from=publicweb-build /app/dist /srv/public

@@ -1,0 +1,120 @@
+# GamoryID production stack — single VPS, single environment (see the
+# deploy runbook for why: budget-constrained 2GB box, dev stays local).
+#
+# Reads /opt/gamoryid/.env — the same file Laravel itself uses. Compose
+# substitutes ${DB_*} below from that file automatically (it auto-loads a
+# file named exactly ".env" next to this compose file); `env_file: .env` on
+# app/worker/scheduler passes the *whole* file in as container env vars.
+#
+# Memory budget (2GB RAM + 2GB swap): db 350m, app 400m, worker 150m,
+# scheduler 100m, web 100m — leaves headroom for the OS and traffic spikes.
+# Tune the numbers below if `docker stats` shows a service consistently
+# pinned at its limit.
+#
+# Each service lists both `image:` and `build:`. First deploy (Phase 4,
+# before CI/CD exists): `docker compose build && docker compose up -d`
+# builds locally and ignores IMAGE_TAG. Once deploy.yml exists: it sets
+# IMAGE_TAG=<git sha> and runs `docker compose pull && up -d`, which just
+# pulls that tag from GHCR instead of rebuilding on the VPS.
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    command:
+      - --innodb-buffer-pool-size=192M
+      - --innodb-log-file-size=48M
+      - --max-connections=50
+      - --performance-schema=0
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+    mem_limit: 350m
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ghcr.io/alchermy/gamoryid-app:${IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+    volumes:
+      - storage-data:/app/storage/app
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 400m
+
+  worker:
+    image: ghcr.io/alchermy/gamoryid-app:${IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+    command: php artisan queue:work --tries=3 --max-time=3600 --sleep=3
+    volumes:
+      - storage-data:/app/storage/app
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 150m
+
+  scheduler:
+    image: ghcr.io/alchermy/gamoryid-app:${IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+    # No cron daemon in the container — a plain loop calling schedule:run
+    # every minute, which is what Laravel's own scheduler expects.
+    command: >
+      sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
+    volumes:
+      - storage-data:/app/storage/app
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 100m
+
+  web:
+    image: ghcr.io/alchermy/gamoryid-web:${IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-thanawat.won01@gmail.com}
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    mem_limit: 100m
+
+volumes:
+  db-data:
+  storage-data:
+  caddy-data:
+  caddy-config:

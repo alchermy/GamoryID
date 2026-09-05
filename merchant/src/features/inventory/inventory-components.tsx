@@ -569,6 +569,11 @@ export function EditDialog({
   busy: boolean;
 }) {
   const [media, setMedia] = useState(createEmptyMediaDraft);
+  // rank/username fall back to "–" for display when empty (list & detail
+  // views) — that sentinel must not leak into an editable field's starting
+  // value, or saving without touching the field writes the literal "–" (or
+  // "–" + whatever the merchant types next to it) into the database.
+  const editableValue = (value: string) => (value === "–" ? "" : value);
 
   return (
     <div
@@ -609,7 +614,7 @@ export function EditDialog({
                 name="username"
                 required
                 autoComplete="username"
-                defaultValue={item.username}
+                defaultValue={editableValue(item.username)}
               />
             </Field>
             <Field label="Password">
@@ -628,7 +633,7 @@ export function EditDialog({
               />
             </Field>
             <Field label="แรงก์">
-              <input name="rank" defaultValue={item.rank} />
+              <input name="rank" defaultValue={editableValue(item.rank)} />
             </Field>
             <Field label="เลเวล">
               <input
