@@ -23,8 +23,6 @@
 <x-mail::footer>
 **GamoryID** — ระบบจัดการสต๊อกและการขายไอดีเกมสำหรับร้านค้า
 
-ผู้ให้บริการ: {{ config('legal.controller_name') }}
-
 ติดต่อสอบถาม: [{{ config('legal.controller_email') }}](mailto:{{ config('legal.controller_email') }})
 
 อีเมลฉบับนี้ส่งจากระบบอัตโนมัติ กรุณาอย่าตอบกลับ

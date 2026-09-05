@@ -186,8 +186,7 @@ describe("inventory flow", () => {
     expect(screen.getByText("ไอดีนี้ยังไม่มีรูปภาพ")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "แก้ไขข้อมูล" }));
     const rank = screen.getByLabelText("แรงก์");
-    await user.clear(rank);
-    await user.type(rank, "Immortal 2");
+    await user.selectOptions(rank, "Immortal 2");
     await user.click(screen.getByRole("button", { name: "บันทึกการแก้ไข" }));
 
     expect(
