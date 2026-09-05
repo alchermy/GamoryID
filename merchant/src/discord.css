@@ -323,15 +323,19 @@
 }
 
 .discord-command-catalog > div {
-  @apply flex min-h-11 min-w-0 items-center justify-between gap-3 border-b border-slate-100 py-2;
+  @apply flex min-w-0 flex-col gap-0.5 border-b border-slate-100 py-2.5;
 }
 
 .discord-command-catalog code {
-  @apply shrink-0 font-data text-xs font-bold text-brand;
+  @apply font-data text-xs font-bold text-brand;
+}
+
+.discord-command-catalog p {
+  @apply text-xs leading-4 text-ink-soft;
 }
 
 .discord-command-catalog span {
-  @apply text-right text-[0.6875rem] leading-4 text-muted;
+  @apply text-[0.6875rem] leading-4 text-muted;
 }
 
 .discord-command-safety {

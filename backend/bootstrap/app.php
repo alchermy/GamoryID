@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureShopPermission;
 use App\Http\Middleware\EnsureShopWritable;
 use App\Http\Middleware\EnsureSuperAdminSession;
 use App\Http\Middleware\EnsureTermsAccepted;
+use App\Http\Middleware\NoStoreResponses;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+        $middleware->api(append: [NoStoreResponses::class]);
         $middleware->alias([
             'shop.permission' => EnsureShopPermission::class,
             'shop.writable' => EnsureShopWritable::class,

@@ -238,9 +238,9 @@ class DiscordApiClient
                 [
                     'type' => 1,
                     'name' => 'เพิ่มไอดี',
-                    'description' => 'เพิ่มไอดีใหม่โดยไม่ส่งข้อมูลลับผ่าน Discord',
+                    'description' => 'เพิ่มไอดีใหม่ — ใส่ได้ถึงชื่อผู้ใช้ ไม่รับรหัสผ่าน',
                     'options' => [
-                        $this->stringOption('ไอดี', 'Riot ID', true),
+                        $this->stringOption('riot-id', 'Riot ID เช่น Player#TH1', true),
                         [
                             'type' => 10,
                             'name' => 'ต้นทุน',
@@ -255,7 +255,14 @@ class DiscordApiClient
                             'required' => true,
                             'min_value' => 0,
                         ],
-                        $this->stringOption('แรงก์', 'แรงก์ของไอดี'),
+                        $this->stringOption('username', 'ชื่อผู้ใช้สำหรับล็อกอิน (ห้ามใส่รหัสผ่าน)'),
+                        [
+                            'type' => 3,
+                            'name' => 'แรงก์',
+                            'description' => 'แรงก์ปัจจุบันของไอดี',
+                            'required' => false,
+                            'choices' => $this->valorantRankChoices(),
+                        ],
                         [
                             'type' => 4,
                             'name' => 'เลเวล',
@@ -285,6 +292,28 @@ class DiscordApiClient
             'required' => $required,
             'max_length' => $maxLength,
         ], fn ($value) => $value !== null);
+    }
+
+    /**
+     * Valorant's fixed competitive ladder — 8 tiers × 3 divisions + Radiant = 25,
+     * exactly Discord's per-option choice limit. Name and value are the same
+     * string so it stores straight into inventory_items.rank.
+     *
+     * @return array<int, array{name: string, value: string}>
+     */
+    private function valorantRankChoices(): array
+    {
+        $tiers = ['Iron', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Ascendant', 'Immortal'];
+        $choices = [];
+        foreach ($tiers as $tier) {
+            foreach ([1, 2, 3] as $division) {
+                $label = "{$tier} {$division}";
+                $choices[] = ['name' => $label, 'value' => $label];
+            }
+        }
+        $choices[] = ['name' => 'Radiant', 'value' => 'Radiant'];
+
+        return $choices;
     }
 
     private function request(): PendingRequest

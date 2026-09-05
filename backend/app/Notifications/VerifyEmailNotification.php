@@ -15,10 +15,12 @@ class VerifyEmailNotification extends VerifyEmail
     protected function buildMailMessage($url): MailMessage
     {
         return (new MailMessage)
-            ->subject('ยืนยันอีเมลของคุณ · GamoryID')
-            ->greeting('สวัสดี')
-            ->line('กดยืนยันอีเมลเพื่อเริ่มใช้งาน GamoryID')
+            ->subject('ยืนยันอีเมลเพื่อเปิดใช้งานบัญชี · GamoryID')
+            ->greeting('ยินดีต้อนรับสู่ GamoryID')
+            ->line('ขอบคุณที่สมัครใช้งาน กรุณายืนยันอีเมลนี้เพื่อเริ่มเปิดร้านและใช้งานระบบทั้งหมด')
             ->action('ยืนยันอีเมล', $url)
-            ->line('หากคุณไม่ได้สมัครใช้งาน GamoryID สามารถละเว้นอีเมลฉบับนี้ได้');
+            ->line('ลิงก์ยืนยันจะหมดอายุภายใน 60 นาที หากหมดอายุแล้ว สามารถขอลิงก์ใหม่ได้จากหน้าเข้าสู่ระบบ')
+            ->line('หากคุณไม่ได้เป็นผู้สมัครใช้งาน โปรดละเว้นอีเมลฉบับนี้ ระบบจะไม่ดำเนินการใด ๆ กับบัญชีของคุณ')
+            ->salutation('ด้วยความเคารพ, ทีมงาน GamoryID');
     }
 }

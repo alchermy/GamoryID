@@ -134,8 +134,9 @@ describe("Discord settings", () => {
     expect(screen.getAllByText("/ร้าน ช่วยเหลือ")).not.toHaveLength(0);
     expect(screen.getByText("/ร้าน ปิดการขาย")).toBeInTheDocument();
     expect(screen.getByText("/ร้าน เพิ่มไอดี")).toBeInTheDocument();
+    expect(screen.getByText("/ร้าน ค้นหา")).toBeInTheDocument();
     expect(
-      screen.getByText(/คำสั่งเพิ่มไอดีไม่รับชื่อผู้ใช้หรือรหัสผ่าน/),
+      screen.getByText(/คำสั่งเพิ่มไอดีรับได้ถึงชื่อผู้ใช้ แต่ไม่รับรหัสผ่าน/),
     ).toBeInTheDocument();
     expect(screen.getByText(/จะทำงานเฉพาะห้องนี้เท่านั้น/)).toBeInTheDocument();
   });

@@ -80,7 +80,10 @@ services:
     env_file: .env
     environment:
       DB_HOST: db
-    command: php artisan queue:work --tries=3 --max-time=3600 --sleep=3
+    # Must name every queue in use — Discord shop notifications and all the
+    # queued mail notifications dispatch onto "notifications", which a bare
+    # `queue:work` (default queue only) would never pick up.
+    command: php artisan queue:work --queue=default,notifications --tries=3 --max-time=3600 --sleep=3
     volumes:
       - storage-data:/app/storage/app
     depends_on:

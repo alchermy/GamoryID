@@ -404,7 +404,7 @@ class DiscordShopCommandHandler
     /** @return array{content: string, status: string} */
     private function createInventory(array $interaction, DiscordInstallation $installation, DiscordUserLink $link): array
     {
-        $riotId = trim($this->optionValue($interaction, 'ไอดี', 'riot_id'));
+        $riotId = trim($this->optionValue($interaction, 'riot-id', 'ไอดี', 'riot_id'));
         $costValue = $this->optionValue($interaction, 'ต้นทุน', 'cost');
         $priceValue = $this->optionValue($interaction, 'ราคา', 'price');
         if ($riotId === '' || ! is_numeric($costValue) || ! is_numeric($priceValue) || (float) $costValue < 0 || (float) $priceValue < 0) {
@@ -422,6 +422,7 @@ class DiscordShopCommandHandler
             'tag' => $this->tags->generate(),
             'title' => $riotId,
             'riot_id' => $riotId,
+            'username' => $this->blankToNull($this->optionValue($interaction, 'username', 'ยูสเซอร์เนม')),
             'region' => 'TH',
             'rank' => $this->blankToNull($this->optionValue($interaction, 'แรงก์', 'rank')),
             'level' => $this->nullableInteger($this->optionValue($interaction, 'เลเวล', 'level')),

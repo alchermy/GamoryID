@@ -115,4 +115,22 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Markdown Mail Settings
+    |--------------------------------------------------------------------------
+    |
+    | The branded theme + component overrides live in
+    | resources/views/vendor/mail. Pinning them here keeps rendering stable
+    | regardless of the framework's default markdown config.
+    |
+    */
+
+    'markdown' => [
+        'theme' => 'default',
+        'paths' => [
+            resource_path('views/vendor/mail'),
+        ],
+    ],
+
 ];
