@@ -18,8 +18,13 @@
 # pulls that tag from GHCR instead of rebuilding on the VPS.
 
 services:
+  # mariadb, not mysql: the official mysql:8.0 image's recent builds require
+  # the x86-64-v2 CPU baseline (SSE4.2 etc.) and hard-crash with "Fatal glibc
+  # error: CPU does not support x86-64-v2" on this VPS's virtual CPU.
+  # MariaDB speaks the same protocol Laravel's `mysql` driver expects, so
+  # nothing else here (or in the app) needs to change.
   db:
-    image: mysql:8.0
+    image: mariadb:10.11
     restart: unless-stopped
     command:
       - --innodb-buffer-pool-size=192M
@@ -37,7 +42,7 @@ services:
       - db-data:/var/lib/mysql
     mem_limit: 350m
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD}"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 10
