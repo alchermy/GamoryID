@@ -24,7 +24,6 @@
 **GamoryID** — ระบบจัดการสต๊อกและการขายไอดีเกมสำหรับร้านค้า
 
 ผู้ให้บริการ: {{ config('legal.controller_name') }}
-{{ config('legal.controller_address') }}
 
 ติดต่อสอบถาม: [{{ config('legal.controller_email') }}](mailto:{{ config('legal.controller_email') }})
 
