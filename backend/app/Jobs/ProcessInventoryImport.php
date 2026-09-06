@@ -134,10 +134,9 @@ class ProcessInventoryImport implements ShouldQueue
                         'shop_id' => $import->shop_id,
                         'created_by' => $import->user_id,
                         'tag' => $tags->generate(),
-                        // The import UI no longer asks for a display name — the
-                        // account username is the item's name. A title column is
-                        // still honoured if an API caller maps one.
-                        'title' => trim((string) ($mapped['title'] ?? '')) ?: trim((string) ($mapped['username'] ?? '')),
+                        // Title (ชื่อรายการ) is optional on import. When it's not
+                        // mapped the item has no name — views fall back to the tag.
+                        'title' => trim((string) ($mapped['title'] ?? '')),
                         'username' => $this->blankToNull($mapped['username'] ?? null),
                         'email' => $this->blankToNull($mapped['email'] ?? null),
                         'region' => 'TH',
@@ -257,7 +256,7 @@ class ProcessInventoryImport implements ShouldQueue
 
     private function validationMessage(array $mapped): ?string
     {
-        if (blank($mapped['title'] ?? null) && blank($mapped['username'] ?? null)) {
+        if (blank($mapped['username'] ?? null)) {
             return 'ต้องมี Username';
         }
         if (! isset($mapped['list_price']) || ! is_numeric($mapped['list_price']) || (float) $mapped['list_price'] < 0) {

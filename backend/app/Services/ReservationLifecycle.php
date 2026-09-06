@@ -93,7 +93,7 @@ class ReservationLifecycle
             $result->shop_id,
             'reservations',
             'การจองหมดเวลาแล้ว',
-            "**#{$result->tag}** · {$result->title}\nรายการกลับเป็นสถานะพร้อมขายอัตโนมัติ",
+            "**{$result->tagged_name}**\nรายการกลับเป็นสถานะพร้อมขายอัตโนมัติ",
         );
 
         return true;

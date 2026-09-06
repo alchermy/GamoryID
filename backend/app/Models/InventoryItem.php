@@ -70,4 +70,19 @@ class InventoryItem extends Model
     {
         return '#'.$this->tag;
     }
+
+    /**
+     * The item's name for display. Falls back to the tag when no title is set
+     * (imports don't require a ชื่อรายการ).
+     */
+    public function getListingNameAttribute(): string
+    {
+        return trim((string) $this->title) !== '' ? $this->title : '#'.$this->tag;
+    }
+
+    /** "#TAG · ชื่อรายการ", or just "#TAG" when the item has no title. */
+    public function getTaggedNameAttribute(): string
+    {
+        return trim((string) $this->title) !== '' ? '#'.$this->tag.' · '.$this->title : '#'.$this->tag;
+    }
 }

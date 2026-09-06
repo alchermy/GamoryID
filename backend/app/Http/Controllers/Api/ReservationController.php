@@ -49,7 +49,7 @@ class ReservationController extends Controller
             $shop->id,
             'reservations',
             'มีการจองไอดี',
-            $item ? "**#{$item->tag}** · {$item->title}\nหมดเวลาจอง ".$reservation->expires_at->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.' : "รายการ #{$inventory}",
+            $item ? "**{$item->tagged_name}**\nหมดเวลาจอง ".$reservation->expires_at->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.' : "รายการ #{$inventory}",
             actor: $request->user()?->name,
         );
 
@@ -74,7 +74,7 @@ class ReservationController extends Controller
             $shop->id,
             'reservations',
             'ยกเลิกการจองแล้ว',
-            "**#{$item->tag}** · {$item->title}\nรายการกลับเป็นสถานะพร้อมขาย",
+            "**{$item->tagged_name}**\nรายการกลับเป็นสถานะพร้อมขาย",
             actor: $request->user()?->name,
         );
 

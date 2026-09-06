@@ -142,7 +142,7 @@ class InventoryImportTest extends TestCase
 
         $this->assertDatabaseHas('inventory_items', [
             'shop_id' => $shop->id,
-            'title' => 'example.user01',
+            'title' => '',
             'username' => 'example.user01',
             'list_price' => 3900,
             'notes' => 'ตัวอย่าง: ลูกค้ากำลังพิจารณา',
@@ -292,14 +292,14 @@ class InventoryImportTest extends TestCase
             }
         });
         $path = "imports/{$shop->id}/tag-collision.csv";
-        Storage::disk('private')->put($path, "title,list_price\nไอดีใหม่,5000\n");
+        Storage::disk('private')->put($path, "title,list_price,username\nไอดีใหม่,5000,collision.user\n");
         $job = ImportJob::create([
             'shop_id' => $shop->id,
             'user_id' => $user->id,
             'status' => 'queued',
             'disk' => 'private',
             'path' => $path,
-            'mapping' => ['title' => 'title', 'list_price' => 'list_price'],
+            'mapping' => ['title' => 'title', 'list_price' => 'list_price', 'username' => 'username'],
             'total_rows' => 1,
         ]);
 

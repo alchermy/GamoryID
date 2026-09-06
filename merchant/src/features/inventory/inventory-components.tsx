@@ -218,7 +218,7 @@ export function InventoryPanel({
                     </td>
                     <td className="title-cell">{i.username}</td>
                     <td className="title-cell">
-                      <span>{i.title}</span>
+                      <span>{i.title || i.tag}</span>
                       {i.notes && canNote && (
                         <button
                           type="button"
@@ -339,7 +339,7 @@ export function InventoryPanel({
                   className="mobile-record-link"
                   onClick={() => onSelect(i)}
                 >
-                  <h3>{i.title}</h3>
+                  <h3>{i.title || i.tag}</h3>
                   <div className="mobile-meta">
                     <span>{i.username}</span>
                     <span>{i.rank}</span>
@@ -838,7 +838,7 @@ export function SellDialog({
               <div>
                 <small id="sale-preview-title">ไอดีที่กำลังปิดการขาย</small>
                 <strong>
-                  {item.tag} · {item.title}
+                  {item.title ? `${item.tag} · ${item.title}` : item.tag}
                 </strong>
               </div>
             </div>
@@ -1128,7 +1128,7 @@ export function InventoryDetailPage({
               {statusLabel[item.status]}
             </span>
           </div>
-          <h2 id="inventory-detail-title">{item.title}</h2>
+          <h2 id="inventory-detail-title">{item.title || item.tag}</h2>
           <p>อัปเดตล่าสุด {item.updated}</p>
         </div>
         <div className="inventory-detail-actions">

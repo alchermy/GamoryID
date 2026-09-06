@@ -72,6 +72,7 @@ export function ImportPanel({
   }, [onComplete]);
 
   const fields: [string, string][] = [
+    ["title", "ชื่อรายการ"],
     ["username", "Username"],
     ["email", "Email"],
     ["password", "Password"],

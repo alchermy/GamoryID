@@ -118,7 +118,7 @@ export function SaleDetailPage({
             {inventory ? `#${inventory.tag}` : `รายการขาย #${record.id}`}
           </h2>
           <p>
-            {inventory?.title || "ข้อมูลไอดีถูกลบ"} ·
+            {inventory ? inventory.title || `#${inventory.tag}` : "ข้อมูลไอดีถูกลบ"} ·
             ขายเมื่อ {formatDate(record.sold_at)}
           </p>
         </div>
@@ -151,7 +151,7 @@ export function SaleDetailPage({
               />
               <DetailValue
                 label="ชื่อรายการ"
-                value={inventory?.title}
+                value={inventory ? inventory.title || `#${inventory.tag}` : undefined}
               />
               <DetailValue label="แรงก์" value={inventory?.rank} />
               <DetailValue

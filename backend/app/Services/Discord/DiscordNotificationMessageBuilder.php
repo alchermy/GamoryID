@@ -11,7 +11,7 @@ class DiscordNotificationMessageBuilder
     public function inventoryCreated(InventoryItem $item, User $actor): string
     {
         return implode("\n", [
-            "**#{$item->tag} · {$this->escape($item->title)}**",
+            '**'.$this->itemHeading($item).'**',
             'แรงก์: '.$this->escape($item->rank ?: 'ไม่ระบุ'),
             'เลเวล: '.($item->level !== null ? number_format((int) $item->level) : 'ไม่ระบุ'),
             'ราคาขาย: '.number_format((float) $item->list_price, 2).' บาท',
@@ -39,7 +39,7 @@ class DiscordNotificationMessageBuilder
 
         return implode("\n", [
             $item
-                ? "**#{$item->tag} · {$this->escape($item->title)}**"
+                ? '**'.$this->itemHeading($item).'**'
                 : '**รายการขาย #'.$sale->id.'**',
             'ขายให้: '.$this->escape($customer?->name ?: 'ไม่ระบุ'),
             'ผู้ขาย: '.$this->escape($creator?->name ?: 'ไม่ระบุ'),
@@ -56,6 +56,14 @@ class DiscordNotificationMessageBuilder
             'label' => 'ตรวจสอบรายละเอียดการขายใน GamoryID',
             'url' => $this->frontendUrl('/sales/'.$sale->id),
         ];
+    }
+
+    /** "#TAG · ชื่อรายการ", or just "#TAG" when the item has no title. */
+    private function itemHeading(InventoryItem $item): string
+    {
+        $title = trim((string) $item->title);
+
+        return $title !== '' ? "#{$item->tag} · ".$this->escape($title) : "#{$item->tag}";
     }
 
     private function frontendUrl(string $path): string

@@ -180,9 +180,8 @@ class DiscordShopCommandHandler
 
         $heading = $status === 'all' ? 'รายการไอดีล่าสุด' : 'รายการสถานะ '.$this->statusLabel($status);
         $lines = $items->map(fn (InventoryItem $item) => sprintf(
-            '**#%s** · %s · %s · %s บาท · %s',
-            $item->tag,
-            $this->escape($item->title),
+            '**%s** · %s · %s บาท · %s',
+            $this->itemHeading($item),
             $this->escape($item->rank ?: 'ไม่ระบุแรงก์'),
             number_format((float) $item->list_price, 0),
             $this->statusLabel($item->status->value),
@@ -238,7 +237,7 @@ class DiscordShopCommandHandler
             $installation->shop_id,
             'reservations',
             'มีการจองไอดี',
-            "**#{$item->tag}** · {$this->escape($item->title)}\nหมดเวลาจอง ".$reservation->expires_at->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.',
+            '**'.$this->itemHeading($item)."**\nหมดเวลาจอง ".$reservation->expires_at->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.',
             actor: $link->user?->name,
         );
 
@@ -279,7 +278,7 @@ class DiscordShopCommandHandler
             $installation->shop_id,
             'reservations',
             'ยกเลิกการจองแล้ว',
-            "**#{$item->tag}** · {$this->escape($item->title)}\nรายการกลับเป็นสถานะพร้อมขาย",
+            '**'.$this->itemHeading($item)."**\nรายการกลับเป็นสถานะพร้อมขาย",
             actor: $link->user?->name,
         );
 
@@ -452,7 +451,7 @@ class DiscordShopCommandHandler
         }
 
         return $this->success(
-            "เพิ่ม **#{$item->tag} · {$this->escape($item->title)}** เข้าคลังแล้ว\n".
+            'เพิ่ม **'.$this->itemHeading($item)."** เข้าคลังแล้ว\n".
             'รหัสผ่านต้องเพิ่มจากหน้ารายละเอียดไอดีใน GamoryID เท่านั้น',
             $this->notifications->inventoryLink($item),
         );
@@ -527,6 +526,14 @@ class DiscordShopCommandHandler
     private function escape(string $value): string
     {
         return preg_replace('/([\\\\`*_{}\[\]()<>#+\-.!|~])/u', '\\\\$1', trim($value)) ?: 'ไม่ระบุ';
+    }
+
+    /** "#TAG · ชื่อรายการ", or just "#TAG" when the item has no title. */
+    private function itemHeading(InventoryItem $item): string
+    {
+        $title = trim((string) $item->title);
+
+        return $title !== '' ? "#{$item->tag} · ".$this->escape($title) : "#{$item->tag}";
     }
 
     private function blankToNull(string $value): ?string
