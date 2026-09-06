@@ -22,7 +22,9 @@ RUN npm run build
 FROM node:20-alpine AS publicweb-build
 ARG VITE_API_URL=https://api.gamoryid.com/api/v1
 ARG VITE_MERCHANT_APP_URL=https://app.gamoryid.com
-ARG VITE_GA_ID=
+# GA4 measurement id — public by design (it ships in client JS). Override via
+# the compose build arg / .env if you ever need a different stream.
+ARG VITE_GA_ID=G-GS4GZV6PXS
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_MERCHANT_APP_URL=${VITE_MERCHANT_APP_URL}
 ENV VITE_GA_ID=${VITE_GA_ID}
