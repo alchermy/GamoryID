@@ -142,7 +142,6 @@ export function InventoryPanel({
   onReserve,
   onSell,
   onDelete,
-  onBatchStatus,
   onCopyTag,
   onCopyDetails,
   onNote,
@@ -161,46 +160,10 @@ export function InventoryPanel({
   onReserve: (v: InventoryItem) => void;
   onSell: (v: InventoryItem) => void;
   onDelete: (v: InventoryItem) => void;
-  onBatchStatus: (
-    ids: number[],
-    status: "available" | "archived",
-  ) => Promise<void> | void;
   onCopyTag: (v: InventoryItem) => void;
   onCopyDetails: (v: InventoryItem) => void;
   onNote: (v: InventoryItem) => void;
 }) {
-  const [picked, setPicked] = useState<Set<number>>(new Set());
-  const [batchTo, setBatchTo] = useState<"available" | "archived">("available");
-  const [batchBusy, setBatchBusy] = useState(false);
-
-  const selectableIds = items
-    .filter((i) => i.status !== "sold")
-    .map((i) => i.id);
-  const pickedIds = [...picked].filter((id) => selectableIds.includes(id));
-  const allPicked =
-    selectableIds.length > 0 && selectableIds.every((id) => picked.has(id));
-
-  const togglePick = (id: number) =>
-    setPicked((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  const toggleAll = () =>
-    setPicked(() => (allPicked ? new Set() : new Set(selectableIds)));
-  const clearPicked = () => setPicked(new Set());
-  const runBatch = async () => {
-    if (pickedIds.length === 0 || batchBusy) return;
-    setBatchBusy(true);
-    try {
-      await onBatchStatus(pickedIds, batchTo);
-      clearPicked();
-    } finally {
-      setBatchBusy(false);
-    }
-  };
-
   return (
     <section className="panel inventory-list-panel">
       <div className="panel-head">
@@ -232,54 +195,10 @@ export function InventoryPanel({
         </div>
       ) : (
         <>
-          {canManage && pickedIds.length > 0 && (
-            <div className="inventory-batch-bar" role="region" aria-label="ทำรายการกับไอดีที่เลือก">
-              <span className="inventory-batch-count">
-                เลือก {pickedIds.length} รายการ
-              </span>
-              <label className="inventory-batch-field">
-                <span>เปลี่ยนสถานะเป็น</span>
-                <select
-                  value={batchTo}
-                  disabled={batchBusy}
-                  onChange={(e) =>
-                    setBatchTo(e.target.value as "available" | "archived")
-                  }
-                >
-                  <option value="available">พร้อมขาย</option>
-                  <option value="archived">เก็บถาวร</option>
-                </select>
-              </label>
-              <button
-                className="button blue"
-                onClick={() => void runBatch()}
-                disabled={batchBusy}
-              >
-                {batchBusy ? "กำลังอัปเดต…" : "ใช้กับที่เลือก"}
-              </button>
-              <button
-                className="button ghost"
-                onClick={clearPicked}
-                disabled={batchBusy}
-              >
-                ล้างการเลือก
-              </button>
-            </div>
-          )}
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  {canManage && (
-                    <th className="select-col">
-                      <input
-                        type="checkbox"
-                        aria-label="เลือกไอดีทั้งหมด"
-                        checked={allPicked}
-                        onChange={toggleAll}
-                      />
-                    </th>
-                  )}
                   <th>แท็ก</th>
                   <th>Username</th>
                   <th>ชื่อรายการ</th>
@@ -292,18 +211,7 @@ export function InventoryPanel({
               </thead>
               <tbody>
                 {items.map((i) => (
-                  <tr key={i.id} className={picked.has(i.id) ? "is-picked" : ""}>
-                    {canManage && (
-                      <td className="select-col">
-                        <input
-                          type="checkbox"
-                          aria-label={`เลือก ${i.tag}`}
-                          checked={picked.has(i.id)}
-                          disabled={i.status === "sold"}
-                          onChange={() => togglePick(i.id)}
-                        />
-                      </td>
-                    )}
+                  <tr key={i.id}>
                     <td>
                       <button
                         className="button ghost tag"

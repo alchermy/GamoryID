@@ -335,53 +335,6 @@ class InventoryApiTest extends TestCase
             ->assertJsonPath('data.0.status', 'archived');
     }
 
-    public function test_batch_status_update_moves_many_ids_at_once_and_skips_sold(): void
-    {
-        [$user, $shop] = $this->owner('batch@example.test', 'ร้านอัปเดตกลุ่ม');
-        $a = $this->item($shop, 'BAT01');
-        $b = $this->item($shop, 'BAT02');
-        $sold = $this->item($shop, 'BAT03');
-        $sold->update(['status' => 'sold']);
-        [, $otherShop] = $this->owner('batch-other@example.test', 'ร้านอื่น');
-        $foreign = $this->item($otherShop, 'BATXX');
-
-        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
-            ->postJson('/api/v1/inventory/batch', [
-                'ids' => [$a->id, $b->id, $sold->id, $foreign->id],
-                'status' => 'archived',
-            ])
-            ->assertOk()
-            ->assertJsonPath('updated', 2)
-            ->assertJsonPath('skipped', 1);
-
-        $this->assertSame('archived', $a->fresh()->status->value);
-        $this->assertSame('archived', $b->fresh()->status->value);
-        $this->assertSame('sold', $sold->fresh()->status->value);
-        $this->assertSame('available', $foreign->fresh()->status->value);
-        $this->assertDatabaseHas('activity_logs', ['shop_id' => $shop->id, 'event' => 'inventory.bulk_updated']);
-
-        // and back to available in one call
-        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
-            ->postJson('/api/v1/inventory/batch', ['ids' => [$a->id, $b->id], 'status' => 'available'])
-            ->assertOk()
-            ->assertJsonPath('updated', 2);
-        $this->assertSame('available', $a->fresh()->status->value);
-        $this->assertNull($a->fresh()->archived_at);
-    }
-
-    public function test_batch_status_update_requires_inventory_manage(): void
-    {
-        [$owner, $shop] = $this->owner('batch-perm@example.test', 'ร้านสิทธิ์');
-        $item = $this->item($shop, 'BATPM');
-        $staff = User::create(['name' => 'พนักงาน', 'email' => 'batch-staff@example.test', 'password' => 'password', 'current_shop_id' => $shop->id, 'email_verified_at' => now()]);
-        ShopMember::create(['shop_id' => $shop->id, 'user_id' => $staff->id, 'role' => 'staff', 'permissions' => ['inventory.sell'], 'joined_at' => now()]);
-
-        $this->actingAs($staff)->withHeader('X-Shop-Id', (string) $shop->id)
-            ->postJson('/api/v1/inventory/batch', ['ids' => [$item->id], 'status' => 'archived'])
-            ->assertForbidden();
-        $this->assertSame('available', $item->fresh()->status->value);
-    }
-
     public function test_sales_and_customers_are_scoped_to_the_current_shop(): void
     {
         [$user, $shopA] = $this->owner('history-a@example.test', 'ร้านประวัติ A');

@@ -20,7 +20,6 @@ import {
 export const ACTIVITY_LABELS: Record<string, string> = {
   "inventory.created": "เพิ่มไอดีในคลัง",
   "inventory.updated": "อัปเดตรายละเอียดไอดี",
-  "inventory.bulk_updated": "อัปเดตสถานะไอดีหลายรายการ",
   "inventory.note_updated": "อัปเดตโน้ตช่วยจำของไอดี",
   "inventory.media_added": "เพิ่มรูปสินค้า",
   "inventory.media_deleted": "ลบรูปสินค้า",

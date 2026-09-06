@@ -122,7 +122,6 @@ Route::prefix('v1')->group(function () {
 
             Route::middleware(['shop.writable', 'shop.permission:inventory.manage'])->group(function () {
                 Route::post('/inventory', [InventoryController::class, 'store']);
-                Route::post('/inventory/batch', [InventoryController::class, 'batch']);
                 Route::put('/inventory/{inventory}', [InventoryController::class, 'update']);
                 Route::delete('/inventory/{inventory}', [InventoryController::class, 'destroy']);
                 Route::post('/inventory/{inventory}/media', [InventoryMediaController::class, 'store']);
