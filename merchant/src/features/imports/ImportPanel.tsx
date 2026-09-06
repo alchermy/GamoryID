@@ -58,6 +58,7 @@ export function ImportPanel({
     [job, setJob] = useState<ImportState | null>(null),
     [importErrors, setImportErrors] = useState<ImportErrorRow[]>([]),
     [selectedFile, setSelectedFile] = useState<File | null>(null),
+    [previewPage, setPreviewPage] = useState(0),
     [busy, setBusy] = useState(false),
     [downloading, setDownloading] = useState(false),
     [isDragOver, setIsDragOver] = useState(false),
@@ -71,6 +72,7 @@ export function ImportPanel({
   const fields: [string, string][] = [
     ["riot_id", "Riot ID"],
     ["username", "Username"],
+    ["email", "Email"],
     ["password", "Password"],
     ["description", "รายละเอียดไอดี"],
     ["rank", "Rank"],
@@ -146,6 +148,7 @@ export function ImportPanel({
         { method: "POST", headers: csrf, body: form },
       );
       setPreview(result.data);
+      setPreviewPage(0);
       setMapping(
         Object.fromEntries(
           fields.map(([key]) => [
@@ -345,8 +348,10 @@ export function ImportPanel({
                     <span className="eyebrow">ตรวจสอบก่อนบันทึก</span>
                     <h3 id="preview-title">จับคู่คอลัมน์</h3>
                     <p>
-                      พบ {preview.total_rows.toLocaleString("th-TH")} แถว ·
-                      แสดงตัวอย่างสูงสุด 10 แถว
+                      พบ {preview.total_rows.toLocaleString("th-TH")} แถว
+                      {preview.rows.length < preview.total_rows
+                        ? ` · ตรวจได้ ${preview.rows.length.toLocaleString("th-TH")} แถวแรก (ที่เหลือจะนำเข้าตามปกติ)`
+                        : " · แสดงครบทุกแถว"}
                     </p>
                   </div>
                 </div>
@@ -388,17 +393,55 @@ export function ImportPanel({
                       </tr>
                     </thead>
                     <tbody>
-                      {preview.rows.map((row, index) => (
-                        <tr key={index}>
-                          <td>{index + 2}</td>
-                          {preview.headers.map((header) => (
-                            <td key={header}>{row[header] ?? "–"}</td>
-                          ))}
-                        </tr>
-                      ))}
+                      {preview.rows
+                        .slice(previewPage * 25, previewPage * 25 + 25)
+                        .map((row, index) => {
+                          const rowNo = previewPage * 25 + index + 2;
+                          return (
+                            <tr key={rowNo}>
+                              <td>{rowNo}</td>
+                              {preview.headers.map((header) => (
+                                <td key={header}>{row[header] ?? "–"}</td>
+                              ))}
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>
+                {preview.rows.length > 25 && (
+                  <div className="import-preview-pager">
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={previewPage === 0}
+                      onClick={() => setPreviewPage((p) => Math.max(0, p - 1))}
+                    >
+                      ก่อนหน้า
+                    </button>
+                    <span>
+                      หน้า {previewPage + 1} /{" "}
+                      {Math.ceil(preview.rows.length / 25)}
+                    </span>
+                    <button
+                      type="button"
+                      className="button"
+                      disabled={
+                        previewPage + 1 >= Math.ceil(preview.rows.length / 25)
+                      }
+                      onClick={() =>
+                        setPreviewPage((p) =>
+                          Math.min(
+                            Math.ceil(preview.rows.length / 25) - 1,
+                            p + 1,
+                          ),
+                        )
+                      }
+                    >
+                      ถัดไป
+                    </button>
+                  </div>
+                )}
                 <div className="import-confirm-row">
                   <p>ระบบจะยกเลิกทั้งชุดหากพบข้อมูลผิดพลาดแม้เพียง 1 แถว</p>
                   <button

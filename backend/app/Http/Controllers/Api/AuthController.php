@@ -25,13 +25,13 @@ class AuthController extends Controller
         $data = $request->validated();
         [$user, $shop] = DB::transaction(function () use ($data) {
             // Trial mirrors the Growth tier so new owners experience the full
-            // feature set for 14 days, then fall back to Free entitlements.
+            // feature set for 30 days, then fall back to Free entitlements.
             $trialPlan = SubscriptionPlan::query()
                 ->whereIn('code', ['growth', 'starter'])
                 ->where('is_active', true)
                 ->orderByRaw("code = 'growth' desc")
                 ->firstOrFail();
-            $trialEndsAt = now()->addDays(14);
+            $trialEndsAt = now()->addDays(30);
             $shop = Shop::create([
                 'name' => $data['shop_name'],
                 'slug' => Str::slug($data['shop_name']).'-'.Str::lower(Str::random(5)),

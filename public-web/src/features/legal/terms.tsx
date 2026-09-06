@@ -168,7 +168,7 @@ export const TERMS_DOC: LegalDoc = {
       body: (
         <ul>
           <li>
-            <strong>ทดลองใช้ฟรี 14 วัน</strong> เมื่อสมัคร
+            <strong>ทดลองใช้ฟรี 30 วัน</strong> เมื่อสมัคร
             ได้สิทธิ์เทียบเท่าแพ็กเกจ Growth
           </li>
           <li>

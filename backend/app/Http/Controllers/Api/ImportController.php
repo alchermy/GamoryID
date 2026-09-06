@@ -55,7 +55,9 @@ class ImportController extends Controller
         $extension = strtolower($file->getClientOriginalExtension());
         $path = $file->storeAs("imports/{$shop->id}", Str::uuid().'.'.$extension, 'private');
         try {
-            $sheet = $reader->read('private', $path, 10);
+            // Return enough rows for the merchant to actually review the file
+            // before committing; the UI paginates them.
+            $sheet = $reader->read('private', $path, 500);
         } catch (Throwable $exception) {
             Storage::disk('private')->delete($path);
             throw ValidationException::withMessages(['file' => $exception->getMessage()]);
@@ -94,6 +96,7 @@ class ImportController extends Controller
             'mapping.title' => ['nullable', 'string', 'required_without:mapping.riot_id'],
             'mapping.riot_id' => ['nullable', 'string', 'required_without:mapping.title'],
             'mapping.username' => ['nullable', 'string'],
+            'mapping.email' => ['nullable', 'string'],
             'mapping.password' => ['nullable', 'string'],
             'mapping.description' => ['nullable', 'string'],
             'mapping.rank' => ['nullable', 'string'],

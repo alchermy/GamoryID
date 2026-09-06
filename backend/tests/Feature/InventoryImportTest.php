@@ -251,14 +251,14 @@ class InventoryImportTest extends TestCase
         Storage::fake('private');
         [$user, $shop] = $this->verifiedMerchant();
         $path = "imports/{$shop->id}/happy-path.csv";
-        Storage::disk('private')->put($path, "title,list_price,username\nไอดีที่ถูกต้อง 1,5000,csv.user01@example.test\nไอดีที่ถูกต้อง 2,6200,csv.user02@example.test\n");
+        Storage::disk('private')->put($path, "title,list_price,username,email\nไอดีที่ถูกต้อง 1,5000,csv.user01,acc01@mail.test\nไอดีที่ถูกต้อง 2,6200,csv.user02,acc02@mail.test\n");
         $job = ImportJob::create([
             'shop_id' => $shop->id,
             'user_id' => $user->id,
             'status' => 'queued',
             'disk' => 'private',
             'path' => $path,
-            'mapping' => ['title' => 'title', 'list_price' => 'list_price', 'username' => 'username'],
+            'mapping' => ['title' => 'title', 'list_price' => 'list_price', 'username' => 'username', 'email' => 'email'],
             'total_rows' => 2,
         ]);
 
@@ -270,6 +270,7 @@ class InventoryImportTest extends TestCase
 
         $this->assertDatabaseCount('inventory_items', 2);
         $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'completed', 'imported_rows' => 2, 'failed_rows' => 0]);
+        $this->assertDatabaseHas('inventory_items', ['title' => 'ไอดีที่ถูกต้อง 1', 'email' => 'acc01@mail.test']);
         $this->assertDatabaseHas('inventory_credentials', ['inventory_item_id' => InventoryItem::where('title', 'ไอดีที่ถูกต้อง 1')->firstOrFail()->id]);
         $this->assertDatabaseHas('activity_logs', ['shop_id' => $shop->id, 'event' => 'import.completed']);
         Storage::disk('private')->assertMissing($path);

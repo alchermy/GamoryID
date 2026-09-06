@@ -233,6 +233,16 @@
   white-space: nowrap;
 }
 
+.import-preview-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 12px 0 0;
+  font: 500 12px var(--font-data);
+  color: var(--muted);
+}
+
 .import-confirm-row {
   display: flex;
   align-items: center;
