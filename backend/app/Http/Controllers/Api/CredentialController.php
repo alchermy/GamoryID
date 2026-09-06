@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendDiscordShopNotification;
 use App\Models\InventoryItem;
 use App\Services\AuditLogger;
 use App\Services\CredentialCipher;
@@ -21,6 +22,15 @@ class CredentialController extends Controller
 
         $item->credentials->update(['last_revealed_at' => now()]);
         $audit->record($request, $shop, 'credentials.revealed', $item, ['tag' => '#'.$item->tag]);
+
+        SendDiscordShopNotification::dispatch(
+            $shop->id,
+            'system',
+            'มีการเปิดดูรหัสผ่านไอดี',
+            "**#{$item->tag}** · ".($item->riot_id ?: $item->title)."\n"
+                .'โดย: '.($request->user()?->name ?? 'ไม่ทราบผู้ใช้')."\n"
+                .'เวลา: '.now()->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.',
+        );
 
         return response()->json(['data' => $cipher->decrypt($item->credentials->encrypted_payload)]);
     }

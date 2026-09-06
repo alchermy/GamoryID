@@ -114,6 +114,12 @@ class ProcessInventoryImport implements ShouldQueue
                 ),
             ]);
             $this->audit($import, 'import.failed', ['invalid_rows' => count($errors), 'reason' => 'validation']);
+            $this->notifyDiscord(
+                $import,
+                'นำเข้าข้อมูลไอดีไม่สำเร็จ',
+                'ไม่ผ่านการตรวจสอบ '.count($errors).' แถว จึงยกเลิกทั้งชุด'
+                    ."\nแถวที่ {$errors[0]['row_number']}: {$errors[0]['message']}",
+            );
 
             return;
         }
@@ -175,6 +181,12 @@ class ProcessInventoryImport implements ShouldQueue
                 'imported_rows' => count($records),
                 'skipped_rows' => count($skipped),
             ]);
+            $this->notifyDiscord(
+                $import,
+                'นำเข้าข้อมูลไอดีสำเร็จ',
+                'เพิ่มเข้าคลัง '.count($records).' รายการ'
+                    .($skipped !== [] ? ' · ข้ามรายการซ้ำ '.count($skipped).' รายการ' : ''),
+            );
         } catch (Throwable $exception) {
             ImportError::create([
                 'import_job_id' => $import->id, 'row_number' => 0,
@@ -191,6 +203,11 @@ class ProcessInventoryImport implements ShouldQueue
                 'at' => $exception->getFile().':'.$exception->getLine(),
             ]);
             $this->audit($import, 'import.failed', ['reason' => 'database']);
+            $this->notifyDiscord(
+                $import,
+                'นำเข้าข้อมูลไอดีไม่สำเร็จ',
+                'เกิดข้อผิดพลาดระหว่างบันทึกลงฐานข้อมูล จึงยกเลิกทั้งชุด',
+            );
         } finally {
             Storage::disk($import->disk)->delete($import->path);
         }
@@ -199,6 +216,16 @@ class ProcessInventoryImport implements ShouldQueue
     private function audit(ImportJob $import, string $event, array $metadata): void
     {
         app(AuditLogger::class)->recordSystem($import->shop_id, $event, $import, $metadata, $import->user_id);
+    }
+
+    private function notifyDiscord(ImportJob $import, string $title, string $description): void
+    {
+        SendDiscordShopNotification::dispatch(
+            $import->shop_id,
+            'inventory',
+            $title,
+            $description,
+        );
     }
 
     public function failed(Throwable $exception): void

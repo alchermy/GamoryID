@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessInventoryImport;
+use App\Jobs\SendDiscordShopNotification;
 use App\Models\ImportError;
 use App\Models\ImportJob;
 use App\Models\InventoryItem;
@@ -24,6 +25,7 @@ class InventoryImportTest extends TestCase
 
     public function test_invalid_row_rolls_back_the_entire_csv_batch(): void
     {
+        Queue::fake();
         Storage::fake('private');
         $shop = Shop::create(['name' => 'ร้านนำเข้า', 'slug' => 'import-'.uniqid(), 'status' => 'trialing']);
         $user = User::create(['name' => 'เจ้าของร้าน', 'email' => 'import@example.test', 'password' => 'password', 'current_shop_id' => $shop->id]);
@@ -50,6 +52,11 @@ class InventoryImportTest extends TestCase
         $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'failed', 'imported_rows' => 0, 'failed_rows' => 1]);
         $this->assertDatabaseHas('import_errors', ['import_job_id' => $job->id, 'row_number' => 3]);
         Storage::disk('private')->assertMissing($path);
+        Queue::assertPushed(
+            SendDiscordShopNotification::class,
+            fn (SendDiscordShopNotification $job) => $job->purpose === 'inventory'
+                && $job->title === 'นำเข้าข้อมูลไอดีไม่สำเร็จ',
+        );
     }
 
     public function test_verified_merchant_can_download_the_excel_template(): void
@@ -283,6 +290,7 @@ class InventoryImportTest extends TestCase
 
     public function test_a_valid_csv_batch_is_imported_end_to_end(): void
     {
+        Queue::fake();
         Storage::fake('private');
         [$user, $shop] = $this->verifiedMerchant();
         $path = "imports/{$shop->id}/happy-path.csv";
@@ -309,6 +317,12 @@ class InventoryImportTest extends TestCase
         $this->assertDatabaseHas('inventory_credentials', ['inventory_item_id' => InventoryItem::where('title', 'ไอดีที่ถูกต้อง 1')->firstOrFail()->id]);
         $this->assertDatabaseHas('activity_logs', ['shop_id' => $shop->id, 'event' => 'import.completed']);
         Storage::disk('private')->assertMissing($path);
+        Queue::assertPushed(
+            SendDiscordShopNotification::class,
+            fn (SendDiscordShopNotification $job) => $job->purpose === 'inventory'
+                && $job->title === 'นำเข้าข้อมูลไอดีสำเร็จ'
+                && str_contains($job->description, 'เพิ่มเข้าคลัง 2 รายการ'),
+        );
     }
 
     /** @return array{User, Shop} */

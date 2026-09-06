@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendDiscordShopNotification;
 use App\Models\InventoryCredential;
 use App\Models\InventoryItem;
 use App\Models\Shop;
@@ -10,6 +11,7 @@ use App\Models\User;
 use App\Services\CredentialCipher;
 use App\Services\Totp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class SensitiveAccessTest extends TestCase
@@ -28,6 +30,7 @@ class SensitiveAccessTest extends TestCase
 
     public function test_password_only_reauth_unlocks_the_reveal_when_2fa_is_off(): void
     {
+        Queue::fake();
         [$user, $shop, $item] = $this->shopWithSecretItem();
 
         $this->acting($user)
@@ -41,6 +44,17 @@ class SensitiveAccessTest extends TestCase
             ->assertJsonPath('data.username', 'acc.login')
             ->assertJsonPath('data.password', 'the-secret-pw')
             ->assertJsonPath('data.recovery_email', 'rescue@example.test');
+
+        // Discord is told that a password was viewed — but never the password itself.
+        Queue::assertPushed(
+            SendDiscordShopNotification::class,
+            fn (SendDiscordShopNotification $job) => $job->shopId === $shop->id
+                && $job->purpose === 'system'
+                && $job->title === 'มีการเปิดดูรหัสผ่านไอดี'
+                && str_contains($job->description, '#SEC01')
+                && str_contains($job->description, 'เจ้าของร้าน')
+                && ! str_contains($job->description, 'the-secret-pw'),
+        );
     }
 
     public function test_a_wrong_password_at_reauth_is_rejected(): void
