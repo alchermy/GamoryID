@@ -358,10 +358,17 @@ export function AuthGate() {
   }, [checkSession, justVerified]);
   useEffect(() => {
     if (justVerified) return;
-    document.title = checking
-      ? "กำลังตรวจสอบสิทธิ์ — GamoryID"
-      : "เชื่อมต่อระบบไม่สำเร็จ — GamoryID";
-  }, [checking, justVerified]);
+    if (checking) {
+      document.title = "กำลังตรวจสอบสิทธิ์ — GamoryID";
+      return;
+    }
+    // On success the app mounts and owns the title — only claim it for the
+    // actual failure screen, otherwise "เชื่อมต่อระบบไม่สำเร็จ" sticks in the
+    // tab because this parent effect runs after the child's title effect.
+    if (!session && error) {
+      document.title = "เชื่อมต่อระบบไม่สำเร็จ — GamoryID";
+    }
+  }, [checking, justVerified, session, error]);
   if (import.meta.env.MODE === "test") return <Outlet context={undefined} />;
   if (justVerified) return <EmailVerifiedScreen />;
   if (checking)
