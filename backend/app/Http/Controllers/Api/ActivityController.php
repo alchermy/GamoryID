@@ -12,9 +12,6 @@ use Illuminate\Support\Carbon;
 
 class ActivityController extends Controller
 {
-    /** Internal audit events that must not surface in the merchant's activity feed. */
-    private const HIDDEN_EVENTS = ['admin.slip_viewed'];
-
     public function index(Request $request, CurrentShop $currentShop): JsonResponse
     {
         $shop = $currentShop->from($request);
@@ -29,7 +26,7 @@ class ActivityController extends Controller
 
         $query = ActivityLog::query()
             ->where('shop_id', $shop->id)
-            ->whereNotIn('event', self::HIDDEN_EVENTS)
+            ->whereNot('event', 'like', 'admin.%')
             ->with('user:id,name')
             ->latest('created_at');
 
@@ -77,7 +74,7 @@ class ActivityController extends Controller
             ],
             'filters' => [
                 'events' => ActivityLog::where('shop_id', $shop->id)
-                    ->whereNotIn('event', self::HIDDEN_EVENTS)
+                    ->whereNot('event', 'like', 'admin.%')
                     ->distinct()->orderBy('event')->pluck('event'),
                 'actors' => ShopMember::where('shop_id', $shop->id)
                     ->with('user:id,name')->get()

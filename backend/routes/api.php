@@ -94,6 +94,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/security/2fa/begin', [SensitiveAccessController::class, 'beginTwoFactor'])->middleware('throttle:5,1');
         Route::post('/security/2fa/confirm', [SensitiveAccessController::class, 'confirmTwoFactor'])->middleware('throttle:5,1');
         Route::post('/security/2fa/disable', [SensitiveAccessController::class, 'disableTwoFactor'])->middleware('throttle:5,1');
+        Route::post('/security/2fa/recovery-codes', [SensitiveAccessController::class, 'regenerateRecoveryCodes'])->middleware('throttle:5,1');
         Route::post('/security/reauth', [SensitiveAccessController::class, 'confirmReauth'])->middleware('throttle:5,1');
 
         Route::middleware(['verified', 'terms.current'])->group(function () {

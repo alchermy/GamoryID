@@ -156,6 +156,7 @@ class AuthController extends Controller
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
             'current_shop_id' => $user->current_shop_id,
             'two_factor_enabled' => (bool) $user->two_factor_confirmed_at,
+            'two_factor_recovery_codes_remaining' => count($user->two_factor_recovery_codes ?? []),
             'terms_current' => $user->hasAcceptedCurrentTerms(),
             'shops' => $user->shops()->get()->map(fn ($shop) => [
                 'id' => $shop->id,

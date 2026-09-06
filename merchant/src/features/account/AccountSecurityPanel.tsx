@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Check, Copy, ShieldCheck, ShieldOff } from "lucide-react";
+import { Check, Copy, KeyRound, ShieldCheck, ShieldOff } from "lucide-react";
 import QRCode from "qrcode";
 import { apiRequest } from "../../api";
 import { Field, PasswordInput } from "../../shared/ui/form-controls";
 import type { SessionUser } from "../../types/models";
 
-type Phase = "idle" | "begin" | "confirm" | "disable";
+type Phase = "idle" | "begin" | "confirm" | "recovery" | "regen" | "disable";
+
+/** Split a "6 digit code" vs "recovery code" input into the right request body. */
+function secondFactorBody(raw: string): { code: string } | { recovery_code: string } {
+  const value = raw.trim();
+  return /^\d{6}$/.test(value) ? { code: value } : { recovery_code: value };
+}
 
 export function AccountSecurityPanel({
   session,
@@ -22,6 +28,10 @@ export function AccountSecurityPanel({
   const [secret, setSecret] = useState("");
   const [qr, setQr] = useState("");
   const [otpauthUri, setOtpauthUri] = useState("");
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [codesRemaining, setCodesRemaining] = useState(
+    session?.two_factor_recovery_codes_remaining ?? 0,
+  );
 
   useEffect(() => {
     if (!otpauthUri) return;
@@ -40,6 +50,25 @@ export function AccountSecurityPanel({
     setSecret("");
     setQr("");
     setOtpauthUri("");
+    setRecoveryCodes([]);
+  };
+
+  const downloadCodes = () => {
+    const blob = new Blob(
+      [
+        `รหัสสำรอง 2FA — GamoryID (${session?.email ?? ""})\n`,
+        "ใช้แทนรหัส 6 หลักจากแอปได้ 1 ครั้งต่อ 1 รหัส เก็บไว้ในที่ปลอดภัย\n\n",
+        recoveryCodes.join("\n"),
+        "\n",
+      ],
+      { type: "text/plain" },
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "gamoryid-2fa-recovery-codes.txt";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const fail = (reason: unknown) =>
@@ -75,13 +104,42 @@ export function AccountSecurityPanel({
     setBusy(true);
     setError("");
     try {
-      await apiRequest("/security/2fa/confirm", {
-        method: "POST",
-        body: JSON.stringify({ code }),
-      });
-      setEnabled(true);
-      reset();
-      notify("เปิด 2FA แล้ว");
+      const result = await apiRequest<{ recovery_codes: string[] }>(
+        "/security/2fa/confirm",
+        { method: "POST", body: JSON.stringify({ code }) },
+      );
+      setRecoveryCodes(result.recovery_codes ?? []);
+      setCodesRemaining(result.recovery_codes?.length ?? 0);
+      setError("");
+      setPhase("recovery");
+    } catch (reason) {
+      fail(reason);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const regenerate = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (busy) return;
+    const data = new FormData(event.currentTarget);
+    setBusy(true);
+    setError("");
+    try {
+      const result = await apiRequest<{ recovery_codes: string[] }>(
+        "/security/2fa/recovery-codes",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            password: String(data.get("password") ?? ""),
+            ...secondFactorBody(String(data.get("code") ?? "")),
+          }),
+        },
+      );
+      setRecoveryCodes(result.recovery_codes ?? []);
+      setCodesRemaining(result.recovery_codes?.length ?? 0);
+      setError("");
+      setPhase("recovery");
     } catch (reason) {
       fail(reason);
     } finally {
@@ -100,10 +158,11 @@ export function AccountSecurityPanel({
         method: "POST",
         body: JSON.stringify({
           password: String(data.get("password") ?? ""),
-          code: String(data.get("code") ?? ""),
+          ...secondFactorBody(String(data.get("code") ?? "")),
         }),
       });
       setEnabled(false);
+      setCodesRemaining(0);
       reset();
       notify("ปิด 2FA แล้ว");
     } catch (reason) {
@@ -233,21 +292,111 @@ export function AccountSecurityPanel({
           </div>
         )}
 
+        {phase === "recovery" && (
+          <div className="account-2fa-setup">
+            <p className="account-2fa-on-note">
+              <KeyRound size={15} /> เก็บรหัสสำรองไว้ในที่ปลอดภัย — ใช้แทนรหัส 6
+              หลักจากแอปได้ 1 ครั้งต่อ 1 รหัส เผื่อโทรศัพท์หาย
+            </p>
+            <ul className="account-2fa-recovery-list">
+              {recoveryCodes.map((code) => (
+                <li key={code}>
+                  <code>{code}</code>
+                </li>
+              ))}
+            </ul>
+            <div className="account-form-actions">
+              <button
+                type="button"
+                className="button ghost compact"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(recoveryCodes.join("\n"));
+                  notify("คัดลอกรหัสสำรองแล้ว");
+                }}
+              >
+                <Copy size={14} /> คัดลอกทั้งหมด
+              </button>
+              <button
+                type="button"
+                className="button ghost compact"
+                onClick={downloadCodes}
+              >
+                ดาวน์โหลด .txt
+              </button>
+            </div>
+            <button
+              type="button"
+              className="button primary"
+              onClick={() => {
+                setEnabled(true);
+                reset();
+                notify("เปิด 2FA แล้ว");
+              }}
+            >
+              <Check size={16} /> บันทึกรหัสสำรองแล้ว
+            </button>
+          </div>
+        )}
+
+        {enabled && phase === "regen" && (
+          <form className="account-form" onSubmit={regenerate}>
+            <p className="account-2fa-on-note">
+              สร้างชุดใหม่จะทำให้รหัสสำรองชุดเดิมใช้ไม่ได้ทันที
+            </p>
+            <Field label="รหัสผ่านบัญชี">
+              <PasswordInput
+                name="password"
+                required
+                autoComplete="current-password"
+              />
+            </Field>
+            <Field label="รหัส 6 หลักจากแอป หรือรหัสสำรอง 1 ชุด">
+              <input name="code" autoComplete="one-time-code" required />
+            </Field>
+            <div className="account-form-actions">
+              <button
+                type="button"
+                className="button"
+                onClick={reset}
+                disabled={busy}
+              >
+                ยกเลิก
+              </button>
+              <button className="button primary" disabled={busy}>
+                {busy ? "กำลังสร้าง…" : "สร้างรหัสสำรองใหม่"}
+              </button>
+            </div>
+          </form>
+        )}
+
         {enabled && phase === "idle" && (
           <div className="account-2fa-on">
             <p className="account-2fa-on-note">
-              <Check size={15} /> บัญชีนี้ต้องใช้รหัส 2FA เมื่อยืนยันตัวตน
+              <Check size={15} /> บัญชีนี้ต้องใช้รหัส 2FA เมื่อยืนยันตัวตน ·
+              เหลือรหัสสำรอง {codesRemaining} ชุด
             </p>
-            <button
-              type="button"
-              className="button danger subtle-danger"
-              onClick={() => {
-                setError("");
-                setPhase("disable");
-              }}
-            >
-              <ShieldOff size={16} /> ปิด 2FA
-            </button>
+            <div className="account-form-actions">
+              <button
+                type="button"
+                className="button ghost compact"
+                onClick={() => {
+                  setError("");
+                  setPhase("regen");
+                }}
+              >
+                <KeyRound size={15} /> สร้างรหัสสำรองใหม่
+              </button>
+              <button
+                type="button"
+                className="button danger subtle-danger"
+                onClick={() => {
+                  setError("");
+                  setPhase("disable");
+                }}
+              >
+                <ShieldOff size={16} /> ปิด 2FA
+              </button>
+            </div>
           </div>
         )}
 
@@ -260,15 +409,8 @@ export function AccountSecurityPanel({
                 autoComplete="current-password"
               />
             </Field>
-            <Field label="รหัส 6 หลักจากแอป">
-              <input
-                name="code"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                autoComplete="one-time-code"
-                required
-              />
+            <Field label="รหัส 6 หลักจากแอป หรือรหัสสำรอง 1 ชุด">
+              <input name="code" autoComplete="one-time-code" required />
             </Field>
             <div className="account-form-actions">
               <button

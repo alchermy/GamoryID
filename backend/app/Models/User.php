@@ -35,6 +35,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'password',
         'remember_token',
         'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -49,6 +50,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
             'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
             'two_factor_confirmed_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
         ];

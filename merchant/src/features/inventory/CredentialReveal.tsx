@@ -76,12 +76,15 @@ function ReauthModal({
     setBusy(true);
     setError("");
     try {
+      const secondFactor = String(data.get("code") ?? "").trim();
       await apiRequest("/security/reauth", {
         method: "POST",
         body: JSON.stringify({
           password: String(data.get("password") ?? ""),
           ...(twoFactorEnabled
-            ? { code: String(data.get("code") ?? "") }
+            ? /^\d{6}$/.test(secondFactor)
+              ? { code: secondFactor }
+              : { recovery_code: secondFactor }
             : {}),
         }),
       });
@@ -119,7 +122,7 @@ function ReauthModal({
           title="ยืนยันตัวตนก่อนดูรหัสผ่าน"
           subtitle={
             twoFactorEnabled
-              ? "กรอกรหัสผ่านบัญชีและรหัส 6 หลักจากแอป Authenticator"
+              ? "กรอกรหัสผ่านบัญชี และรหัส 6 หลักจากแอป Authenticator (หรือรหัสสำรอง 1 ชุด)"
               : "กรอกรหัสผ่านบัญชีของคุณอีกครั้ง"
           }
           close={onClose}
@@ -138,13 +141,10 @@ function ReauthModal({
             />
           </Field>
           {twoFactorEnabled && (
-            <Field label="รหัส 6 หลักจากแอป">
+            <Field label="รหัส 6 หลักจากแอป หรือรหัสสำรอง 1 ชุด">
               <input
                 ref={firstField}
                 name="code"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
                 autoComplete="one-time-code"
                 required
               />

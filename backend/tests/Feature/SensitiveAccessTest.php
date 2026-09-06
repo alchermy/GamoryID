@@ -97,10 +97,67 @@ class SensitiveAccessTest extends TestCase
             ->postJson('/api/v1/security/2fa/confirm', ['code' => '000000'])
             ->assertStatus(422);
 
-        $this->acting($user)
+        $confirm = $this->acting($user)
             ->postJson('/api/v1/security/2fa/confirm', ['code' => app(Totp::class)->currentCode($secret)])
-            ->assertOk();
+            ->assertOk()
+            ->assertJsonCount(8, 'recovery_codes');
         $this->assertNotNull($user->fresh()->two_factor_confirmed_at);
+        $this->assertSame($confirm->json('recovery_codes'), $user->fresh()->two_factor_recovery_codes);
+    }
+
+    public function test_a_recovery_code_can_stand_in_for_the_authenticator_and_is_consumed(): void
+    {
+        [$user, $shop, $item] = $this->shopWithSecretItem();
+        $this->enableTwoFactor($user);
+
+        // a wrong account password must not burn a recovery code
+        $this->acting($user)
+            ->postJson('/api/v1/security/reauth', ['password' => 'nope', 'recovery_code' => 'aaaaa-11111'])
+            ->assertStatus(422);
+        $this->assertCount(3, $user->fresh()->two_factor_recovery_codes);
+
+        // right password + a recovery code → unlocks, and that code is spent
+        $this->acting($user)
+            ->postJson('/api/v1/security/reauth', ['password' => 'password', 'recovery_code' => 'AAAAA-11111'])
+            ->assertOk();
+        $this->assertSame(['bbbbb-22222', 'ccccc-33333'], array_values($user->fresh()->two_factor_recovery_codes));
+
+        $this->acting($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->getJson("/api/v1/inventory/{$item->id}/credentials")->assertOk();
+
+        // the spent code no longer works
+        $this->acting($user)
+            ->postJson('/api/v1/security/reauth', ['password' => 'password', 'recovery_code' => 'aaaaa-11111'])
+            ->assertStatus(422);
+    }
+
+    public function test_recovery_codes_can_be_regenerated_and_old_ones_stop_working(): void
+    {
+        [$user] = $this->shopWithSecretItem();
+        $secret = $this->enableTwoFactor($user);
+
+        $this->acting($user)
+            ->postJson('/api/v1/security/2fa/recovery-codes', ['password' => 'password'])
+            ->assertStatus(422); // needs a second factor
+
+        $fresh = $this->acting($user)
+            ->postJson('/api/v1/security/2fa/recovery-codes', [
+                'password' => 'password',
+                'code' => app(Totp::class)->currentCode($secret),
+            ])
+            ->assertOk()
+            ->assertJsonCount(8, 'recovery_codes')
+            ->json('recovery_codes');
+
+        $this->assertSame($fresh, $user->fresh()->two_factor_recovery_codes);
+        $this->assertNotContains('aaaaa-11111', $fresh);
+
+        $this->acting($user)
+            ->postJson('/api/v1/security/reauth', ['password' => 'password', 'recovery_code' => 'aaaaa-11111'])
+            ->assertStatus(422);
+        $this->acting($user)
+            ->postJson('/api/v1/security/reauth', ['password' => 'password', 'recovery_code' => $fresh[0]])
+            ->assertOk();
     }
 
     public function test_with_2fa_on_the_reveal_needs_password_and_code(): void
@@ -130,25 +187,24 @@ class SensitiveAccessTest extends TestCase
             ->assertJsonPath('data.password', 'the-secret-pw');
     }
 
-    public function test_disabling_2fa_needs_password_and_code_and_clears_both_columns(): void
+    public function test_disabling_2fa_needs_a_second_factor_and_clears_everything(): void
     {
         [$user] = $this->shopWithSecretItem();
-        $secret = $this->enableTwoFactor($user);
+        $this->enableTwoFactor($user);
 
         $this->acting($user)
             ->postJson('/api/v1/security/2fa/disable', ['password' => 'password', 'code' => '111111'])
             ->assertStatus(422);
 
+        // a recovery code works here too
         $this->acting($user)
-            ->postJson('/api/v1/security/2fa/disable', [
-                'password' => 'password',
-                'code' => app(Totp::class)->currentCode($secret),
-            ])
+            ->postJson('/api/v1/security/2fa/disable', ['password' => 'password', 'recovery_code' => 'ccccc-33333'])
             ->assertOk();
 
         $fresh = $user->fresh();
         $this->assertNull($fresh->two_factor_secret);
         $this->assertNull($fresh->two_factor_confirmed_at);
+        $this->assertNull($fresh->two_factor_recovery_codes);
     }
 
     public function test_staff_without_the_reveal_permission_gets_403(): void
@@ -217,12 +273,16 @@ class SensitiveAccessTest extends TestCase
         ])->actingAs($user);
     }
 
+    /** Fixed recovery codes seeded by enableTwoFactor(), for assertions. */
+    private const RECOVERY_CODES = ['aaaaa-11111', 'bbbbb-22222', 'ccccc-33333'];
+
     private function enableTwoFactor(User $user): string
     {
         $secret = app(Totp::class)->generateSecret();
         $user->forceFill([
             'two_factor_secret' => $secret,
             'two_factor_confirmed_at' => now(),
+            'two_factor_recovery_codes' => self::RECOVERY_CODES,
         ])->save();
 
         return $secret;

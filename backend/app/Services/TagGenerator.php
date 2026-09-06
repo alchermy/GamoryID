@@ -52,9 +52,10 @@ class TagGenerator
     }
 
     /**
-     * Rebrand every "<something>-<number>" code in the shop to the shop's
-     * current prefix, keeping the number. Legacy 5-char codes are left alone.
-     * A target code already used by a different item is skipped.
+     * Rebrand every item code in the shop to the shop's current prefix while
+     * keeping its number part ("<PREFIX>-<number>"). A legacy 5-char code keeps
+     * itself as the number part (#2VS8D → #PCX-2VS8D). A target code already
+     * used by a different item is skipped.
      *
      * @return array{renamed: int, skipped: int}
      */
@@ -67,7 +68,6 @@ class TagGenerator
         DB::transaction(function () use ($shop, $prefix, &$renamed, &$skipped) {
             $items = InventoryItem::withTrashed()
                 ->where('shop_id', $shop->id)
-                ->where('tag', 'like', '%-%')
                 ->lockForUpdate()
                 ->get(['id', 'tag']);
             $used = InventoryItem::withTrashed()->where('shop_id', $shop->id)->pluck('tag', 'id');
@@ -99,7 +99,6 @@ class TagGenerator
 
         return InventoryItem::withTrashed()
             ->where('shop_id', $shop->id)
-            ->where('tag', 'like', '%-%')
             ->where('tag', 'not like', $prefix.'-%')
             ->count();
     }

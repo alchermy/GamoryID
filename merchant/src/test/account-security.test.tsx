@@ -48,7 +48,11 @@ describe("AccountSecurityPanel", () => {
     mockApi({
       "/security/2fa/begin": () =>
         json({ secret: "ABCDEF234567", otpauth_uri: "otpauth://totp/x" }),
-      "/security/2fa/confirm": () => json({ message: "เปิดใช้ 2FA แล้ว" }),
+      "/security/2fa/confirm": () =>
+        json({
+          message: "เปิดใช้ 2FA แล้ว",
+          recovery_codes: ["aaaaa-11111", "bbbbb-22222"],
+        }),
     });
 
     render(<AccountSecurityPanel session={session} notify={notify} />);
@@ -65,6 +69,12 @@ describe("AccountSecurityPanel", () => {
     await user.type(screen.getByLabelText("กรอกรหัส 6 หลักจากแอป"), "123456");
     await user.click(
       screen.getByRole("button", { name: "ยืนยันและเปิดใช้" }),
+    );
+
+    // recovery codes are shown once before 2FA is really "on"
+    expect(await screen.findByText("aaaaa-11111")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: /บันทึกรหัสสำรองแล้ว/ }),
     );
 
     expect(await screen.findByText("เปิดอยู่")).toBeInTheDocument();

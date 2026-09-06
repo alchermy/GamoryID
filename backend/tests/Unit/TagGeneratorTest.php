@@ -65,22 +65,23 @@ class TagGeneratorTest extends TestCase
         $tags->generate($shop, '1282');
     }
 
-    public function test_retag_swaps_the_prefix_keeps_the_number_and_skips_legacy_and_collisions(): void
+    public function test_retag_swaps_the_prefix_folds_in_legacy_codes_and_skips_collisions(): void
     {
         $tags = app(TagGenerator::class);
         $shop = $this->shop(['tag_prefix' => 'XYZ']);
         $mk = fn (string $tag) => InventoryItem::create(['shop_id' => $shop->id, 'tag' => $tag, 'title' => $tag, 'cost' => 0, 'list_price' => 0, 'status' => 'available']);
         $a = $mk('ABC-0001');
         $mk('ABC-0002');
-        $mk('23DX5');          // legacy — untouched
-        $mk('XYZ-0002');       // target of ABC-0002 already exists → that one is skipped
+        $legacy = $mk('23DX5');   // legacy 5-char → becomes XYZ-23DX5
+        $mk('XYZ-0002');          // target of ABC-0002 already exists → that one is skipped
 
-        $this->assertSame(2, $tags->retaggableCount($shop)); // ABC-0001, ABC-0002
+        $this->assertSame(3, $tags->retaggableCount($shop)); // ABC-0001, ABC-0002, 23DX5
         $result = $tags->retagShop($shop);
 
-        $this->assertSame(['renamed' => 1, 'skipped' => 1], $result);
+        $this->assertSame(['renamed' => 2, 'skipped' => 1], $result);
         $this->assertSame('XYZ-0001', $a->fresh()->tag);
-        $this->assertDatabaseHas('inventory_items', ['tag' => '23DX5']);
+        $this->assertSame('XYZ-23DX5', $legacy->fresh()->tag);
         $this->assertDatabaseHas('inventory_items', ['tag' => 'ABC-0002']); // skipped, left as-is
+        $this->assertSame(1, $tags->retaggableCount($shop)); // only the skipped ABC-0002 remains
     }
 }

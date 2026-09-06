@@ -16,6 +16,23 @@ class Totp
         return $secret;
     }
 
+    /**
+     * One-time 2FA recovery codes, formatted "xxxxx-xxxxx" (lowercase, no
+     * ambiguous characters).
+     *
+     * @return array<int, string>
+     */
+    public function recoveryCodes(int $count = 8): array
+    {
+        $alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+        $pick = fn (int $len) => implode('', array_map(
+            fn () => $alphabet[random_int(0, strlen($alphabet) - 1)],
+            range(1, $len),
+        ));
+
+        return array_map(fn () => $pick(5).'-'.$pick(5), range(1, $count));
+    }
+
     public function verify(string $secret, string $code, int $window = 1): bool
     {
         if (! preg_match('/^\d{6}$/', $code)) {

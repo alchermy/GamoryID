@@ -89,6 +89,7 @@ export type SessionUser = {
   terms_current: boolean;
   /** true once the account has finished setting up TOTP two-factor auth. */
   two_factor_enabled: boolean;
+  two_factor_recovery_codes_remaining?: number;
   current_shop_id: number;
   shops: Shop[];
 };

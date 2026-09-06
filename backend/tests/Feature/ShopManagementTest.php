@@ -61,15 +61,15 @@ class ShopManagementTest extends TestCase
         InventoryItem::create(['shop_id' => $shop->id, 'tag' => '23DX5', 'title' => 'b', 'cost' => 0, 'list_price' => 1, 'status' => 'available']);
 
         $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
-            ->getJson('/api/v1/shop')->assertOk()->assertJsonPath('data.retaggable_count', 1);
+            ->getJson('/api/v1/shop')->assertOk()->assertJsonPath('data.retaggable_count', 2);
 
         $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
             ->postJson('/api/v1/shop/retag')
-            ->assertOk()->assertJsonPath('renamed', 1)->assertJsonPath('skipped', 0)
+            ->assertOk()->assertJsonPath('renamed', 2)->assertJsonPath('skipped', 0)
             ->assertJsonPath('data.retaggable_count', 0);
 
         $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'tag' => 'NEW-0001']);
-        $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'tag' => '23DX5']);
+        $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'tag' => 'NEW-23DX5']);
         $this->assertDatabaseHas('activity_logs', ['shop_id' => $shop->id, 'event' => 'shop.retagged']);
     }
 
