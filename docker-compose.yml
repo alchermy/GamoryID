@@ -123,9 +123,9 @@ services:
       context: .
       dockerfile: Dockerfile.web
       args:
-        # Set VITE_GA_ID=G-XXXXXXXXXX in .env to bake Google Analytics into the
-        # public site; empty (default) ships no analytics script.
-        VITE_GA_ID: ${VITE_GA_ID:-}
+        # Override the Dockerfile's GA4 id via .env if you ever need a different
+        # stream; unset falls back to the baked-in production id.
+        VITE_GA_ID: ${VITE_GA_ID:-G-GS4GZV6PXS}
     restart: unless-stopped
     ports:
       - "80:80"
