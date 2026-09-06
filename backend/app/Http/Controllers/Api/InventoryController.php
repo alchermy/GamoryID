@@ -12,6 +12,7 @@ use App\Http\Resources\InventoryItemResource;
 use App\Jobs\SendDiscordShopNotification;
 use App\Models\InventoryCredential;
 use App\Models\InventoryItem;
+use App\Models\Reservation;
 use App\Services\AuditLogger;
 use App\Services\CredentialCipher;
 use App\Services\CurrentShop;
@@ -167,6 +168,59 @@ class InventoryController extends Controller
         ]);
 
         return new InventoryItemResource($item->fresh()->load(['shop', 'media']));
+    }
+
+    /**
+     * Move several IDs to the same status in one request — the merchant's
+     * bulk "restock" / "remove" action from the inventory table.
+     */
+    public function batch(Request $request, CurrentShop $currentShop, AuditLogger $audit)
+    {
+        $shop = $currentShop->from($request);
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*' => ['integer'],
+            'status' => ['required', 'in:available,archived'],
+        ]);
+
+        $target = InventoryStatus::from($data['status']);
+        $items = InventoryItem::forShop($shop)->whereIn('id', $data['ids'])->get();
+
+        $updated = 0;
+        $skipped = 0;
+        DB::transaction(function () use ($items, $target, &$updated, &$skipped) {
+            foreach ($items as $item) {
+                if ($item->status === InventoryStatus::Sold || $item->status === $target) {
+                    $skipped++;
+
+                    continue;
+                }
+                if ($target === InventoryStatus::Available) {
+                    Reservation::query()
+                        ->where('inventory_item_id', $item->id)
+                        ->whereNull('released_at')
+                        ->update(['released_at' => now()]);
+                    $item->update(['status' => InventoryStatus::Available, 'archived_at' => null, 'lock_version' => $item->lock_version + 1]);
+                } else {
+                    $item->update(['status' => InventoryStatus::Archived, 'archived_at' => now(), 'lock_version' => $item->lock_version + 1]);
+                }
+                $updated++;
+            }
+        }, 3);
+
+        $audit->record($request, $shop, 'inventory.bulk_updated', null, [
+            'status' => $target->value,
+            'updated' => $updated,
+            'skipped' => $skipped,
+        ]);
+
+        return response()->json([
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'message' => $skipped > 0
+                ? "อัปเดต {$updated} รายการ · ข้าม {$skipped} รายการ (ขายแล้ว หรือสถานะเดิมอยู่แล้ว)"
+                : "อัปเดตสถานะ {$updated} รายการแล้ว",
+        ]);
     }
 
     public function destroy(Request $request, int $inventory, CurrentShop $currentShop, AuditLogger $audit)

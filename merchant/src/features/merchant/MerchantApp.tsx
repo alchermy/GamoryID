@@ -677,6 +677,36 @@ export function MerchantApp() {
       setInventoryBusy(false);
     }
   };
+  const batchInventoryStatus = async (
+    ids: number[],
+    nextStatus: "available" | "archived",
+  ) => {
+    if (ids.length === 0) return;
+    if (!shop) {
+      setInventoryItems((current) =>
+        current.map((item) =>
+          ids.includes(item.id) ? { ...item, status: nextStatus } : item,
+        ),
+      );
+      notify(`อัปเดตสถานะ ${ids.length} รายการแล้ว`);
+      return;
+    }
+    try {
+      const result = await shopRequest<{ message: string }>(
+        "/inventory/batch",
+        shop.id,
+        { method: "POST", body: JSON.stringify({ ids, status: nextStatus }) },
+      );
+      await Promise.all([refreshInventory(), refreshDashboardData()]);
+      notify(result.message);
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "อัปเดตสถานะแบบกลุ่มไม่สำเร็จ",
+      );
+    }
+  };
   const reserve = async (i: InventoryItem) => {
     await changeInventoryStatus(i, "reserved");
   };
@@ -1848,6 +1878,7 @@ export function MerchantApp() {
             status={status}
             setInventoryStatus={setInventoryStatus}
             canSell={hasShopPermission("inventory.sell")}
+            canManage={hasShopPermission("inventory.manage")}
             canNote={
               hasShopPermission("inventory.manage") ||
               hasShopPermission("inventory.sell")
@@ -1858,6 +1889,8 @@ export function MerchantApp() {
             onSelect={openDetail}
             onReserve={reserve}
             onSell={sell}
+            onDelete={(i) => setArchiveCandidate(i)}
+            onBatchStatus={batchInventoryStatus}
             onCopyTag={copyTag}
             onCopyDetails={copyDetails}
             onNote={openInventoryNote}

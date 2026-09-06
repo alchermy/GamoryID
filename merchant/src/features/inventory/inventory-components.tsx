@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Tag,
+  Trash2,
   UserRound,
   X,
 } from "lucide-react";
@@ -132,6 +133,7 @@ export function InventoryPanel({
   status,
   setInventoryStatus,
   canSell,
+  canManage,
   canNote,
   canViewAnalytics,
   busy,
@@ -139,6 +141,8 @@ export function InventoryPanel({
   onSelect,
   onReserve,
   onSell,
+  onDelete,
+  onBatchStatus,
   onCopyTag,
   onCopyDetails,
   onNote,
@@ -148,6 +152,7 @@ export function InventoryPanel({
   status: "all" | InventoryStatus;
   setInventoryStatus: (v: "all" | InventoryStatus) => void;
   canSell: boolean;
+  canManage: boolean;
   canNote: boolean;
   canViewAnalytics: boolean;
   busy: boolean;
@@ -155,10 +160,47 @@ export function InventoryPanel({
   onSelect: (v: InventoryItem) => void;
   onReserve: (v: InventoryItem) => void;
   onSell: (v: InventoryItem) => void;
+  onDelete: (v: InventoryItem) => void;
+  onBatchStatus: (
+    ids: number[],
+    status: "available" | "archived",
+  ) => Promise<void> | void;
   onCopyTag: (v: InventoryItem) => void;
   onCopyDetails: (v: InventoryItem) => void;
   onNote: (v: InventoryItem) => void;
 }) {
+  const [picked, setPicked] = useState<Set<number>>(new Set());
+  const [batchTo, setBatchTo] = useState<"available" | "archived">("available");
+  const [batchBusy, setBatchBusy] = useState(false);
+
+  const selectableIds = items
+    .filter((i) => i.status !== "sold")
+    .map((i) => i.id);
+  const pickedIds = [...picked].filter((id) => selectableIds.includes(id));
+  const allPicked =
+    selectableIds.length > 0 && selectableIds.every((id) => picked.has(id));
+
+  const togglePick = (id: number) =>
+    setPicked((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAll = () =>
+    setPicked(() => (allPicked ? new Set() : new Set(selectableIds)));
+  const clearPicked = () => setPicked(new Set());
+  const runBatch = async () => {
+    if (pickedIds.length === 0 || batchBusy) return;
+    setBatchBusy(true);
+    try {
+      await onBatchStatus(pickedIds, batchTo);
+      clearPicked();
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
   return (
     <section className="panel inventory-list-panel">
       <div className="panel-head">
@@ -190,10 +232,54 @@ export function InventoryPanel({
         </div>
       ) : (
         <>
+          {canManage && pickedIds.length > 0 && (
+            <div className="inventory-batch-bar" role="region" aria-label="ทำรายการกับไอดีที่เลือก">
+              <span className="inventory-batch-count">
+                เลือก {pickedIds.length} รายการ
+              </span>
+              <label className="inventory-batch-field">
+                <span>เปลี่ยนสถานะเป็น</span>
+                <select
+                  value={batchTo}
+                  disabled={batchBusy}
+                  onChange={(e) =>
+                    setBatchTo(e.target.value as "available" | "archived")
+                  }
+                >
+                  <option value="available">พร้อมขาย</option>
+                  <option value="archived">เก็บถาวร</option>
+                </select>
+              </label>
+              <button
+                className="button blue"
+                onClick={() => void runBatch()}
+                disabled={batchBusy}
+              >
+                {batchBusy ? "กำลังอัปเดต…" : "ใช้กับที่เลือก"}
+              </button>
+              <button
+                className="button ghost"
+                onClick={clearPicked}
+                disabled={batchBusy}
+              >
+                ล้างการเลือก
+              </button>
+            </div>
+          )}
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
+                  {canManage && (
+                    <th className="select-col">
+                      <input
+                        type="checkbox"
+                        aria-label="เลือกไอดีทั้งหมด"
+                        checked={allPicked}
+                        onChange={toggleAll}
+                      />
+                    </th>
+                  )}
                   <th>แท็ก</th>
                   <th>Username</th>
                   <th>ชื่อรายการ</th>
@@ -206,7 +292,18 @@ export function InventoryPanel({
               </thead>
               <tbody>
                 {items.map((i) => (
-                  <tr key={i.id}>
+                  <tr key={i.id} className={picked.has(i.id) ? "is-picked" : ""}>
+                    {canManage && (
+                      <td className="select-col">
+                        <input
+                          type="checkbox"
+                          aria-label={`เลือก ${i.tag}`}
+                          checked={picked.has(i.id)}
+                          disabled={i.status === "sold"}
+                          onChange={() => togglePick(i.id)}
+                        />
+                      </td>
+                    )}
                     <td>
                       <button
                         className="button ghost tag"
@@ -310,6 +407,18 @@ export function InventoryPanel({
                               <Tag size={16} />
                             </button>
                           )}
+                        {canManage &&
+                          i.status !== "sold" &&
+                          i.status !== "archived" && (
+                            <button
+                              className="icon-button delete-action"
+                              aria-label={`ลบไอดี ${i.tag}`}
+                              title="ลบไอดี (เก็บถาวร)"
+                              onClick={() => onDelete(i)}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
                       </div>
                     </td>
                   </tr>
@@ -396,6 +505,17 @@ export function InventoryPanel({
                       ปิดการขาย
                     </button>
                   )}
+                  {canManage &&
+                    i.status !== "sold" &&
+                    i.status !== "archived" && (
+                      <button
+                        className="button danger"
+                        onClick={() => onDelete(i)}
+                      >
+                        <Trash2 size={16} />
+                        ลบไอดี
+                      </button>
+                    )}
                 </div>
               </article>
             ))}
