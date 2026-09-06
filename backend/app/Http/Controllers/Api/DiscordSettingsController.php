@@ -9,6 +9,7 @@ use App\Services\AuditLogger;
 use App\Services\CurrentShop;
 use App\Services\Discord\DiscordApiClient;
 use App\Services\Discord\DiscordCodeService;
+use App\Services\Discord\DiscordCommandDispatcher;
 use App\Services\Discord\DiscordNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -170,7 +171,7 @@ class DiscordSettingsController extends Controller
         return response()->json(['message' => 'เปิดโหมดจำลอง Discord แล้ว']);
     }
 
-    public function autoCreateChannels(Request $request, CurrentShop $currentShop, DiscordApiClient $discord, AuditLogger $audit)
+    public function autoCreateChannels(Request $request, CurrentShop $currentShop, DiscordApiClient $discord, AuditLogger $audit, DiscordCommandDispatcher $dispatcher)
     {
         $shop = $currentShop->from($request);
         $installation = $shop->discordInstallation()->where('status', 'connected')->firstOrFail();
@@ -225,7 +226,20 @@ class DiscordSettingsController extends Controller
         });
         $audit->record($request, $shop, 'discord.channels_created', $installation, ['purposes' => array_keys(self::CHANNELS)]);
 
-        return response()->json(['message' => 'สร้างหรือปรับปรุงห้องภาษาไทยของ GamoryID แล้ว']);
+        // Drop the control panel into the freshly-provisioned commands channel so
+        // the team sees the button menu without having to run /ร้าน เมนู first.
+        $menuPosted = false;
+        if (! $discord->isTestMode()) {
+            try {
+                $menuPosted = $dispatcher->publishMenu($installation->fresh()->load(['channels', 'shop']));
+            } catch (Throwable $error) {
+                report($error);
+            }
+        }
+
+        return response()->json(['message' => $menuPosted
+            ? 'สร้างห้องภาษาไทยและโพสต์แผงปุ่มควบคุมในห้องคำสั่งทั่วไปแล้ว'
+            : 'สร้างหรือปรับปรุงห้องภาษาไทยของ GamoryID แล้ว']);
     }
 
     public function updateChannels(Request $request, CurrentShop $currentShop, DiscordApiClient $discord, AuditLogger $audit)

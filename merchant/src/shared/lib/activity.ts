@@ -54,6 +54,7 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   "shop.archived": "ระงับร้าน (โดยผู้ดูแลระบบ)",
   "shop.restored": "เปิดร้านอีกครั้ง (โดยผู้ดูแลระบบ)",
   "listing.directory_hidden": "ปรับการแสดงไอดีในไดเรกทอรี (โดยผู้ดูแลระบบ)",
+  "sales.updated": "อัปเดตข้อมูลการขาย",
   "sales.exported": "ส่งออกรายงานการขาย",
   "discord.connected": "เชื่อมต่อ Discord",
   "discord.demo_connected": "เชื่อมต่อ Discord (โหมดทดสอบ)",

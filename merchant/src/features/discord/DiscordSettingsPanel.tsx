@@ -473,8 +473,8 @@ export function DiscordSettingsPanel({
                 >
                   <Plus size={16} />{" "}
                   {busy === "create-channels"
-                    ? "กำลังซิงก์…"
-                    : "ซิงก์ห้องและคำสั่ง"}
+                    ? "กำลังสร้าง…"
+                    : "สร้างห้องอัตโนมัติ"}
                 </button>
               </div>
               {commandPurpose ? (

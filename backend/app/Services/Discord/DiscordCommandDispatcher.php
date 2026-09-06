@@ -79,24 +79,35 @@ class DiscordCommandDispatcher
         if ($type === 3 || $type === 5) {
             $prefix = $type === 3 ? 'ปุ่ม' : 'modal';
 
-            return $prefix.'.'.($this->menuActionFromCustomId((string) ($interaction['data']['custom_id'] ?? '')) ?? 'unknown');
+            return $prefix.'.'.($this->parseCustomId((string) ($interaction['data']['custom_id'] ?? ''))['action'] ?? 'unknown');
         }
 
         return $this->commandName($interaction);
     }
 
-    private function menuActionFromCustomId(string $customId): ?string
+    /** @return array{action: ?string, id: ?int} */
+    private function parseCustomId(string $customId): array
     {
-        return preg_match('/^gid:(?:menu|modal):([a-z]+)$/', $customId, $matches) ? $matches[1] : null;
+        if (preg_match('/^gid:(?:menu|modal):([a-z]+)(?::(\d+))?$/', $customId, $m)) {
+            return ['action' => $m[1], 'id' => isset($m[2]) ? (int) $m[2] : null];
+        }
+
+        return ['action' => null, 'id' => null];
     }
+
+    /** Follow-up buttons that open a second modal for the optional fields. */
+    private const MENU_FOLLOWUPS = [
+        'addmore' => 'ร้าน.เพิ่มไอดี',   // uses the same permission as the first step
+        'sellmore' => 'ร้าน.ปิดการขาย',
+    ];
 
     /**
      * Button on the pinned panel — run it now, or open a modal to collect input.
      */
     private function component(array $interaction): array
     {
-        $action = $this->menuActionFromCustomId((string) ($interaction['data']['custom_id'] ?? ''));
-        $command = self::MENU_COMMANDS[$action] ?? null;
+        ['action' => $action, 'id' => $id] = $this->parseCustomId((string) ($interaction['data']['custom_id'] ?? ''));
+        $command = self::MENU_COMMANDS[$action] ?? self::MENU_FOLLOWUPS[$action] ?? null;
         if (! $command) {
             return [$this->ephemeral('ปุ่มนี้ไม่รองรับแล้ว กรุณากด `/ร้าน เมนู` เพื่อสร้างแผงใหม่'), ['shop_id' => null, 'user_id' => null, 'status' => 'not_found']];
         }
@@ -109,6 +120,9 @@ class DiscordCommandDispatcher
             return [$this->ephemeral($this->shopCommands->permissionDeniedMessage($command)), [...$ctx['context'], 'status' => 'denied']];
         }
 
+        if (isset(self::MENU_FOLLOWUPS[$action])) {
+            return [$this->modalResponse($action, $id), [...$ctx['context'], 'status' => 'modal']];
+        }
         if (in_array($action, self::MENU_DIRECT, true)) {
             return $this->runShopCommand($command, $this->syntheticInteraction($interaction, []), $ctx);
         }
@@ -121,8 +135,8 @@ class DiscordCommandDispatcher
      */
     private function modalSubmit(array $interaction): array
     {
-        $action = $this->menuActionFromCustomId((string) ($interaction['data']['custom_id'] ?? ''));
-        $command = self::MENU_COMMANDS[$action] ?? null;
+        ['action' => $action, 'id' => $id] = $this->parseCustomId((string) ($interaction['data']['custom_id'] ?? ''));
+        $command = self::MENU_COMMANDS[$action] ?? self::MENU_FOLLOWUPS[$action] ?? null;
         if (! $command) {
             return [$this->ephemeral('แบบฟอร์มนี้ไม่รองรับแล้ว'), ['shop_id' => null, 'user_id' => null, 'status' => 'not_found']];
         }
@@ -133,6 +147,19 @@ class DiscordCommandDispatcher
         }
         if (! $this->shopCommands->canRun($command, $ctx['member'])) {
             return [$this->ephemeral($this->shopCommands->permissionDeniedMessage($command)), [...$ctx['context'], 'status' => 'denied']];
+        }
+
+        $params = collect($this->modalOptions($interaction))->mapWithKeys(fn ($o) => [$o['name'] => $o['value']])->all();
+
+        if ($action === 'addmore' && $id) {
+            $result = $this->shopCommands->applyInventoryExtras($params, $ctx['installation'], $ctx['link'], $id);
+
+            return [$this->ephemeral($result['content']), [...$ctx['context'], 'status' => $result['status']]];
+        }
+        if ($action === 'sellmore' && $id) {
+            $result = $this->shopCommands->applySaleExtras($params, $ctx['installation'], $ctx['link'], $id);
+
+            return [$this->ephemeral($result['content']), [...$ctx['context'], 'status' => $result['status']]];
         }
 
         return $this->runShopCommand($command, $this->syntheticInteraction($interaction, $this->modalOptions($interaction)), $ctx);
@@ -179,20 +206,27 @@ class DiscordCommandDispatcher
             return [$this->ephemeral($message), [...$ctx['context'], 'status' => 'denied']];
         }
 
+        $followUp = null;
+        if ($result['item_id'] ?? null) {
+            $followUp = ['action' => 'addmore', 'id' => (int) $result['item_id'], 'label' => '➕ เพิ่มข้อมูลไอดี (แรงก์ เลเวล อีเมล…)'];
+        } elseif ($result['sale_id'] ?? null) {
+            $followUp = ['action' => 'sellmore', 'id' => (int) $result['sale_id'], 'label' => '➕ เพิ่มข้อมูลลูกค้า/ประกัน'];
+        }
+
         return [
-            $this->ephemeral($result['content'], $result['link'] ?? null),
+            $this->ephemeral($result['content'], $result['link'] ?? null, $followUp),
             [...$ctx['context'], 'status' => $result['status']],
         ];
     }
 
-    private function modalResponse(string $action): array
+    private function modalResponse(string $action, ?int $id = null): array
     {
         [$title, $fields] = $this->modalFields($action);
 
         return [
             'type' => 9,
             'data' => [
-                'custom_id' => "gid:modal:{$action}",
+                'custom_id' => 'gid:modal:'.$action.($id ? ':'.$id : ''),
                 'title' => $title,
                 'components' => array_map(fn (array $field) => [
                     'type' => 1,
@@ -246,6 +280,20 @@ class DiscordCommandDispatcher
                 ['name' => 'price', 'label' => 'ราคาตั้งขาย (บาท)', 'required' => true, 'max' => 12],
                 ['name' => 'username', 'label' => 'ยูสเซอร์เนม — ห้ามใส่รหัสผ่าน', 'max' => 200],
             ]],
+            // Second step opened by the "เพิ่มข้อมูล" button after the item is created.
+            'addmore' => ['ข้อมูลเพิ่มเติมของไอดี', [
+                ['name' => 'rank', 'label' => 'แรงก์', 'max' => 60],
+                ['name' => 'level', 'label' => 'เลเวล', 'max' => 6],
+                ['name' => 'email', 'label' => 'อีเมลติดไอดี', 'max' => 200],
+                ['name' => 'description', 'label' => 'รายละเอียด (แสดงหน้าร้าน)', 'style' => 2, 'max' => 2000],
+                ['name' => 'note', 'label' => 'โน้ตภายในทีม', 'style' => 2, 'max' => 2000],
+            ]],
+            // Second step opened by the "เพิ่มข้อมูล" button after the sale is closed.
+            'sellmore' => ['ข้อมูลเพิ่มเติมของการขาย', [
+                ['name' => 'facebook', 'label' => 'ลิงก์ Facebook ลูกค้า', 'max' => 200],
+                ['name' => 'phone', 'label' => 'เบอร์โทรลูกค้า', 'max' => 30],
+                ['name' => 'warranty', 'label' => 'วันหมดประกัน (YYYY-MM-DD)', 'max' => 10],
+            ]],
             default => ['ทำรายการ', []],
         };
     }
@@ -260,24 +308,18 @@ class DiscordCommandDispatcher
             return [$ctx['response'], $ctx['context']];
         }
         $channel = $ctx['installation']->channels()->where('purpose', 'commands')->where('enabled', true)->first();
-        $payload = $this->menuPayload($ctx['installation']->shop?->name ?: 'ร้าน');
 
         if ($this->api->isTestMode() || ! $this->api->isConfigured() || ! $channel) {
             // No live Discord to post to — echo the panel back so it is still visible/testable.
+            $payload = $this->menuPayload($ctx['installation']->shop?->name ?: 'ร้าน');
+
             return [
                 ['type' => 4, 'data' => [...$payload, 'flags' => 64, 'allowed_mentions' => ['parse' => []]]],
                 [...$ctx['context'], 'status' => 'success'],
             ];
         }
 
-        $message = $this->api->sendMessage($channel->channel_id, $payload);
-        $pinned = true;
-        try {
-            $this->api->pinMessage($channel->channel_id, (string) ($message['id'] ?? ''));
-        } catch (Throwable $error) {
-            report($error);
-            $pinned = false;
-        }
+        $pinned = $this->publishMenu($ctx['installation']);
 
         return [
             $this->ephemeral($pinned
@@ -285,6 +327,38 @@ class DiscordCommandDispatcher
                 : 'โพสต์แผงปุ่มควบคุมแล้ว แต่ปักหมุดอัตโนมัติไม่ได้ กรุณาปักหมุดข้อความเอง (บอทต้องมีสิทธิ์ Manage Messages)'),
             [...$ctx['context'], 'status' => 'success'],
         ];
+    }
+
+    /**
+     * Post the pinned control panel into the shop's commands channel. Used by
+     * `/ร้าน เมนู` and by the "สร้างห้องอัตโนมัติ" button right after the channels
+     * are provisioned. No-op (returns false) when there is no live Discord.
+     *
+     * @return bool true when the panel was posted AND pinned
+     */
+    public function publishMenu(DiscordInstallation $installation): bool
+    {
+        $channel = $installation->channels()
+            ->where('purpose', 'commands')
+            ->where('enabled', true)
+            ->first();
+        if (! $channel || $this->api->isTestMode() || ! $this->api->isConfigured()) {
+            return false;
+        }
+
+        $message = $this->api->sendMessage(
+            $channel->channel_id,
+            $this->menuPayload($installation->shop?->name ?: 'ร้าน'),
+        );
+        try {
+            $this->api->pinMessage($channel->channel_id, (string) ($message['id'] ?? ''));
+        } catch (Throwable $error) {
+            report($error);
+
+            return false;
+        }
+
+        return true;
     }
 
     /** The pinned control-panel message: intro text + rows of action buttons. */
@@ -541,7 +615,7 @@ class DiscordCommandDispatcher
             ->where('enabled', true)
             ->first();
         if (! $channel) {
-            return 'ร้านนี้ยังไม่มีห้องคำสั่งทั่วไป กรุณาให้ผู้ดูแลกด “ซิงก์ห้องและคำสั่ง” ในหน้า Discord ของ GamoryID ก่อน';
+            return 'ร้านนี้ยังไม่มีห้องคำสั่งทั่วไป กรุณาให้ผู้ดูแลกด “สร้างห้องอัตโนมัติ” ในหน้า Discord ของ GamoryID ก่อน';
         }
 
         if ((string) ($interaction['channel_id'] ?? '') !== $channel->channel_id) {
@@ -553,24 +627,35 @@ class DiscordCommandDispatcher
 
     /**
      * @param  array{label: string, url: string}|null  $link
+     * @param  array{action: string, id: int, label: string}|null  $followUp  opens a second modal
      */
-    private function ephemeral(string $content, ?array $link = null): array
+    private function ephemeral(string $content, ?array $link = null, ?array $followUp = null): array
     {
         $data = [
             'content' => $content,
             'flags' => 64,
             'allowed_mentions' => ['parse' => []],
         ];
+
+        $buttons = [];
+        if ($followUp) {
+            $buttons[] = [
+                'type' => 2,
+                'style' => 2,
+                'label' => mb_substr($followUp['label'], 0, 80),
+                'custom_id' => "gid:menu:{$followUp['action']}:{$followUp['id']}",
+            ];
+        }
         if ($link && filter_var($link['url'] ?? null, FILTER_VALIDATE_URL) && preg_match('#^https?://#', (string) $link['url'])) {
-            $data['components'] = [[
-                'type' => 1,
-                'components' => [[
-                    'type' => 2,
-                    'style' => 5,
-                    'label' => mb_substr($link['label'], 0, 80),
-                    'url' => $link['url'],
-                ]],
-            ]];
+            $buttons[] = [
+                'type' => 2,
+                'style' => 5,
+                'label' => mb_substr($link['label'], 0, 80),
+                'url' => $link['url'],
+            ];
+        }
+        if ($buttons) {
+            $data['components'] = [['type' => 1, 'components' => $buttons]];
         }
 
         return ['type' => 4, 'data' => $data];

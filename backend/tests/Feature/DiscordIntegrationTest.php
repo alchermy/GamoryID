@@ -330,8 +330,9 @@ class DiscordIntegrationTest extends TestCase
         $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('add-manager', 'เพิ่มไอดี', ['ชื่อ' => 'Added#TH01', 'ต้นทุน' => 700, 'ราคา' => 1500, 'username' => 'added-login', 'แรงก์' => 'Platinum 1', 'เลเวล' => 88], 'guild-commands', 'commands-room', 'discord-staff'))
             ->assertOk()
             ->assertJsonPath('data.content', fn ($content) => str_contains($content, 'เข้าคลังแล้ว'))
-            ->assertJsonPath('data.components.0.components.0.style', 5)
-            ->assertJsonPath('data.components.0.components.0.label', 'เปิดข้อมูลไอดีใน GamoryID');
+            ->assertJsonPath('data.components.0.components.0.custom_id', fn ($id) => str_starts_with((string) $id, 'gid:menu:addmore:'))
+            ->assertJsonPath('data.components.0.components.1.style', 5)
+            ->assertJsonPath('data.components.0.components.1.label', 'เปิดข้อมูลไอดีใน GamoryID');
         $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'title' => 'Added#TH01', 'username' => 'added-login', 'rank' => 'Platinum 1', 'level' => 88]);
         $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('reserve-denied', 'จอง', ['แท็ก' => '#BOOK1'], 'guild-commands', 'commands-room', 'discord-staff'))
             ->assertOk()
@@ -383,6 +384,30 @@ class DiscordIntegrationTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'จอง **#PANL1** สำเร็จ'));
         $this->assertDatabaseHas('inventory_items', ['tag' => 'PANL1', 'status' => 'reserved']);
+
+        // the 5-field add modal creates the item; its reply carries a follow-up button
+        $this->postJson('/api/v1/discord/interactions', $this->modalInteraction('modal-add', 'gid:modal:add', [
+            'title' => 'ไอดีจากปุ่ม', 'cost' => '120', 'price' => '640', 'username' => 'panel-login',
+        ], 'guild-panel', 'panel-room', 'discord-panel'))
+            ->assertOk()
+            ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'เข้าคลังแล้ว'))
+            ->assertJsonPath('data.components.0.components.0.custom_id', fn ($id) => str_starts_with((string) $id, 'gid:menu:addmore:'));
+        $added = InventoryItem::query()->where('shop_id', $shop->id)->where('title', 'ไอดีจากปุ่ม')->firstOrFail();
+
+        // the follow-up button opens a second modal for the optional fields
+        $this->postJson('/api/v1/discord/interactions', $this->componentInteraction('btn-addmore', "gid:menu:addmore:{$added->id}", 'guild-panel', 'panel-room', 'discord-panel'))
+            ->assertOk()
+            ->assertJsonPath('type', 9)
+            ->assertJsonPath('data.custom_id', "gid:modal:addmore:{$added->id}")
+            ->assertJsonPath('data.components.0.components.0.custom_id', 'rank');
+
+        // submitting the second modal fills in the extras
+        $this->postJson('/api/v1/discord/interactions', $this->modalInteraction('modal-addmore', "gid:modal:addmore:{$added->id}", [
+            'rank' => 'Diamond 2', 'level' => '145', 'email' => 'panel@example.test',
+        ], 'guild-panel', 'panel-room', 'discord-panel'))
+            ->assertOk()
+            ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'บันทึกข้อมูลเพิ่มเติม'));
+        $this->assertDatabaseHas('inventory_items', ['id' => $added->id, 'rank' => 'Diamond 2', 'level' => 145, 'email' => 'panel@example.test']);
 
         // a staff member without inventory.manage cannot use the add button
         $staff = User::create(['name' => 'สตาฟ', 'email' => 'panel-staff@example.test', 'password' => 'password', 'current_shop_id' => $shop->id, 'email_verified_at' => now()]);
@@ -473,6 +498,50 @@ class DiscordIntegrationTest extends TestCase
             ->map(fn ($exchange) => $exchange[0]->data());
         $this->assertCount(1, $createdRooms);
         $this->assertSame('คำสั่งทั่วไป', $createdRooms->first()['name']);
+    }
+
+    public function test_auto_create_posts_the_control_panel_into_the_commands_channel(): void
+    {
+        [$owner, $shop] = $this->owner('panel-provision-owner@example.test', 'Panel Provision Shop');
+        config()->set('services.discord.test_bypass', false);
+        config()->set('services.discord.application_id', 'application-1');
+        config()->set('services.discord.public_key', 'public-key-1');
+        config()->set('services.discord.bot_token', 'bot-token');
+
+        DiscordInstallation::create([
+            'shop_id' => $shop->id,
+            'installed_by' => $owner->id,
+            'guild_id' => 'guild-provision',
+            'guild_name' => 'Provision Guild',
+            'status' => 'connected',
+            'installed_at' => now(),
+        ]);
+
+        Http::fake(function ($request) {
+            if ($request->method() === 'GET') {
+                return Http::response([]);
+            }
+            if ($request->method() === 'POST' && str_contains($request->url(), '/messages')) {
+                return Http::response(['id' => 'panel-message-1']);
+            }
+
+            return Http::response(['id' => 'new-'.basename(parse_url($request->url(), PHP_URL_PATH)), 'name' => $request->data()['name'] ?? 'x', 'type' => 0], 200);
+        });
+
+        $this->actingAs($owner)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->postJson('/api/v1/discord/channels/auto-create')
+            ->assertOk()
+            ->assertJsonPath('message', 'สร้างห้องภาษาไทยและโพสต์แผงปุ่มควบคุมในห้องคำสั่งทั่วไปแล้ว');
+
+        $panelPost = collect(Http::recorded())
+            ->first(fn ($exchange) => $exchange[0]->method() === 'POST' && str_contains($exchange[0]->url(), '/messages'));
+        $this->assertNotNull($panelPost, 'expected the control panel to be posted to a channel');
+        $this->assertStringContainsString('แผงควบคุมร้าน', $panelPost[0]->data()['content']);
+        $this->assertSame('gid:menu:add', $panelPost[0]->data()['components'][0]['components'][0]['custom_id']);
+
+        $pinned = collect(Http::recorded())
+            ->contains(fn ($exchange) => $exchange[0]->method() === 'PUT' && str_contains($exchange[0]->url(), '/pins/panel-message-1'));
+        $this->assertTrue($pinned, 'expected the posted panel to be pinned');
     }
 
     private function interaction(string $id, string $subcommand, string $optionName, string $value, string $guildId, string $channelId): array

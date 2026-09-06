@@ -461,7 +461,114 @@ class DiscordShopCommandHandler
             'เพิ่ม **'.$this->itemHeading($item)."** เข้าคลังแล้ว\n".
             'รหัสผ่านต้องเพิ่มจากหน้ารายละเอียดไอดีใน GamoryID เท่านั้น',
             $this->notifications->inventoryLink($item),
+            ['item_id' => $item->id],
         );
+    }
+
+    /**
+     * Second-step modal after เพิ่มไอดี — fill in the optional fields that did
+     * not fit in Discord's 5-input first modal.
+     *
+     * @param  array<string, string>  $params
+     * @return array{content: string, status: string}
+     */
+    public function applyInventoryExtras(array $params, DiscordInstallation $installation, DiscordUserLink $link, int $itemId): array
+    {
+        $item = InventoryItem::query()
+            ->where('shop_id', $installation->shop_id)
+            ->whereKey($itemId)
+            ->first();
+        if (! $item) {
+            return $this->failure('ไม่พบไอดีที่จะเพิ่มข้อมูล อาจถูกลบไปแล้ว', 'not_found');
+        }
+
+        $updates = array_filter([
+            'rank' => $this->blankToNull($params['rank'] ?? ''),
+            'level' => $this->nullableInteger($params['level'] ?? ''),
+            'email' => $this->blankToNull($params['email'] ?? ''),
+            'description' => $this->blankToNull($params['description'] ?? ''),
+            'notes' => $this->blankToNull($params['note'] ?? ''),
+        ], fn ($value) => $value !== null);
+
+        if ($updates === []) {
+            return $this->success('ไม่มีข้อมูลเพิ่มเติมให้บันทึก **#'.$item->tag.'** ยังพร้อมขายตามเดิม');
+        }
+
+        $item->update($updates);
+        $this->activity($installation->shop_id, $link->user_id, 'inventory.updated', [
+            'tag' => '#'.$item->tag,
+            'fields' => array_keys($updates),
+            'source' => 'discord',
+        ]);
+
+        return $this->success('บันทึกข้อมูลเพิ่มเติมของ **#'.$item->tag.'** แล้ว');
+    }
+
+    /**
+     * Second-step modal after ปิดการขาย — customer contact + warranty details.
+     *
+     * @param  array<string, string>  $params
+     * @return array{content: string, status: string}
+     */
+    public function applySaleExtras(array $params, DiscordInstallation $installation, DiscordUserLink $link, int $saleId): array
+    {
+        $sale = Sale::query()
+            ->where('shop_id', $installation->shop_id)
+            ->whereKey($saleId)
+            ->with(['customer', 'inventoryItem'])
+            ->first();
+        if (! $sale) {
+            return $this->failure('ไม่พบรายการขายที่จะเพิ่มข้อมูล', 'not_found');
+        }
+
+        $facebook = trim($params['facebook'] ?? '');
+        if ($facebook !== '' && filter_var($facebook, FILTER_VALIDATE_URL) === false) {
+            return $this->failure('ลิงก์ Facebook ไม่ถูกต้อง กรุณาใส่ URL แบบเต็ม');
+        }
+
+        $warrantyValue = trim($params['warranty'] ?? '');
+        $warrantyEndsAt = null;
+        if ($warrantyValue !== '') {
+            if (! Carbon::canBeCreatedFromFormat($warrantyValue, 'Y-m-d')) {
+                return $this->failure('วันที่หมดประกันไม่ถูกต้อง กรุณาใช้รูปแบบ YYYY-MM-DD');
+            }
+            try {
+                $warrantyEndsAt = Carbon::createFromFormat('Y-m-d', $warrantyValue)->startOfDay();
+            } catch (Throwable) {
+                return $this->failure('วันที่หมดประกันไม่ถูกต้อง กรุณาใช้รูปแบบ YYYY-MM-DD');
+            }
+            if ($warrantyEndsAt->lt(today())) {
+                return $this->failure('วันที่หมดประกันต้องเป็นวันนี้หรือวันถัดไป');
+            }
+        }
+
+        $changed = [];
+        if ($sale->customer) {
+            $customerUpdates = array_filter([
+                'facebook_url' => $facebook !== '' ? $facebook : null,
+                'phone' => $this->blankToNull($params['phone'] ?? ''),
+            ], fn ($value) => $value !== null);
+            if ($customerUpdates !== []) {
+                $sale->customer->update($customerUpdates);
+                $changed[] = 'ข้อมูลลูกค้า';
+            }
+        }
+        if ($warrantyEndsAt !== null) {
+            $sale->update(['has_warranty' => true, 'warranty_ends_at' => $warrantyEndsAt->toDateString()]);
+            $changed[] = 'ประกัน';
+        }
+
+        if ($changed === []) {
+            return $this->success('ไม่มีข้อมูลเพิ่มเติมให้บันทึกสำหรับการขาย **#'.$sale->inventoryItem?->tag.'**');
+        }
+
+        $this->activity($installation->shop_id, $link->user_id, 'sales.updated', [
+            'sale_id' => $sale->id,
+            'fields' => $changed,
+            'source' => 'discord',
+        ]);
+
+        return $this->success('บันทึก'.implode(' และ ', $changed).'ของการขาย **#'.$sale->inventoryItem?->tag.'** แล้ว');
     }
 
     /** @return array{content: string, status: string} */
@@ -569,13 +676,15 @@ class DiscordShopCommandHandler
     /** @return array{content: string, status: string} */
     /**
      * @param  array{label: string, url: string}|null  $link  rendered as a link button under the reply
+     * @param  array<string, mixed>  $extra  merged into the result (e.g. item_id / sale_id for the follow-up button)
      */
-    private function success(string $content, ?array $link = null): array
+    private function success(string $content, ?array $link = null, array $extra = []): array
     {
         return array_filter([
             'content' => $content,
             'status' => 'success',
             'link' => $link,
+            ...$extra,
         ], fn ($value) => $value !== null);
     }
 
