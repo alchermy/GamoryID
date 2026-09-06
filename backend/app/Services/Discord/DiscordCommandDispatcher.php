@@ -217,23 +217,23 @@ class DiscordCommandDispatcher
         // accept these as aliases for their Thai option names.
         return match ($action) {
             'find' => ['เช็คสถานะไอดี', [
-                ['name' => 'tag', 'label' => 'แท็กไอดี เช่น #23DX5', 'required' => true, 'max' => 12],
+                ['name' => 'tag', 'label' => 'แท็กไอดี เช่น #23DX5', 'required' => true, 'max' => 24],
             ]],
             'release' => ['ยกเลิกการจอง', [
-                ['name' => 'tag', 'label' => 'แท็กไอดีที่จะยกเลิกจอง', 'required' => true, 'max' => 12],
+                ['name' => 'tag', 'label' => 'แท็กไอดีที่จะยกเลิกจอง', 'required' => true, 'max' => 24],
             ]],
             'note' => ['บันทึกโน้ตไอดี', [
-                ['name' => 'tag', 'label' => 'แท็กไอดี', 'required' => true, 'max' => 12],
+                ['name' => 'tag', 'label' => 'แท็กไอดี', 'required' => true, 'max' => 24],
                 ['name' => 'note', 'label' => 'ข้อความโน้ต (เห็นเฉพาะในร้าน)', 'style' => 2, 'required' => true, 'max' => 2000],
             ]],
             'reserve' => ['จองไอดีให้ลูกค้า', [
-                ['name' => 'tag', 'label' => 'แท็กไอดี', 'required' => true, 'max' => 12],
+                ['name' => 'tag', 'label' => 'แท็กไอดี', 'required' => true, 'max' => 24],
                 ['name' => 'customer', 'label' => 'ชื่อลูกค้า (ไม่บังคับ)', 'max' => 120],
                 ['name' => 'hours', 'label' => 'จองกี่ชั่วโมง 1–720 (เว้นว่าง = 24)', 'max' => 4],
                 ['name' => 'note', 'label' => 'โน้ตการจอง (ไม่บังคับ)', 'style' => 2, 'max' => 500],
             ]],
             'sell' => ['ปิดการขายไอดี', [
-                ['name' => 'tag', 'label' => 'แท็กไอดี', 'required' => true, 'max' => 12],
+                ['name' => 'tag', 'label' => 'แท็กไอดี', 'required' => true, 'max' => 24],
                 ['name' => 'customer', 'label' => 'ชื่อลูกค้า', 'required' => true, 'max' => 120],
                 ['name' => 'price', 'label' => 'ราคาขาย (บาท)', 'required' => true, 'max' => 12],
                 ['name' => 'line', 'label' => 'LINE ของลูกค้า (ไม่บังคับ)', 'max' => 120],
@@ -241,9 +241,9 @@ class DiscordCommandDispatcher
             ]],
             'add' => ['เพิ่มไอดีเข้าคลัง', [
                 ['name' => 'title', 'label' => 'ชื่อรายการ', 'required' => true, 'max' => 120],
+                ['name' => 'number', 'label' => 'เลขรหัสไอดี (เว้นว่าง = ระบบรันให้)', 'max' => 16],
                 ['name' => 'cost', 'label' => 'ต้นทุน (บาท)', 'required' => true, 'max' => 12],
                 ['name' => 'price', 'label' => 'ราคาตั้งขาย (บาท)', 'required' => true, 'max' => 12],
-                ['name' => 'rank', 'label' => 'แรงก์ (ไม่บังคับ)', 'max' => 60],
                 ['name' => 'username', 'label' => 'ยูสเซอร์เนม — ห้ามใส่รหัสผ่าน', 'max' => 200],
             ]],
             default => ['ทำรายการ', []],

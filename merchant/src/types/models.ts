@@ -204,7 +204,7 @@ export type InventoryResponse = {
   data: Array<{
     id: number;
     tag: string;
-    title: string;
+    title: string;
     username: string | null;
     email: string | null;
     rank: string | null;
@@ -254,7 +254,7 @@ export type SaleRecord = {
   inventory_item: {
     id: number;
     tag: string;
-    title: string;
+    title: string;
     rank: string | null;
     level: number | null;
     list_price: number | string;
@@ -314,6 +314,8 @@ export type ShopDetails = Shop & {
   grace_ends_at: string | null;
   credit_balance: number;
   inventory_copy_footer?: string | null;
+  tag_prefix?: string | null;
+  effective_tag_prefix?: string;
   storefront_enabled?: boolean;
   onboarding_dismissed_at?: string | null;
   logo_url?: string | null;

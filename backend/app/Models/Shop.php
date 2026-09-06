@@ -15,11 +15,22 @@ class Shop extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'description', 'facebook_url', 'line_url', 'phone', 'inventory_copy_footer', 'storefront_enabled', 'hidden_from_directory', 'status', 'trial_ends_at', 'grace_ends_at', 'timezone', 'currency', 'credit_balance'];
+    protected $fillable = ['name', 'slug', 'description', 'facebook_url', 'line_url', 'phone', 'inventory_copy_footer', 'storefront_enabled', 'hidden_from_directory', 'status', 'trial_ends_at', 'grace_ends_at', 'timezone', 'currency', 'credit_balance', 'tag_prefix'];
 
     protected function casts(): array
     {
         return ['trial_ends_at' => 'datetime', 'grace_ends_at' => 'datetime', 'credit_balance' => 'integer', 'storefront_enabled' => 'boolean', 'storefront_view_count' => 'integer', 'hidden_from_directory' => 'boolean', 'onboarding_dismissed_at' => 'datetime'];
+    }
+
+    /** The 3-letter prefix used in front of this shop's item codes (PCX-1282). */
+    public function getEffectiveTagPrefixAttribute(): string
+    {
+        if (filled($this->tag_prefix)) {
+            return mb_strtoupper($this->tag_prefix);
+        }
+        $letters = strtoupper(preg_replace('/[^A-Za-z]/', '', (string) $this->name));
+
+        return $letters !== '' ? str_pad(substr($letters, 0, 3), 3, 'X') : 'GID';
     }
 
     public function users(): BelongsToMany

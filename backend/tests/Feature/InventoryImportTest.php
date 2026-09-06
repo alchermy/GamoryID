@@ -286,7 +286,7 @@ class InventoryImportTest extends TestCase
         InventoryItem::create(['shop_id' => $shop->id, 'tag' => 'DUP01', 'title' => 'มีอยู่แล้ว', 'cost' => 0, 'list_price' => 0, 'status' => 'available']);
         $this->app->bind(TagGenerator::class, fn () => new class extends TagGenerator
         {
-            public function generate(): string
+            public function generate(Shop $shop, ?string $providedNumber = null): string
             {
                 return 'DUP01';
             }
@@ -352,6 +352,30 @@ class InventoryImportTest extends TestCase
                 && str_contains($job->description, 'เพิ่มเข้าคลัง 2 รายการ')
                 && $job->actor === $user->name,
         );
+    }
+
+    public function test_a_mapped_id_number_becomes_the_item_code_and_duplicates_are_skipped(): void
+    {
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        $shop->update(['tag_prefix' => 'PCX']);
+        InventoryItem::create(['shop_id' => $shop->id, 'tag' => 'PCX-1282', 'title' => 'มีอยู่แล้ว', 'username' => 'have.user', 'cost' => 0, 'list_price' => 0, 'status' => 'available']);
+        $path = "imports/{$shop->id}/codes.csv";
+        Storage::disk('private')->put($path, "no,list_price,username\n1282,5000,new.user\n1295,6000,other.user\n1295,7000,dup.user\n");
+        $job = ImportJob::create([
+            'shop_id' => $shop->id, 'user_id' => $user->id, 'status' => 'queued', 'disk' => 'private', 'path' => $path,
+            'mapping' => ['tag_number' => 'no', 'list_price' => 'list_price', 'username' => 'username'],
+            'total_rows' => 3,
+        ]);
+
+        (new ProcessInventoryImport($job->id))->handle(
+            app(TagGenerator::class), app(CredentialCipher::class), app(InventoryImportReader::class),
+        );
+
+        // 1282 clashes with the existing item, the 2nd 1295 clashes within the file → both skipped; 1295 imports
+        $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'tag' => 'PCX-1295', 'username' => 'other.user']);
+        $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'completed', 'imported_rows' => 1, 'skipped_rows' => 2, 'failed_rows' => 0]);
+        $this->assertSame(2, ImportError::where('import_job_id', $job->id)->where('kind', 'duplicate')->count());
     }
 
     /** @return array{User, Shop} */

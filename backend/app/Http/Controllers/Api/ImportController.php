@@ -20,7 +20,7 @@ use Throwable;
 class ImportController extends Controller
 {
     private const MAPPABLE_FIELDS = [
-        'title', 'username', 'email', 'rank', 'level', 'skin_count', 'cost', 'list_price',
+        'title', 'tag_number', 'username', 'email', 'rank', 'level', 'skin_count', 'cost', 'list_price',
         'description', 'notes', 'password', 'recovery_email',
     ];
 
@@ -96,6 +96,7 @@ class ImportController extends Controller
         $data = $request->validate([
             'mapping' => ['required', 'array'],
             'mapping.title' => ['nullable', 'string'],
+            'mapping.tag_number' => ['nullable', 'string'],
             'mapping.username' => ['required', 'string'],
             'mapping.email' => ['nullable', 'string'],
             'mapping.password' => ['nullable', 'string'],

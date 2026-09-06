@@ -247,6 +247,7 @@ class DiscordApiClient
                     'description' => 'เพิ่มไอดีใหม่ — ใส่ได้ถึงชื่อผู้ใช้ ไม่รับรหัสผ่าน',
                     'options' => [
                         $this->stringOption('ชื่อ', 'ชื่อรายการที่จะแสดงในระบบ เช่น ไอดี Diamond สกินเยอะ', true),
+                        $this->stringOption('รหัส', 'เลขรหัสไอดีของร้าน (เว้นว่าง = ระบบรันให้)', false, 16),
                         [
                             'type' => 10,
                             'name' => 'ต้นทุน',

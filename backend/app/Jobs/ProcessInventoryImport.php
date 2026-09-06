@@ -7,6 +7,7 @@ use App\Models\ImportError;
 use App\Models\ImportJob;
 use App\Models\InventoryCredential;
 use App\Models\InventoryItem;
+use App\Models\Shop;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\CredentialCipher;
@@ -40,10 +41,16 @@ class ProcessInventoryImport implements ShouldQueue
         $log->info('เริ่มประมวลผลไฟล์นำเข้า', ['file' => $import->path, 'total_rows' => $import->total_rows]);
         $import->update(['status' => 'processing']);
         $sheet = $reader->read($import->disk, $import->path);
+        $shop = Shop::findOrFail($import->shop_id);
         $records = [];
         $errors = [];   // hard problems — these abort the whole batch
-        $skipped = [];  // username already exists (in file or shop) — skip the row, import the rest
+        $skipped = [];  // username / item code already exists — skip the row, import the rest
         $usernames = [];
+        $batchTags = [];   // shop-supplied item codes claimed earlier in this file
+        $existingTags = InventoryItem::withTrashed()
+            ->where('shop_id', $import->shop_id)
+            ->pluck('tag')
+            ->flip();
         // Usernames already live in this shop's inventory (available / reserved).
         // A username that only clashes with a *sold* item is fine — the account
         // was handed over and the shop may legitimately be re-stocking it.
@@ -91,6 +98,28 @@ class ProcessInventoryImport implements ShouldQueue
                 $usernames[$username] = $rowNumber;
             }
 
+            // Resolve a shop-supplied item-code number now so a clash skips just
+            // this row instead of aborting the batch inside the transaction.
+            $provided = trim((string) ($mapped['tag_number'] ?? ''));
+            if ($provided !== '') {
+                $tag = $shop->effective_tag_prefix.'-'.(ctype_digit($provided) ? str_pad($provided, 4, '0', STR_PAD_LEFT) : mb_strtoupper($provided));
+                $clash = isset($batchTags[$tag])
+                    ? "ซ้ำกับแถว {$batchTags[$tag]} ในไฟล์"
+                    : ($existingTags->has($tag) ? 'มีอยู่ในคลังแล้ว' : null);
+                if ($clash !== null) {
+                    $skipped[] = [
+                        'row_number' => $rowNumber,
+                        'message' => "รหัสไอดี {$tag} {$clash} — ข้ามรายการนี้",
+                        'kind' => 'duplicate',
+                        'row_data' => $this->redactRowData($import, $data),
+                    ];
+
+                    continue;
+                }
+                $batchTags[$tag] = $rowNumber;
+                $mapped['_tag'] = $tag;
+            }
+
             $records[] = $mapped;
         }
 
@@ -128,12 +157,12 @@ class ProcessInventoryImport implements ShouldQueue
         }
 
         try {
-            DB::transaction(function () use ($records, $import, $tags, $cipher) {
+            DB::transaction(function () use ($records, $import, $shop, $tags, $cipher) {
                 foreach ($records as $mapped) {
                     $item = InventoryItem::create([
                         'shop_id' => $import->shop_id,
                         'created_by' => $import->user_id,
-                        'tag' => $tags->generate(),
+                        'tag' => $mapped['_tag'] ?? $tags->generate($shop),
                         // Title (ชื่อรายการ) is optional on import. When it's not
                         // mapped the item has no name — views fall back to the tag.
                         'title' => trim((string) ($mapped['title'] ?? '')),

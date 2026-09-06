@@ -4,6 +4,7 @@ namespace App\Services\Discord;
 
 use App\Enums\InventoryStatus;
 use App\Enums\ShopPermission;
+use App\Exceptions\TagConflictException;
 use App\Jobs\SendDiscordShopNotification;
 use App\Models\ActivityLog;
 use App\Models\Customer;
@@ -419,10 +420,16 @@ class DiscordShopCommandHandler
         }
         $this->planGate->ensureInventoryCapacity($shop);
 
+        try {
+            $tag = $this->tags->generate($shop, $this->optionValue($interaction, 'รหัส', 'number'));
+        } catch (TagConflictException $conflict) {
+            return $this->failure($conflict->getMessage(), 'conflict');
+        }
+
         $item = InventoryItem::create([
             'shop_id' => $installation->shop_id,
             'created_by' => $link->user_id,
-            'tag' => $this->tags->generate(),
+            'tag' => $tag,
             'title' => $name,
             'username' => $this->blankToNull($this->optionValue($interaction, 'username', 'ยูสเซอร์เนม')),
             'email' => $this->blankToNull($this->optionValue($interaction, 'email', 'อีเมล')),

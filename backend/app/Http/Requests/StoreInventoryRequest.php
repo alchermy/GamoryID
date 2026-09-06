@@ -15,6 +15,9 @@ class StoreInventoryRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:190'],
+            // Optional item-code number the shop supplies (from their old data);
+            // blank → the system allocates the next one. Ignored on update.
+            'tag_number' => ['nullable', 'string', 'max:16', 'regex:/^[A-Za-z0-9]+$/'],
             'username' => ['nullable', 'string', 'max:500'],
             'email' => ['nullable', 'string', 'max:254'],
             'rank' => ['nullable', 'string', 'max:80'],

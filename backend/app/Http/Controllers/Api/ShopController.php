@@ -35,8 +35,12 @@ class ShopController extends Controller
             'line_url' => ['nullable', 'url', 'max:500'],
             'phone' => ['nullable', 'string', 'max:32'],
             'inventory_copy_footer' => ['nullable', 'string', 'max:2000'],
+            'tag_prefix' => ['nullable', 'string', 'size:3', 'regex:/^[A-Za-z]{3}$/'],
             'storefront_enabled' => ['sometimes', 'boolean'],
         ]);
+        if (array_key_exists('tag_prefix', $data)) {
+            $data['tag_prefix'] = $data['tag_prefix'] ? strtoupper($data['tag_prefix']) : null;
+        }
 
         if (($data['storefront_enabled'] ?? false) && ! $entitlements->can($shop, 'storefront')) {
             throw ValidationException::withMessages([
@@ -169,6 +173,8 @@ class ShopController extends Controller
             'line_url' => $shop->line_url,
             'phone' => $shop->phone,
             'inventory_copy_footer' => $shop->inventory_copy_footer,
+            'tag_prefix' => $shop->tag_prefix,
+            'effective_tag_prefix' => $shop->effective_tag_prefix,
             'storefront_enabled' => $shop->storefront_enabled,
             'onboarding_dismissed_at' => $shop->onboarding_dismissed_at,
             'logo_url' => $this->signedBrandingUrl($shop, 'logo'),

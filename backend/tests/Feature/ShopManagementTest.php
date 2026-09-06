@@ -22,18 +22,28 @@ class ShopManagementTest extends TestCase
         [$user, $shop] = $this->owner('settings@example.test', 'ร้านตั้งค่า');
 
         $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
-            ->getJson('/api/v1/shop')->assertOk()->assertJsonPath('data.name', 'ร้านตั้งค่า');
+            ->getJson('/api/v1/shop')->assertOk()
+            ->assertJsonPath('data.name', 'ร้านตั้งค่า')
+            ->assertJsonPath('data.tag_prefix', null)
+            ->assertJsonPath('data.effective_tag_prefix', 'GID'); // Thai-only name → fallback
 
         $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
             ->putJson('/api/v1/shop', [
                 'name' => 'ร้านใหม่', 'slug' => 'shop-new', 'description' => 'ร้านไอดี TH',
                 'facebook_url' => 'https://facebook.com/gamoryid', 'line_url' => 'https://line.me/ti/p/@gamory', 'phone' => '0812345678',
                 'inventory_copy_footer' => 'สอบถามเพิ่มเติมทาง LINE รับประกัน 7 วัน',
+                'tag_prefix' => 'pcx',
                 'storefront_enabled' => true,
             ])->assertOk()->assertJsonPath('data.name', 'ร้านใหม่')
             ->assertJsonPath('data.line_url', 'https://line.me/ti/p/@gamory')
             ->assertJsonPath('data.inventory_copy_footer', 'สอบถามเพิ่มเติมทาง LINE รับประกัน 7 วัน')
+            ->assertJsonPath('data.tag_prefix', 'PCX')
+            ->assertJsonPath('data.effective_tag_prefix', 'PCX')
             ->assertJsonPath('data.storefront_enabled', true);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson('/api/v1/shop', ['name' => 'ร้านใหม่', 'slug' => 'shop-new', 'tag_prefix' => 'toolong'])
+            ->assertJsonValidationErrors('tag_prefix');
 
         $this->assertDatabaseHas('shops', [
             'id' => $shop->id,

@@ -787,6 +787,7 @@ export function MerchantApp() {
     const title = String(d.get("title") ?? "");
     const username = String(d.get("username") ?? "");
     const description = String(d.get("description") ?? "");
+    const tagNumber = String(d.get("tag_number") ?? "").trim();
     try {
       if (shop) {
         const result = await shopRequest<{
@@ -795,6 +796,7 @@ export function MerchantApp() {
           method: "POST",
           body: JSON.stringify({
             title,
+            tag_number: tagNumber || null,
             username,
             email: String(d.get("email") ?? "").trim() || null,
             description: description || null,
@@ -1077,6 +1079,7 @@ export function MerchantApp() {
             line_url: data.get("line_url") || null,
             phone: data.get("phone") || null,
             inventory_copy_footer: data.get("inventory_copy_footer") || null,
+            tag_prefix: String(data.get("tag_prefix") || "").trim() || null,
             storefront_enabled: data.get("storefront_enabled") === "on",
           }),
         },

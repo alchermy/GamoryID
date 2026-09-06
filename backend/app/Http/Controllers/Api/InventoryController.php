@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\InventoryStatus;
 use App\Enums\ShopPermission;
+use App\Exceptions\TagConflictException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreInventoryRequest;
 use App\Http\Requests\UpdateInventoryNoteRequest;
@@ -20,6 +21,7 @@ use App\Services\TagGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class InventoryController extends Controller
 {
@@ -38,6 +40,7 @@ class InventoryController extends Controller
             $normalizedTag = ltrim(mb_strtoupper($q), '#');
             $query->where(function ($builder) use ($q, $normalizedTag) {
                 $builder->where('tag', $normalizedTag)
+                    ->orWhere('tag', 'like', "%{$normalizedTag}%")
                     ->orWhere('title', 'like', "%{$q}%")
                     ->orWhere('username', 'like', "%{$q}%")
                     ->orWhere('email', 'like', "%{$q}%")
@@ -58,9 +61,10 @@ class InventoryController extends Controller
     {
         $shop = $currentShop->from($request);
         $planGate->ensureInventoryCapacity($shop);
-        $item = DB::transaction(function () use ($request, $shop, $tags, $cipher) {
+        $tagNumber = $request->validated('tag_number');
+        $item = DB::transaction(function () use ($request, $shop, $tags, $cipher, $tagNumber) {
             $credentials = $request->validated('credentials');
-            $data = Arr::except($request->validated(), 'credentials');
+            $data = Arr::except($request->validated(), ['credentials', 'tag_number']);
             $data['region'] = 'TH';
             $data['username'] = $data['username'] ?? $credentials['username'] ?? null;
             // skin_count is nullable in the request but the column defaults to 0 —
@@ -69,7 +73,12 @@ class InventoryController extends Controller
             // (built from the in-memory instance below, not a fresh fetch) carries
             // skin_count: null instead of 0, which crashes the merchant UI.
             $data['skin_count'] = $data['skin_count'] ?? 0;
-            $item = InventoryItem::create([...$data, 'shop_id' => $shop->id, 'created_by' => $request->user()->id, 'tag' => $tags->generate(), 'status' => InventoryStatus::Available]);
+            try {
+                $tag = $tags->generate($shop, $tagNumber);
+            } catch (TagConflictException $conflict) {
+                throw ValidationException::withMessages(['tag_number' => $conflict->getMessage()]);
+            }
+            $item = InventoryItem::create([...$data, 'shop_id' => $shop->id, 'created_by' => $request->user()->id, 'tag' => $tag, 'status' => InventoryStatus::Available]);
             if ($credentials) {
                 $encrypted = $cipher->encrypt($credentials);
                 InventoryCredential::create([
@@ -108,7 +117,7 @@ class InventoryController extends Controller
         $item = InventoryItem::forShop($shop)->findOrFail($inventory);
         DB::transaction(function () use ($request, $item, $cipher) {
             $credentials = $request->validated('credentials');
-            $data = Arr::except($request->validated(), 'credentials');
+            $data = Arr::except($request->validated(), ['credentials', 'tag_number']);
             $data['region'] = 'TH';
             $data['title'] = $data['title'] ?? $item->title;
             $data['username'] = $data['username'] ?? $credentials['username'] ?? $item->username;

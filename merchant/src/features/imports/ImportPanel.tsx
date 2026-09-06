@@ -73,6 +73,7 @@ export function ImportPanel({
 
   const fields: [string, string][] = [
     ["title", "ชื่อรายการ"],
+    ["tag_number", "เลขรหัสไอดี (ของร้าน)"],
     ["username", "Username"],
     ["email", "Email"],
     ["password", "Password"],

@@ -55,7 +55,7 @@ class InventoryApiTest extends TestCase
         // create() — the response used to carry skin_count: null here, which
         // crashed the merchant detail page's item.skins.toLocaleString().
         $response->assertJsonPath('data.skin_count', 0);
-        $this->assertMatchesRegularExpression('/^#[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{5}$/', $response->json('data.tag'));
+        $this->assertMatchesRegularExpression('/^#[A-Z]{3}-\d{4}$/', $response->json('data.tag'));
         $this->assertDatabaseCount('inventory_credentials', 1);
         $this->assertDatabaseHas('inventory_items', ['title' => 'Gammy#TH01', 'username' => 'gammy.ops01', 'email' => 'gammy.account@example.test', 'region' => 'TH']);
         Queue::assertPushed(SendDiscordShopNotification::class, function (SendDiscordShopNotification $job) use ($user) {

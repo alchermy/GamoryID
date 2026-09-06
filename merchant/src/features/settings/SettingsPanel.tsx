@@ -77,6 +77,9 @@ export function SettingsPanel({
   if (!shop) return null;
   const copyFooter =
     "inventory_copy_footer" in shop ? (shop.inventory_copy_footer ?? "") : "";
+  const tagPrefix = "tag_prefix" in shop ? (shop.tag_prefix ?? "") : "";
+  const effectiveTagPrefix =
+    "effective_tag_prefix" in shop ? (shop.effective_tag_prefix ?? "") : "";
   const storefrontOn =
     "storefront_enabled" in shop && Boolean(shop.storefront_enabled);
   const shopUrl = shop.slug ? storefrontUrl(shop.slug) : "";
@@ -188,6 +191,26 @@ export function SettingsPanel({
                     placeholder="เช่น 081-234-5678"
                   />
                 </span>
+              </Field>
+              <Field label="อักษรนำหน้ารหัสไอดี (3 ตัว)">
+                <input
+                  name="tag_prefix"
+                  defaultValue={tagPrefix}
+                  maxLength={3}
+                  pattern="[A-Za-z]{3}"
+                  placeholder={
+                    effectiveTagPrefix
+                      ? `เว้นว่าง = ${effectiveTagPrefix}`
+                      : "เช่น PCX"
+                  }
+                  autoCapitalize="characters"
+                  style={{ textTransform: "uppercase" }}
+                />
+                <small>
+                  รหัสไอดีใหม่จะเป็น{" "}
+                  <code>{tagPrefix || effectiveTagPrefix || "PCX"}-1282</code> ·
+                  มีผลกับไอดีที่เพิ่มใหม่เท่านั้น
+                </small>
               </Field>
             </div>
           </section>

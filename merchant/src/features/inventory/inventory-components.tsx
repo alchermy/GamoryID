@@ -542,7 +542,7 @@ export function AddDialog({
         <DialogHead
           id="add-title"
           title="เพิ่มไอดีใหม่"
-          subtitle="ระบบจะสร้างแท็ก 5 ตัวให้อัตโนมัติหลังบันทึก"
+          subtitle="เว้นเลขรหัสไอดีว่าง ระบบจะรันรหัสให้อัตโนมัติหลังบันทึก"
           close={close}
         />
         <div className="dialog-body">
@@ -553,6 +553,14 @@ export function AddDialog({
                 required
                 autoFocus
                 placeholder="เช่น ไอดี Diamond สกินเยอะ พร้อมส่ง"
+              />
+            </Field>
+            <Field label="เลขรหัสไอดี (เว้นว่าง = ระบบรันให้)">
+              <input
+                name="tag_number"
+                inputMode="numeric"
+                pattern="[A-Za-z0-9]+"
+                placeholder="เช่น 1282"
               />
             </Field>
             <Field label="Username">
