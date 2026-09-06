@@ -1178,10 +1178,6 @@ export function InventoryDetailPage({
               <Data label="ต้นทุน" value={money.format(item.cost)} />
               <Data label="ราคาขาย" value={money.format(item.price)} />
               <Data
-                label="จำนวนสกิน"
-                value={`${item.skins.toLocaleString("th-TH")} รายการ`}
-              />
-              <Data
                 label="ยอดเข้าชมหน้าร้าน"
                 value={
                   canViewAnalytics

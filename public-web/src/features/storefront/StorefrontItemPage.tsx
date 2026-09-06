@@ -131,12 +131,6 @@ export function StorefrontItemPage() {
                       <dd>{item.level.toLocaleString("th-TH")}</dd>
                     </div>
                   )}
-                  {item.skin_count != null && (
-                    <div>
-                      <dt>จำนวนสกิน</dt>
-                      <dd>{item.skin_count.toLocaleString("th-TH")}</dd>
-                    </div>
-                  )}
                   {item.battlepass_level != null && (
                     <div>
                       <dt>Battle Pass</dt>

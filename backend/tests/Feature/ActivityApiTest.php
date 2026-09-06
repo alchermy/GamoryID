@@ -50,6 +50,25 @@ class ActivityApiTest extends TestCase
             ->assertJsonPath('data.0.event', 'import.completed');
     }
 
+    public function test_admin_slip_views_are_hidden_from_the_merchant_activity_feed(): void
+    {
+        [$owner, $shop] = $this->owner('act-slip@example.test', 'ร้านสลิป');
+        $this->log($shop, null, 'credit.top_up_submitted', null, ['credits' => 500]);
+        $this->log($shop, null, 'admin.slip_viewed', null, ['credits' => 500]);
+        $this->log($shop, null, 'admin.slip_viewed', null, ['credits' => 500]);
+
+        $response = $this->actingAs($owner)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->getJson('/api/v1/activity')->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.event', 'credit.top_up_submitted');
+        $this->assertNotContains('admin.slip_viewed', $response->json('filters.events'));
+
+        // even asking for it directly returns nothing
+        $this->actingAs($owner)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->getJson('/api/v1/activity?event=admin.slip_viewed')
+            ->assertOk()->assertJsonPath('meta.total', 0);
+    }
+
     public function test_a_shop_cannot_see_another_shops_activity(): void
     {
         [$ownerA, $shopA] = $this->owner('act-a@example.test', 'ร้าน A');

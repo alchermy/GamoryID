@@ -12,11 +12,7 @@ export function ListingCard({
   shop?: { name: string | null; slug: string | null; logo_url?: string | null };
 }) {
   const meta =
-    [
-      item.rank,
-      item.level != null ? `Lv.${item.level}` : null,
-      item.skin_count != null ? `${item.skin_count} สกิน` : null,
-    ]
+    [item.rank, item.level != null ? `Lv.${item.level}` : null]
       .filter(Boolean)
       .join(" · ") || "ดูรายละเอียด";
 
