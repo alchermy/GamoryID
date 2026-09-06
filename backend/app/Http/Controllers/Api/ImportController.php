@@ -31,7 +31,9 @@ class ImportController extends Controller
 
         return response()->download($path, 'GamoryID-inventory-import-template.xlsx', [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Cache-Control' => 'private, max-age=3600',
+            // Revalidate every time — the template changes rarely, but when it
+            // does a stale hour-long browser cache is worse than a tiny refetch.
+            'Cache-Control' => 'private, no-cache, max-age=0, must-revalidate',
         ]);
     }
 
