@@ -83,12 +83,18 @@ class DiscordApiClient
         return $this->request()->patch("/channels/{$channelId}", $changes)->throw()->json();
     }
 
-    public function sendMessage(string $channelId, array $payload): void
+    /** @return array<string, mixed> the created message (includes its "id") */
+    public function sendMessage(string $channelId, array $payload): array
     {
-        $this->request()->post("/channels/{$channelId}/messages", [
+        return $this->request()->post("/channels/{$channelId}/messages", [
             ...$payload,
             'allowed_mentions' => ['parse' => []],
-        ])->throw();
+        ])->throw()->json() ?? [];
+    }
+
+    public function pinMessage(string $channelId, string $messageId): void
+    {
+        $this->request()->put("/channels/{$channelId}/pins/{$messageId}")->throw();
     }
 
     public function leaveGuild(string $guildId): void
@@ -279,6 +285,11 @@ class DiscordApiClient
                     'type' => 1,
                     'name' => 'ช่วยเหลือ',
                     'description' => 'ดูคำสั่งที่บัญชีของคุณมีสิทธิ์ใช้งาน',
+                ],
+                [
+                    'type' => 1,
+                    'name' => 'เมนู',
+                    'description' => 'โพสต์แผงปุ่มควบคุมร้านและปักหมุดไว้ในห้องนี้',
                 ],
             ],
         ]];

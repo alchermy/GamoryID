@@ -178,7 +178,7 @@ paths:
     put: {summary: เปิดหรือปิดต่ออายุอัตโนมัติด้วยเครดิต, security: [{sanctum: []}], parameters: [{$ref: '#/components/parameters/ShopId'}], responses: {'200': {description: Auto-renew updated}}}
   /discord/interactions:
     post:
-      summary: รับ signed interaction จาก Discord (PING และคำสั่งภาษาไทย /ร้าน สำหรับสรุป รายการ ค้นหา จอง ยกเลิกจอง ปิดการขาย โน้ต เพิ่มไอดี และช่วยเหลือ)
+      summary: รับ signed interaction จาก Discord (PING, คำสั่งภาษาไทย /ร้าน สำหรับสรุป รายการ ค้นหา จอง ยกเลิกจอง ปิดการขาย โน้ต เพิ่มไอดี เมนู และช่วยเหลือ รวมถึงปุ่มและ modal ของแผงควบคุมที่ปักหมุด)
       description: คำสั่งทำงานเฉพาะห้องคำสั่งทั่วไป ตอบแบบ ephemeral และตรวจสมาชิกกับ ShopMember permissions ล่าสุดทุกครั้ง โดยไม่รับ credentials ผ่าน Discord
       parameters:
         - {name: X-Signature-Ed25519, in: header, required: true, schema: {type: string}}

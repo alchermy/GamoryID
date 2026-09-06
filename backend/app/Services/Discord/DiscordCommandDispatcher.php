@@ -16,22 +16,39 @@ use Throwable;
 
 class DiscordCommandDispatcher
 {
-    public function __construct(private readonly DiscordShopCommandHandler $shopCommands) {}
+    /** Pinned-panel button action → shop command. */
+    private const MENU_COMMANDS = [
+        'find' => 'ร้าน.ค้นหา',
+        'list' => 'ร้าน.รายการ',
+        'reserve' => 'ร้าน.จอง',
+        'release' => 'ร้าน.ยกเลิกจอง',
+        'sell' => 'ร้าน.ปิดการขาย',
+        'note' => 'ร้าน.โน้ต',
+        'add' => 'ร้าน.เพิ่มไอดี',
+        'summary' => 'ร้าน.สรุป',
+        'help' => 'ร้าน.ช่วยเหลือ',
+    ];
+
+    /** Buttons that run straight away — the rest pop a modal to collect input. */
+    private const MENU_DIRECT = ['summary', 'help', 'list'];
+
+    public function __construct(
+        private readonly DiscordShopCommandHandler $shopCommands,
+        private readonly DiscordApiClient $api,
+    ) {}
 
     public function handle(array $interaction): array
     {
         $startedAt = hrtime(true);
-        $command = $this->commandName($interaction);
+        $type = (int) ($interaction['type'] ?? 2);
+        $label = $this->interactionLabel($interaction, $type);
         $context = ['shop_id' => null, 'user_id' => null, 'status' => 'denied'];
 
         try {
-            [$response, $context] = match ($command) {
-                'ร้าน.ตั้งค่า', 'gid.setup' => $this->setup($interaction),
-                'ร้าน.เชื่อมบัญชี', 'gid.link' => $this->link($interaction),
-                'gid.find' => $this->shopCommand($interaction, 'ร้าน.ค้นหา'),
-                default => $this->shopCommands->supports($command)
-                    ? $this->shopCommand($interaction, $command)
-                    : [$this->ephemeral('ไม่พบคำสั่งนี้ กรุณาเลือกคำสั่งจากรายการของ Discord'), $context],
+            [$response, $context] = match ($type) {
+                3 => $this->component($interaction),      // MESSAGE_COMPONENT (button)
+                5 => $this->modalSubmit($interaction),    // MODAL_SUBMIT
+                default => $this->applicationCommand($interaction, $label, $context),
             };
         } catch (Throwable $error) {
             report($error);
@@ -39,9 +56,318 @@ class DiscordCommandDispatcher
             $context['status'] = 'error';
         }
 
-        $this->log($interaction, $command, $context, (int) ((hrtime(true) - $startedAt) / 1_000_000));
+        $this->log($interaction, $label, $context, (int) ((hrtime(true) - $startedAt) / 1_000_000));
 
         return $response;
+    }
+
+    private function applicationCommand(array $interaction, string $command, array $context): array
+    {
+        return match ($command) {
+            'ร้าน.ตั้งค่า', 'gid.setup' => $this->setup($interaction),
+            'ร้าน.เชื่อมบัญชี', 'gid.link' => $this->link($interaction),
+            'ร้าน.เมนู' => $this->postMenu($interaction),
+            'gid.find' => $this->shopCommand($interaction, 'ร้าน.ค้นหา'),
+            default => $this->shopCommands->supports($command)
+                ? $this->shopCommand($interaction, $command)
+                : [$this->ephemeral('ไม่พบคำสั่งนี้ กรุณาเลือกคำสั่งจากรายการของ Discord'), $context],
+        };
+    }
+
+    private function interactionLabel(array $interaction, int $type): string
+    {
+        if ($type === 3 || $type === 5) {
+            $prefix = $type === 3 ? 'ปุ่ม' : 'modal';
+
+            return $prefix.'.'.($this->menuActionFromCustomId((string) ($interaction['data']['custom_id'] ?? '')) ?? 'unknown');
+        }
+
+        return $this->commandName($interaction);
+    }
+
+    private function menuActionFromCustomId(string $customId): ?string
+    {
+        return preg_match('/^gid:(?:menu|modal):([a-z]+)$/', $customId, $matches) ? $matches[1] : null;
+    }
+
+    /**
+     * Button on the pinned panel — run it now, or open a modal to collect input.
+     */
+    private function component(array $interaction): array
+    {
+        $action = $this->menuActionFromCustomId((string) ($interaction['data']['custom_id'] ?? ''));
+        $command = self::MENU_COMMANDS[$action] ?? null;
+        if (! $command) {
+            return [$this->ephemeral('ปุ่มนี้ไม่รองรับแล้ว กรุณากด `/ร้าน เมนู` เพื่อสร้างแผงใหม่'), ['shop_id' => null, 'user_id' => null, 'status' => 'not_found']];
+        }
+
+        $ctx = $this->resolveShopContext($interaction);
+        if (! $ctx['ok']) {
+            return [$ctx['response'], $ctx['context']];
+        }
+        if (! $this->shopCommands->canRun($command, $ctx['member'])) {
+            return [$this->ephemeral($this->shopCommands->permissionDeniedMessage($command)), [...$ctx['context'], 'status' => 'denied']];
+        }
+
+        if (in_array($action, self::MENU_DIRECT, true)) {
+            return $this->runShopCommand($command, $this->syntheticInteraction($interaction, []), $ctx);
+        }
+
+        return [$this->modalResponse($action), [...$ctx['context'], 'status' => 'modal']];
+    }
+
+    /**
+     * The staff member filled in a modal that a panel button opened.
+     */
+    private function modalSubmit(array $interaction): array
+    {
+        $action = $this->menuActionFromCustomId((string) ($interaction['data']['custom_id'] ?? ''));
+        $command = self::MENU_COMMANDS[$action] ?? null;
+        if (! $command) {
+            return [$this->ephemeral('แบบฟอร์มนี้ไม่รองรับแล้ว'), ['shop_id' => null, 'user_id' => null, 'status' => 'not_found']];
+        }
+
+        $ctx = $this->resolveShopContext($interaction);
+        if (! $ctx['ok']) {
+            return [$ctx['response'], $ctx['context']];
+        }
+        if (! $this->shopCommands->canRun($command, $ctx['member'])) {
+            return [$this->ephemeral($this->shopCommands->permissionDeniedMessage($command)), [...$ctx['context'], 'status' => 'denied']];
+        }
+
+        return $this->runShopCommand($command, $this->syntheticInteraction($interaction, $this->modalOptions($interaction)), $ctx);
+    }
+
+    /** @return array<int, array{name: string, value: string}> */
+    private function modalOptions(array $interaction): array
+    {
+        $options = [];
+        foreach ($interaction['data']['components'] ?? [] as $row) {
+            foreach ($row['components'] ?? [] as $field) {
+                $name = (string) ($field['custom_id'] ?? '');
+                $value = trim((string) ($field['value'] ?? ''));
+                if ($name !== '' && $value !== '') {
+                    $options[] = ['name' => $name, 'value' => $value];
+                }
+            }
+        }
+
+        return $options;
+    }
+
+    /**
+     * Reshape a component/modal interaction so the slash-command handlers, which
+     * read `data.options[0].options`, can run it unchanged.
+     */
+    private function syntheticInteraction(array $interaction, array $options): array
+    {
+        return [
+            ...$interaction,
+            'data' => ['name' => 'ร้าน', 'options' => [['name' => 'menu', 'options' => $options]]],
+        ];
+    }
+
+    private function runShopCommand(string $command, array $synthetic, array $ctx): array
+    {
+        try {
+            $result = $this->shopCommands->execute($command, $synthetic, $ctx['installation'], $ctx['link'], $ctx['member']);
+        } catch (HttpExceptionInterface $error) {
+            $message = $error->getStatusCode() < 500 && $error->getMessage() !== ''
+                ? $error->getMessage()
+                : 'คำสั่งยังทำงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+
+            return [$this->ephemeral($message), [...$ctx['context'], 'status' => 'denied']];
+        }
+
+        return [
+            $this->ephemeral($result['content'], $result['link'] ?? null),
+            [...$ctx['context'], 'status' => $result['status']],
+        ];
+    }
+
+    private function modalResponse(string $action): array
+    {
+        [$title, $fields] = $this->modalFields($action);
+
+        return [
+            'type' => 9,
+            'data' => [
+                'custom_id' => "gid:modal:{$action}",
+                'title' => $title,
+                'components' => array_map(fn (array $field) => [
+                    'type' => 1,
+                    'components' => [array_filter([
+                        'type' => 4,
+                        'custom_id' => $field['name'],
+                        'label' => $field['label'],
+                        'style' => $field['style'] ?? 1,
+                        'required' => $field['required'] ?? false,
+                        'max_length' => $field['max'] ?? 200,
+                        'placeholder' => $field['placeholder'] ?? null,
+                    ], fn ($value) => $value !== null)],
+                ], $fields),
+            ],
+        ];
+    }
+
+    /** @return array{0: string, 1: array<int, array<string, mixed>>} */
+    private function modalFields(string $action): array
+    {
+        // custom_id values are ASCII (Discord-safe); the shop handlers already
+        // accept these as aliases for their Thai option names.
+        return match ($action) {
+            'find' => ['เช็คสถานะไอดี', [
+                ['name' => 'tag', 'label' => 'แท็กไอดี เช่น #23DX5', 'required' => true, 'max' => 12],
+            ]],
+            'release' => ['ยกเลิกการจอง', [
+                ['name' => 'tag', 'label' => 'แท็กไอดีที่จะยกเลิกจอง', 'required' => true, 'max' => 12],
+            ]],
+            'note' => ['บันทึกโน้ตไอดี', [
+                ['name' => 'tag', 'label' => 'แท็กไอดี', 'required' => true, 'max' => 12],
+                ['name' => 'note', 'label' => 'ข้อความโน้ต (เห็นเฉพาะในร้าน)', 'style' => 2, 'required' => true, 'max' => 2000],
+            ]],
+            'reserve' => ['จองไอดีให้ลูกค้า', [
+                ['name' => 'tag', 'label' => 'แท็กไอดี', 'required' => true, 'max' => 12],
+                ['name' => 'customer', 'label' => 'ชื่อลูกค้า (ไม่บังคับ)', 'max' => 120],
+                ['name' => 'hours', 'label' => 'จองกี่ชั่วโมง 1–720 (เว้นว่าง = 24)', 'max' => 4],
+                ['name' => 'note', 'label' => 'โน้ตการจอง (ไม่บังคับ)', 'style' => 2, 'max' => 500],
+            ]],
+            'sell' => ['ปิดการขายไอดี', [
+                ['name' => 'tag', 'label' => 'แท็กไอดี', 'required' => true, 'max' => 12],
+                ['name' => 'customer', 'label' => 'ชื่อลูกค้า', 'required' => true, 'max' => 120],
+                ['name' => 'price', 'label' => 'ราคาขาย (บาท)', 'required' => true, 'max' => 12],
+                ['name' => 'line', 'label' => 'LINE ของลูกค้า (ไม่บังคับ)', 'max' => 120],
+                ['name' => 'note', 'label' => 'รายละเอียดการขาย (ไม่บังคับ)', 'style' => 2, 'max' => 500],
+            ]],
+            'add' => ['เพิ่มไอดีเข้าคลัง', [
+                ['name' => 'title', 'label' => 'ชื่อรายการ', 'required' => true, 'max' => 120],
+                ['name' => 'cost', 'label' => 'ต้นทุน (บาท)', 'required' => true, 'max' => 12],
+                ['name' => 'price', 'label' => 'ราคาตั้งขาย (บาท)', 'required' => true, 'max' => 12],
+                ['name' => 'rank', 'label' => 'แรงก์ (ไม่บังคับ)', 'max' => 60],
+                ['name' => 'username', 'label' => 'ยูสเซอร์เนม — ห้ามใส่รหัสผ่าน', 'max' => 200],
+            ]],
+            default => ['ทำรายการ', []],
+        };
+    }
+
+    /**
+     * Post the button panel into the commands channel and pin it.
+     */
+    private function postMenu(array $interaction): array
+    {
+        $ctx = $this->resolveShopContext($interaction);
+        if (! $ctx['ok']) {
+            return [$ctx['response'], $ctx['context']];
+        }
+        $channel = $ctx['installation']->channels()->where('purpose', 'commands')->where('enabled', true)->first();
+        $payload = $this->menuPayload($ctx['installation']->shop?->name ?: 'ร้าน');
+
+        if ($this->api->isTestMode() || ! $this->api->isConfigured() || ! $channel) {
+            // No live Discord to post to — echo the panel back so it is still visible/testable.
+            return [
+                ['type' => 4, 'data' => [...$payload, 'flags' => 64, 'allowed_mentions' => ['parse' => []]]],
+                [...$ctx['context'], 'status' => 'success'],
+            ];
+        }
+
+        $message = $this->api->sendMessage($channel->channel_id, $payload);
+        $pinned = true;
+        try {
+            $this->api->pinMessage($channel->channel_id, (string) ($message['id'] ?? ''));
+        } catch (Throwable $error) {
+            report($error);
+            $pinned = false;
+        }
+
+        return [
+            $this->ephemeral($pinned
+                ? 'โพสต์แผงปุ่มควบคุมและปักหมุดไว้ในห้องนี้แล้ว'
+                : 'โพสต์แผงปุ่มควบคุมแล้ว แต่ปักหมุดอัตโนมัติไม่ได้ กรุณาปักหมุดข้อความเอง (บอทต้องมีสิทธิ์ Manage Messages)'),
+            [...$ctx['context'], 'status' => 'success'],
+        ];
+    }
+
+    /** The pinned control-panel message: intro text + rows of action buttons. */
+    public function menuPayload(string $shopName): array
+    {
+        $button = fn (string $action, string $label, int $style = 2) => [
+            'type' => 2, 'style' => $style, 'label' => $label, 'custom_id' => "gid:menu:{$action}",
+        ];
+
+        return [
+            'content' => "**แผงควบคุมร้าน {$shopName}**\n".
+                "กดปุ่มเพื่อทำรายการได้เลย — ปุ่มที่ต้องกรอกข้อมูลจะเปิดหน้าต่างให้กรอก\n".
+                'ยังใช้คำสั่ง `/ร้าน …` ได้ตามปกติ',
+            'components' => [
+                ['type' => 1, 'components' => [
+                    $button('add', '➕ เพิ่มไอดี', 3),
+                    $button('note', '📝 บันทึกโน้ตไอดี'),
+                    $button('find', '🔍 เช็คสถานะไอดี'),
+                ]],
+                ['type' => 1, 'components' => [
+                    $button('reserve', '📌 จองไอดี'),
+                    $button('release', '↩️ ยกเลิกจอง'),
+                    $button('sell', '💰 ปิดการขาย', 1),
+                ]],
+                ['type' => 1, 'components' => [
+                    $button('list', '📦 ไอดีล่าสุด'),
+                    $button('summary', '📊 สรุปยอด'),
+                    $button('help', '❔ ช่วยเหลือ'),
+                ]],
+            ],
+        ];
+    }
+
+    /**
+     * Shared auth chain for slash / button / modal interactions: connected
+     * installation → command channel → linked member of the shop.
+     *
+     * @return array{ok: bool, response?: array, context: array, installation?: DiscordInstallation, link?: DiscordUserLink, member?: ShopMember}
+     */
+    private function resolveShopContext(array $interaction): array
+    {
+        $deny = fn (string $message, ?int $shopId = null, ?int $userId = null, string $status = 'denied') => [
+            'ok' => false,
+            'response' => $this->ephemeral($message),
+            'context' => ['shop_id' => $shopId, 'user_id' => $userId, 'status' => $status],
+        ];
+
+        $guildId = (string) ($interaction['guild_id'] ?? '');
+        $discordUserId = $this->discordUserId($interaction);
+        $installation = DiscordInstallation::query()
+            ->where('guild_id', $guildId)
+            ->where('status', 'connected')
+            ->with('shop')
+            ->first();
+        if (! $installation) {
+            return $deny('เซิร์ฟเวอร์นี้ยังไม่ได้เชื่อมกับร้าน GamoryID');
+        }
+        if ($message = $this->commandChannelError($interaction, $installation)) {
+            return $deny($message, $installation->shop_id, null, 'wrong_channel');
+        }
+        $link = DiscordUserLink::query()
+            ->where('shop_id', $installation->shop_id)
+            ->where('discord_user_id', $discordUserId)
+            ->with('user')
+            ->first();
+        if (! $link || ! $link->user) {
+            return $deny('บัญชี Discord นี้ยังไม่ได้เชื่อมกับสมาชิกในร้าน กรุณาสร้างรหัสจากหน้า Discord ใน GamoryID แล้วใช้ `/ร้าน เชื่อมบัญชี` ในห้องคำสั่งทั่วไป', $installation->shop_id);
+        }
+        $member = ShopMember::query()
+            ->where('shop_id', $installation->shop_id)
+            ->where('user_id', $link->user_id)
+            ->first();
+        if (! $member) {
+            return $deny('บัญชีนี้ไม่ได้เป็นสมาชิกของร้านแล้ว กรุณาติดต่อเจ้าของร้าน', $installation->shop_id, $link->user_id);
+        }
+
+        return [
+            'ok' => true,
+            'context' => ['shop_id' => $installation->shop_id, 'user_id' => $link->user_id, 'status' => 'success'],
+            'installation' => $installation,
+            'link' => $link,
+            'member' => $member,
+        ];
     }
 
     private function setup(array $interaction): array
@@ -162,54 +488,15 @@ class DiscordCommandDispatcher
 
     private function shopCommand(array $interaction, string $command): array
     {
-        $guildId = (string) ($interaction['guild_id'] ?? '');
-        $discordUserId = $this->discordUserId($interaction);
-        $installation = DiscordInstallation::query()
-            ->where('guild_id', $guildId)
-            ->where('status', 'connected')
-            ->with('shop')
-            ->first();
-        if (! $installation) {
-            return [$this->ephemeral('เซิร์ฟเวอร์นี้ยังไม่ได้เชื่อมกับร้าน GamoryID'), ['shop_id' => null, 'user_id' => null, 'status' => 'denied']];
+        $ctx = $this->resolveShopContext($interaction);
+        if (! $ctx['ok']) {
+            return [$ctx['response'], $ctx['context']];
         }
-        if ($message = $this->commandChannelError($interaction, $installation)) {
-            return [$this->ephemeral($message), ['shop_id' => $installation->shop_id, 'user_id' => null, 'status' => 'wrong_channel']];
+        if (! $this->shopCommands->canRun($command, $ctx['member'])) {
+            return [$this->ephemeral($this->shopCommands->permissionDeniedMessage($command)), [...$ctx['context'], 'status' => 'denied']];
         }
 
-        $link = DiscordUserLink::query()
-            ->where('shop_id', $installation->shop_id)
-            ->where('discord_user_id', $discordUserId)
-            ->with('user')
-            ->first();
-        if (! $link || ! $link->user) {
-            return [$this->ephemeral('บัญชี Discord นี้ยังไม่ได้เชื่อมกับสมาชิกในร้าน กรุณาสร้างรหัสจากหน้า Discord ใน GamoryID แล้วใช้ `/ร้าน เชื่อมบัญชี` ในห้องคำสั่งทั่วไป'), ['shop_id' => $installation->shop_id, 'user_id' => null, 'status' => 'denied']];
-        }
-
-        $member = ShopMember::query()
-            ->where('shop_id', $installation->shop_id)
-            ->where('user_id', $link->user_id)
-            ->first();
-        if (! $member) {
-            return [$this->ephemeral('บัญชีนี้ไม่ได้เป็นสมาชิกของร้านแล้ว กรุณาติดต่อเจ้าของร้าน'), ['shop_id' => $installation->shop_id, 'user_id' => $link->user_id, 'status' => 'denied']];
-        }
-        if (! $this->shopCommands->canRun($command, $member)) {
-            return [$this->ephemeral($this->shopCommands->permissionDeniedMessage($command)), ['shop_id' => $installation->shop_id, 'user_id' => $link->user_id, 'status' => 'denied']];
-        }
-
-        try {
-            $result = $this->shopCommands->execute($command, $interaction, $installation, $link, $member);
-        } catch (HttpExceptionInterface $error) {
-            $message = $error->getStatusCode() < 500 && $error->getMessage() !== ''
-                ? $error->getMessage()
-                : 'คำสั่งยังทำงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
-
-            return [$this->ephemeral($message), ['shop_id' => $installation->shop_id, 'user_id' => $link->user_id, 'status' => 'denied']];
-        }
-
-        return [
-            $this->ephemeral($result['content'], $result['link'] ?? null),
-            ['shop_id' => $installation->shop_id, 'user_id' => $link->user_id, 'status' => $result['status']],
-        ];
+        return $this->runShopCommand($command, $interaction, $ctx);
     }
 
     private function commandName(array $interaction): string

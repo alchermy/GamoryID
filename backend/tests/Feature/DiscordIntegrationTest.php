@@ -326,6 +326,61 @@ class DiscordIntegrationTest extends TestCase
             ->assertJsonPath('data.content', fn ($content) => str_contains($content, 'ไม่มีสิทธิ์'));
     }
 
+    public function test_pinned_button_panel_runs_and_opens_modals(): void
+    {
+        Queue::fake();
+        [$owner, $shop] = $this->owner('panel-owner@example.test', 'Panel Shop');
+        $installation = DiscordInstallation::create([
+            'shop_id' => $shop->id, 'installed_by' => $owner->id, 'guild_id' => 'guild-panel',
+            'guild_name' => 'Panel Guild', 'status' => 'connected', 'installed_at' => now(),
+        ]);
+        $installation->channels()->create([
+            'purpose' => 'commands', 'channel_id' => 'panel-room', 'channel_name' => 'คำสั่งทั่วไป', 'enabled' => true,
+        ]);
+        DiscordUserLink::create([
+            'shop_id' => $shop->id, 'user_id' => $owner->id,
+            'discord_user_id' => 'discord-panel', 'discord_username' => 'owner', 'linked_at' => now(),
+        ]);
+        InventoryItem::create([
+            'shop_id' => $shop->id, 'created_by' => $owner->id, 'tag' => 'PANL1', 'title' => 'ไอดีในแผง',
+            'rank' => 'Gold 1', 'cost' => 100, 'list_price' => 500, 'status' => 'available',
+        ]);
+
+        // /ร้าน เมนู — in test mode the panel is echoed back with its buttons
+        $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('panel-post', 'เมนู', [], 'guild-panel', 'panel-room', 'discord-panel'))
+            ->assertOk()
+            ->assertJsonPath('data.components.0.components.0.custom_id', 'gid:menu:add')
+            ->assertJsonPath('data.components.2.components.1.custom_id', 'gid:menu:summary');
+
+        // a "direct" button runs immediately
+        $this->postJson('/api/v1/discord/interactions', $this->componentInteraction('btn-summary', 'gid:menu:summary', 'guild-panel', 'panel-room', 'discord-panel'))
+            ->assertOk()
+            ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'สรุปร้าน'));
+
+        // an "input" button replies with a modal (type 9) carrying a tag field
+        $this->postJson('/api/v1/discord/interactions', $this->componentInteraction('btn-find', 'gid:menu:find', 'guild-panel', 'panel-room', 'discord-panel'))
+            ->assertOk()
+            ->assertJsonPath('type', 9)
+            ->assertJsonPath('data.custom_id', 'gid:modal:find')
+            ->assertJsonPath('data.components.0.components.0.custom_id', 'tag');
+
+        // submitting the reserve modal actually reserves the item
+        $this->postJson('/api/v1/discord/interactions', $this->modalInteraction('modal-reserve', 'gid:modal:reserve', [
+            'tag' => '#PANL1', 'customer' => 'ลูกค้าแผง', 'hours' => '6',
+        ], 'guild-panel', 'panel-room', 'discord-panel'))
+            ->assertOk()
+            ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'จอง **#PANL1** สำเร็จ'));
+        $this->assertDatabaseHas('inventory_items', ['tag' => 'PANL1', 'status' => 'reserved']);
+
+        // a staff member without inventory.manage cannot use the add button
+        $staff = User::create(['name' => 'สตาฟ', 'email' => 'panel-staff@example.test', 'password' => 'password', 'current_shop_id' => $shop->id, 'email_verified_at' => now()]);
+        ShopMember::create(['shop_id' => $shop->id, 'user_id' => $staff->id, 'role' => 'staff', 'permissions' => ['inventory.sell'], 'joined_at' => now()]);
+        DiscordUserLink::create(['shop_id' => $shop->id, 'user_id' => $staff->id, 'discord_user_id' => 'discord-panel-staff', 'discord_username' => 'staff', 'linked_at' => now()]);
+        $this->postJson('/api/v1/discord/interactions', $this->componentInteraction('btn-add', 'gid:menu:add', 'guild-panel', 'panel-room', 'discord-panel-staff'))
+            ->assertOk()
+            ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'ไม่มีสิทธิ์'));
+    }
+
     public function test_auto_create_reuses_existing_rooms_and_adds_only_the_thai_command_room(): void
     {
         [$owner, $shop] = $this->owner('room-migration-owner@example.test', 'Room Migration Shop');
@@ -411,6 +466,36 @@ class DiscordIntegrationTest extends TestCase
     private function interaction(string $id, string $subcommand, string $optionName, string $value, string $guildId, string $channelId): array
     {
         return $this->commandInteraction($id, $subcommand, [$optionName => $value], $guildId, $channelId);
+    }
+
+    private function componentInteraction(string $id, string $customId, string $guildId, string $channelId, string $discordUserId): array
+    {
+        return [
+            'id' => $id,
+            'type' => 3,
+            'guild_id' => $guildId,
+            'channel_id' => $channelId,
+            'member' => ['permissions' => '32', 'user' => ['id' => $discordUserId, 'username' => 'merchant', 'global_name' => 'Merchant']],
+            'data' => ['custom_id' => $customId, 'component_type' => 2],
+        ];
+    }
+
+    private function modalInteraction(string $id, string $customId, array $fields, string $guildId, string $channelId, string $discordUserId): array
+    {
+        return [
+            'id' => $id,
+            'type' => 5,
+            'guild_id' => $guildId,
+            'channel_id' => $channelId,
+            'member' => ['permissions' => '32', 'user' => ['id' => $discordUserId, 'username' => 'merchant', 'global_name' => 'Merchant']],
+            'data' => [
+                'custom_id' => $customId,
+                'components' => collect($fields)->map(fn ($value, $name) => [
+                    'type' => 1,
+                    'components' => [['type' => 4, 'custom_id' => $name, 'value' => $value]],
+                ])->values()->all(),
+            ],
+        ];
     }
 
     private function commandInteraction(string $id, string $subcommand, array $options, string $guildId, string $channelId, string $discordUserId = 'discord-user-1'): array

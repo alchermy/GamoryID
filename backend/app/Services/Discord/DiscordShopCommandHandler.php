@@ -407,7 +407,7 @@ class DiscordShopCommandHandler
     /** @return array{content: string, status: string} */
     private function createInventory(array $interaction, DiscordInstallation $installation, DiscordUserLink $link): array
     {
-        $name = trim($this->optionValue($interaction, 'ชื่อ', 'riot-id', 'ไอดี'));
+        $name = trim($this->optionValue($interaction, 'ชื่อ', 'title', 'riot-id', 'ไอดี'));
         $costValue = $this->optionValue($interaction, 'ต้นทุน', 'cost');
         $priceValue = $this->optionValue($interaction, 'ราคา', 'price');
         if ($name === '' || ! is_numeric($costValue) || ! is_numeric($priceValue) || (float) $costValue < 0 || (float) $priceValue < 0) {
