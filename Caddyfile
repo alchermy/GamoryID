@@ -24,8 +24,15 @@ api.gamoryid.com {
 
 # Public storefront (React) — same SPA fallback pattern as the merchant app.
 gamoryid.com, www.gamoryid.com {
-	root * /srv/public
 	encode gzip
+
+	# The backend generates the real sitemap (every storefront + listing URL)
+	# and a matching robots.txt — serve those from the API, not the static
+	# 2-URL fallback baked into the SPA bundle.
+	@seo path /sitemap.xml /robots.txt
+	reverse_proxy @seo app:8000
+
+	root * /srv/public
 	try_files {path} /index.html
 	file_server
 	header {

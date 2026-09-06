@@ -56,9 +56,13 @@ class SitemapTest extends TestCase
         unset($soldItem);
     }
 
-    public function test_robots_points_at_the_dynamic_sitemap(): void
+    public function test_robots_points_at_the_storefront_hosts_sitemap(): void
     {
+        config(['app.storefront_url' => 'https://shop.example']);
+
         $body = $this->get('/robots.txt')->assertOk()->getContent();
-        $this->assertStringContainsString('Sitemap: '.url('/sitemap.xml'), $body);
+
+        $this->assertStringContainsString('Sitemap: https://shop.example/sitemap.xml', $body);
+        $this->assertStringContainsString("Allow: /\n", $body);
     }
 }

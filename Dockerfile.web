@@ -22,8 +22,10 @@ RUN npm run build
 FROM node:20-alpine AS publicweb-build
 ARG VITE_API_URL=https://api.gamoryid.com/api/v1
 ARG VITE_MERCHANT_APP_URL=https://app.gamoryid.com
+ARG VITE_GA_ID=
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_MERCHANT_APP_URL=${VITE_MERCHANT_APP_URL}
+ENV VITE_GA_ID=${VITE_GA_ID}
 WORKDIR /app
 COPY public-web/package.json public-web/package-lock.json ./
 RUN npm ci

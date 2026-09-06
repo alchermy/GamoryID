@@ -24,14 +24,22 @@ class SitemapController extends Controller
 
     public function robots(): Response
     {
-        $body = "User-agent: *\nAllow: /\n\nSitemap: ".url('/sitemap.xml')."\n";
+        // Served under the storefront host, so point at that host's sitemap,
+        // not APP_URL (which is the API host).
+        $base = $this->storefrontBase();
+        $body = "User-agent: *\nAllow: /\n\nSitemap: {$base}/sitemap.xml\n";
 
         return response($body, 200)->header('Content-Type', 'text/plain; charset=UTF-8');
     }
 
+    private function storefrontBase(): string
+    {
+        return rtrim((string) (config('app.storefront_url') ?: 'https://gamoryid.com'), '/');
+    }
+
     private function build(): string
     {
-        $base = rtrim(config('app.storefront_url'), '/');
+        $base = $this->storefrontBase();
 
         $urls = [
             ['loc' => $base.'/', 'changefreq' => 'daily', 'priority' => '1.0'],
