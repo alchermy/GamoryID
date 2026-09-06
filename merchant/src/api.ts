@@ -99,6 +99,9 @@ export async function downloadShopFile(
   try {
     const response = await fetch(`${API_BASE}${path}`, {
       credentials: "include",
+      // Never serve a stale download from the HTTP cache — templates and
+      // exports must always reflect the current data.
+      cache: "no-store",
       headers: {
         Accept: "application/octet-stream",
         "X-Shop-Id": String(shopId),
