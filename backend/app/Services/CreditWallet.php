@@ -42,6 +42,50 @@ class CreditWallet
         });
     }
 
+    /**
+     * Undo a wrongly-approved top-up: claw the credited amount back out of the
+     * shop's wallet. The balance is allowed to go negative when the shop has
+     * already spent the credits — restoring it is on the shop (a real top-up).
+     */
+    public function reverseTopUp(PaymentSubmission $submission, string $reason): CreditTransaction
+    {
+        return DB::transaction(function () use ($submission, $reason) {
+            $payment = PaymentSubmission::lockForUpdate()->findOrFail($submission->id);
+            $reversalQuery = fn () => CreditTransaction::where('type', 'credit_top_up_reversed')
+                ->where('metadata->reversed_payment_id', $payment->id);
+
+            if ($payment->status === 'reversed') {
+                return $reversalQuery()->firstOrFail(); // idempotent
+            }
+            $topUpTxn = CreditTransaction::where('payment_submission_id', $payment->id)
+                ->where('type', 'credit_top_up')
+                ->first();
+            if ($payment->status !== 'verified' || ! $topUpTxn) {
+                throw ValidationException::withMessages(['reason' => 'รายการนี้ไม่ได้อยู่ในสถานะอนุมัติแล้ว จึงยกเลิกไม่ได้']);
+            }
+
+            $shop = Shop::lockForUpdate()->findOrFail($payment->shop_id);
+            $balance = $shop->credit_balance - (int) $payment->credit_amount;
+            $shop->update(['credit_balance' => $balance]);
+            $payment->update([
+                'status' => 'reversed',
+                'verified_at' => null,
+                'review_note' => 'ยกเลิกการอนุมัติ: '.$reason,
+            ]);
+
+            // The unique index on credit_transactions.payment_submission_id is
+            // already taken by the credit_top_up row, so the reversal links back
+            // through metadata instead.
+            return CreditTransaction::create([
+                'shop_id' => $shop->id,
+                'type' => 'credit_top_up_reversed',
+                'credits' => -(int) $payment->credit_amount,
+                'balance_after' => $balance,
+                'metadata' => ['reason' => $reason, 'reversed_payment_id' => $payment->id, 'reversed_txn_id' => $topUpTxn->id],
+            ]);
+        });
+    }
+
     public function purchase(Shop $shop, SubscriptionPlan $plan, string $cycle, bool $autoRenew, string $idempotencyKey, string $type = 'subscription_purchase'): Subscription
     {
         $cycle = $cycle === 'yearly' ? 'yearly' : 'monthly';

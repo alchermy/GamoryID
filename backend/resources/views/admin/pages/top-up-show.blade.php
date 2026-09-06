@@ -1,4 +1,7 @@
-@php $canReview = in_array($payment->status, ['pending', 'pending_review'], true); @endphp
+@php
+    $canReview = in_array($payment->status, ['pending', 'pending_review'], true);
+    $canReverse = $payment->status === 'verified';
+@endphp
 <div class="back-row"><a class="back-link" href="{{ route('admin.top-ups.index') }}">← กลับไปรายการเติมเครดิต</a></div>
 
 <section class="topup-summary" aria-label="สรุปรายการเติมเครดิต">
@@ -27,8 +30,12 @@
             </dl>
         </section>
 
+        @if($payment->auto_check_failed)
+            <div class="decision-warning" role="alert">⚠ ระบบตรวจสลิปอัตโนมัติไม่ทำงานกับรายการนี้ กรุณาตรวจยอดเงิน บัญชีผู้รับ และวันเวลา จากภาพสลิปด้วยตนเองก่อนอนุมัติ</div>
+        @endif
+
         <section class="card decision-card" aria-labelledby="decision-title">
-            <div class="card-head"><div><h2 id="decision-title">ปรับสถานะรายการ</h2><p>{{ $canReview ? 'อนุมัติเพื่อเพิ่มเครดิต หรือปฏิเสธพร้อมระบุเหตุผล' : 'รายการนี้ได้รับการตรวจสอบแล้ว' }}</p></div></div>
+            <div class="card-head"><div><h2 id="decision-title">ปรับสถานะรายการ</h2><p>{{ $canReview ? 'อนุมัติเพื่อเพิ่มเครดิต หรือปฏิเสธพร้อมระบุเหตุผล' : ($canReverse ? 'อนุมัติแล้ว — ยกเลิกได้หากตรวจพบภายหลังว่าสลิปผิด' : 'รายการนี้ได้รับการตรวจสอบแล้ว') }}</p></div></div>
             @if($canReview)
                 <form class="decision-form" method="post" action="{{ route('admin.top-ups.review', $payment) }}" novalidate data-review-form>
                     @csrf @method('PATCH')
@@ -45,6 +52,18 @@
                 </form>
             @else
                 <div class="decision-result"><span class="status {{ $payment->status }}">{{ $statusLabels[$payment->status] ?? $payment->status }}</span><strong>{{ $payment->review_note ?: 'ไม่มีหมายเหตุ' }}</strong>@if($payment->verified_at)<small>ตรวจเมื่อ {{ $payment->verified_at->timezone('Asia/Bangkok')->format('d/m/Y H:i') }} น.</small>@endif</div>
+            @endif
+
+            @if($canReverse)
+                <form class="decision-form reverse-form" method="post" action="{{ route('admin.top-ups.reverse', $payment) }}" novalidate>
+                    @csrf @method('PATCH')
+                    <label for="reverse-reason">เหตุผลในการยกเลิก <span>(จำเป็น)</span></label>
+                    <textarea id="reverse-reason" name="reason" rows="3" maxlength="1000" placeholder="เช่น ตรวจซ้ำแล้วพบว่าสลิปโอนแค่ 8 บาท แต่ขอ 500 เครดิต" aria-describedby="reverse-error" @error('reason') aria-invalid="true" @enderror>{{ old('reason') }}</textarea>
+                    <span class="field-error" id="reverse-error" data-review-error>@error('reason'){{ $message }}@enderror</span>
+                    <div class="decision-actions">
+                        <button class="button reject" type="button" data-admin-confirm="ยกเลิกการอนุมัติและดึง {{ number_format($payment->credit_amount) }} เครดิตคืนจากร้าน {{ $payment->shop->name }}? เครดิตของร้านอาจติดลบหากใช้ไปแล้ว" data-confirm-label="ยกเลิกอนุมัติ" data-confirm-intent="reject" data-confirm-requires="reason">ยกเลิกอนุมัติ &amp; ดึงเครดิตคืน</button>
+                    </div>
+                </form>
             @endif
         </section>
     </div>

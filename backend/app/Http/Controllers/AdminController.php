@@ -162,7 +162,7 @@ class AdminController extends Controller
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'date' => ['nullable', 'date_format:Y-m-d'],
-            'status' => ['nullable', Rule::in(['all', 'pending', 'pending_review', 'verified', 'rejected'])],
+            'status' => ['nullable', Rule::in(['all', 'pending', 'pending_review', 'verified', 'rejected', 'reversed'])],
         ]);
         $query = trim((string) ($filters['q'] ?? ''));
         $date = (string) ($filters['date'] ?? '');
@@ -328,6 +328,37 @@ class AdminController extends Controller
         }
 
         return redirect()->route('admin.top-ups.show', $payment)->with('message', $message);
+    }
+
+    public function reverseTopUp(Request $request, PaymentSubmission $payment, CreditWallet $wallet)
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:3', 'max:1000'],
+        ]);
+        abort_unless($payment->credit_amount, 404);
+        if ($payment->status !== 'verified') {
+            return back()->withErrors(['reason' => 'ยกเลิกได้เฉพาะรายการที่อนุมัติแล้ว กรุณาโหลดหน้าใหม่เพื่อดูสถานะล่าสุด']);
+        }
+
+        $wallet->reverseTopUp($payment, $data['reason']);
+        $this->recordAdminLog($request, $payment->shop, 'credit.top_up_reversed', $payment, [
+            'credits' => $payment->credit_amount,
+            'reason' => $data['reason'],
+        ]);
+
+        $payment->loadMissing('shop');
+        if ($payment->shop) {
+            $recipients = $payment->shop->billingRecipients();
+            if ($recipients->isNotEmpty()) {
+                Notification::send($recipients, new PaymentReviewedNotification(
+                    $payment->fresh('shop'),
+                    PaymentReviewedNotification::OUTCOME_REVERSED,
+                ));
+            }
+        }
+
+        return redirect()->route('admin.top-ups.show', $payment)
+            ->with('message', 'ยกเลิกการอนุมัติและดึงเครดิตคืนแล้ว');
     }
 
     public function slip(Request $request, PaymentSubmission $payment)

@@ -118,6 +118,26 @@ export function BillingPanel({
               </span>
             </div>
           )}
+          {topUp?.status === "reversed" && (
+            <div className="notice notice-warning" role="status">
+              <ShieldCheck size={18} />
+              <span>
+                รายการเติมเครดิต {topUp.credits.toLocaleString("th-TH")} เครดิต
+                ถูกแอดมินยกเลิกและดึงเครดิตคืน
+                {topUp.review_note ? ` — ${topUp.review_note}` : ""}
+              </span>
+            </div>
+          )}
+          {balance < 0 && (
+            <div className="notice notice-warning" role="alert">
+              <ShieldCheck size={18} />
+              <span>
+                ยอดเครดิตติดลบ {balance.toLocaleString("th-TH")} เครดิต —
+                เกิดจากแอดมินยกเลิกรายการเติมเครดิตที่ตรวจพบว่าไม่ถูกต้อง
+                กรุณาเติมเครดิตด้วยสลิปที่ถูกต้องให้ยอดกลับเป็นบวกก่อนซื้อหรือต่ออายุแพ็กเกจ
+              </span>
+            </div>
+          )}
           {!canManage && (
             <div className="notice" role="status">
               <ShieldCheck size={18} />

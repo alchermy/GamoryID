@@ -20,6 +20,8 @@ class PaymentReviewedNotification extends Notification implements ShouldQueue
 
     public const OUTCOME_REJECTED = 'rejected';
 
+    public const OUTCOME_REVERSED = 'reversed';
+
     public function __construct(
         private readonly PaymentSubmission $payment,
         private readonly string $outcome,
@@ -45,6 +47,21 @@ class PaymentReviewedNotification extends Notification implements ShouldQueue
                 ->line('ผู้ดูแลระบบตรวจสอบสลิปเรียบร้อยแล้ว เพิ่ม '.$credits.' เครดิตเข้าร้าน '.$this->payment->shop->name.' แล้ว')
                 ->action('ไปซื้อหรือต่ออายุแพ็กเกจ', $billingUrl)
                 ->line('ขอบคุณที่ใช้บริการ GamoryID');
+        }
+
+        if ($this->outcome === self::OUTCOME_REVERSED) {
+            $message = (new MailMessage)
+                ->subject('ยกเลิกรายการเติมเครดิต '.$credits.' เครดิต · GamoryID')
+                ->greeting('สวัสดี')
+                ->line('ผู้ดูแลระบบยกเลิกการอนุมัติรายการเติมเครดิต '.$credits.' เครดิตของร้าน '.$this->payment->shop->name.' และดึงเครดิตจำนวนนี้คืนจากร้าน');
+            if ($note !== '') {
+                $message->line('หมายเหตุจากผู้ดูแลระบบ: '.$note);
+            }
+
+            return $message
+                ->line('หากยอดเครดิตของร้านติดลบ กรุณาเติมเครดิตด้วยสลิปที่ถูกต้องเพื่อให้กลับมาใช้งานได้ตามปกติ')
+                ->action('ไปหน้าเติมเครดิต', $billingUrl)
+                ->line('หากคิดว่าเป็นความผิดพลาด กรุณาติดต่อทีมงาน');
         }
 
         $message = (new MailMessage)

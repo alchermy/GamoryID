@@ -12,7 +12,7 @@
 @php
     $statusLabels = [
         'pending' => 'กำลังตรวจสลิป', 'pending_review' => 'รออนุมัติ', 'verified' => 'อนุมัติแล้ว',
-        'rejected' => 'ไม่อนุมัติ', 'trialing' => 'ทดลองใช้', 'pending_payment' => 'รอชำระเงิน',
+        'rejected' => 'ไม่อนุมัติ', 'reversed' => 'ยกเลิกอนุมัติแล้ว', 'trialing' => 'ทดลองใช้', 'pending_payment' => 'รอชำระเงิน',
         'active' => 'ใช้งาน', 'expired' => 'หมดอายุ', 'grace_read_only' => 'อ่านอย่างเดียว',
         'suspended' => 'ระงับ', 'cancelled' => 'ยกเลิก', 'archived' => 'เก็บถาวร',
     ];

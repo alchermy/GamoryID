@@ -3,17 +3,21 @@
 namespace Tests\Feature;
 
 use App\Jobs\VerifyPaymentSlip;
+use App\Models\CreditTransaction;
 use App\Models\PaymentSubmission;
 use App\Models\Shop;
 use App\Models\ShopMember;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\CreditWallet;
+use App\Services\SlipReview;
 use App\Services\SlipVerifier;
 use App\Services\SubscriptionLifecycle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class CreditWalletTest extends TestCase
@@ -97,11 +101,97 @@ class CreditWalletTest extends TestCase
             'slip_path' => 'slips/credit.png',
         ]);
 
-        (new VerifyPaymentSlip($payment->id))->handle(app(SlipVerifier::class));
+        (new VerifyPaymentSlip($payment->id))->handle(app(SlipReview::class));
 
-        $this->assertDatabaseHas('payment_submissions', ['id' => $payment->id, 'status' => 'pending_review']);
+        $this->assertDatabaseHas('payment_submissions', ['id' => $payment->id, 'status' => 'pending_review', 'auto_slip_check' => 'passed']);
         $this->assertDatabaseHas('shops', ['id' => $shop->id, 'credit_balance' => 0]);
         $this->assertDatabaseCount('credit_transactions', 0);
+        $this->assertDatabaseHas('slip_verifications', ['payment_submission_id' => $payment->id, 'is_valid' => true]);
+    }
+
+    public function test_top_up_is_blocked_when_the_slip_amount_does_not_match(): void
+    {
+        [$user, $shop] = $this->owner();
+        Storage::fake('private');
+        $this->mock(SlipVerifier::class)->shouldReceive('verify')->once()->andReturn([
+            'status' => 'verified', 'amount' => 8.0, 'receiver_account' => null,
+            'transaction_reference' => 'ref-mismatch', 'transferred_at' => now()->toDateTimeString(),
+            'summary' => ['success' => true],
+        ]);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->withHeader('Accept', 'application/json')
+            ->post('/api/v1/credits/top-ups', [
+                'credits' => 500,
+                'slip' => UploadedFile::fake()->create('slip.png', 20, 'image/png'),
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('slip');
+
+        $this->assertDatabaseCount('payment_submissions', 0);
+        $this->assertSame([], Storage::disk('private')->allFiles());
+    }
+
+    public function test_top_up_falls_back_to_admin_review_when_the_checker_is_unavailable(): void
+    {
+        [$user, $shop] = $this->owner();
+        Storage::fake('private');
+        $this->mock(SlipVerifier::class)->shouldReceive('verify')->once()->andReturn([
+            'status' => 'pending_review', 'reason' => 'SlipOK ไม่ตอบกลับ', 'http_status' => 503,
+        ]);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->withHeader('Accept', 'application/json')
+            ->post('/api/v1/credits/top-ups', [
+                'credits' => 300,
+                'slip' => UploadedFile::fake()->create('slip.png', 20, 'image/png'),
+            ])
+            ->assertStatus(202);
+
+        $this->assertDatabaseHas('payment_submissions', [
+            'shop_id' => $shop->id, 'status' => 'pending_review', 'auto_slip_check' => 'unavailable',
+        ]);
+        $this->assertDatabaseHas('shops', ['id' => $shop->id, 'credit_balance' => 0]);
+    }
+
+    public function test_admin_reverse_claws_credits_back_and_allows_a_negative_balance(): void
+    {
+        [, $shop] = $this->owner();
+        $payment = PaymentSubmission::create([
+            'shop_id' => $shop->id, 'status' => 'pending_review',
+            'expected_amount' => 500, 'credit_amount' => 500,
+            'slip_disk' => 'private', 'slip_path' => 'slips/x.png',
+        ]);
+        $wallet = app(CreditWallet::class);
+        $wallet->approveTopUp($payment);
+        // shop spends most of the wrongly-credited balance
+        $shop->update(['credit_balance' => 120]);
+
+        $wallet->reverseTopUp($payment->fresh(), 'สลิปโอนแค่ 8 บาท');
+        $wallet->reverseTopUp($payment->fresh(), 'ซ้ำ'); // idempotent
+
+        $this->assertDatabaseHas('shops', ['id' => $shop->id, 'credit_balance' => -380]);
+        $this->assertDatabaseHas('payment_submissions', ['id' => $payment->id, 'status' => 'reversed']);
+        $reversals = CreditTransaction::where('type', 'credit_top_up_reversed')
+            ->where('metadata->reversed_payment_id', $payment->id)->get();
+        $this->assertCount(1, $reversals);
+        $this->assertSame(-500, (int) $reversals->first()->credits);
+        $this->assertSame(-380, (int) $reversals->first()->balance_after);
+    }
+
+    public function test_reversing_a_top_up_that_was_not_approved_is_rejected(): void
+    {
+        [, $shop] = $this->owner();
+        $payment = PaymentSubmission::create([
+            'shop_id' => $shop->id, 'status' => 'pending_review',
+            'expected_amount' => 500, 'credit_amount' => 500,
+            'slip_disk' => 'private', 'slip_path' => 'slips/x.png',
+        ]);
+
+        $this->expectException(ValidationException::class);
+        app(CreditWallet::class)->reverseTopUp($payment, 'ทดสอบ');
     }
 
     public function test_auto_renew_preference_is_limited_to_the_current_shops_active_subscription(): void

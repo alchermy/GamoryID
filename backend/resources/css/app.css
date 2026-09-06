@@ -125,7 +125,7 @@ tbody tr:last-child td { @apply border-b-0; }
 .status { @apply inline-flex min-h-7 items-center rounded-lg px-2.5 py-1 text-[0.6875rem] font-extrabold whitespace-nowrap; }
 .status.verified, .status.active { @apply bg-emerald-50 text-emerald-700; }
 .status.pending, .status.pending_review, .status.trialing { @apply bg-amber-50 text-amber-800; }
-.status.rejected, .status.suspended { @apply bg-red-50 text-red-700; }
+.status.rejected, .status.suspended, .status.reversed { @apply bg-red-50 text-red-700; }
 .status.grace_read_only { @apply bg-violet-50 text-violet-700; }
 .status.expired, .status.cancelled, .status.archived { @apply bg-slate-100 text-slate-600; }
 .empty { @apply px-5 py-12 text-center text-sm leading-6 text-muted; }
@@ -312,6 +312,14 @@ details summary::-webkit-details-marker { display: none; }
 .decision-result .status { @apply w-fit; }
 .decision-result strong { @apply text-sm leading-6 text-ink; }
 .decision-result small { @apply text-xs text-muted; }
+
+/* Top-ups whose automated slip check could not run — an admin must verify by hand. */
+tr.flagged td { @apply text-red-700; }
+tr.flagged .table-link, tr.flagged .muted { @apply text-red-700; }
+.flag-badge { @apply ml-1.5 text-sm text-red-600; }
+.decision-warning { @apply mb-3 rounded-control border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700; }
+.reverse-form { @apply border-t border-slate-200; }
+.reverse-form .decision-actions { @apply grid-cols-1; }
 
 @media (max-width: 1050px) {
     .shell { @apply grid-cols-1; }

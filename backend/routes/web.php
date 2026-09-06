@@ -48,6 +48,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/plans', [AdminController::class, 'storePlan'])->name('plans.store');
         Route::patch('/plans/{plan}', [AdminController::class, 'updatePlan'])->name('plans.update');
         Route::patch('/top-ups/{payment}', [AdminController::class, 'reviewTopUp'])->name('top-ups.review');
+        Route::patch('/top-ups/{payment}/reverse', [AdminController::class, 'reverseTopUp'])->name('top-ups.reverse');
         Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
     });
 });

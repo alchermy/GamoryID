@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\InventoryItem;
 use App\Models\PaymentSubmission;
 use App\Models\Shop;
 use App\Models\ShopMember;
@@ -9,9 +10,12 @@ use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Notifications\PaymentReviewedNotification;
+use App\Services\CreditWallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminManagementTest extends TestCase
@@ -111,6 +115,48 @@ class AdminManagementTest extends TestCase
         $this->assertDatabaseHas('payment_submissions', ['id' => $payment->id, 'status' => 'rejected', 'review_note' => 'ชื่อบัญชีผู้รับไม่ตรง']);
     }
 
+    public function test_admin_can_reverse_an_approved_top_up_and_claw_credits_back(): void
+    {
+        $admin = $this->admin();
+        [$shop] = $this->shopWithSubscription();
+        $payment = PaymentSubmission::create([
+            'shop_id' => $shop->id, 'status' => 'pending_review', 'expected_amount' => 500,
+            'credit_amount' => 500, 'slip_path' => 'slips/wrong.png',
+        ]);
+        app(CreditWallet::class)->approveTopUp($payment);
+        $shop->update(['credit_balance' => 90]); // shop already spent most of it
+
+        // reason is required
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->patch(route('admin.top-ups.reverse', $payment), [])
+            ->assertSessionHasErrors('reason');
+
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->patch(route('admin.top-ups.reverse', $payment), ['reason' => 'สลิปโอนแค่ 8 บาท แต่ขอ 500 เครดิต'])
+            ->assertRedirect(route('admin.top-ups.show', $payment));
+
+        $this->assertDatabaseHas('payment_submissions', ['id' => $payment->id, 'status' => 'reversed']);
+        $this->assertDatabaseHas('shops', ['id' => $shop->id, 'credit_balance' => -410]);
+
+        // a second reverse is refused — it is no longer "verified"
+        $this->withSession(['admin_user_id' => $admin->id])
+            ->patch(route('admin.top-ups.reverse', $payment->fresh()), ['reason' => 'ซ้ำ'])
+            ->assertSessionHasErrors('reason');
+    }
+
+    public function test_a_top_up_whose_auto_check_failed_is_flagged_in_the_admin_list(): void
+    {
+        $admin = $this->admin();
+        [$shop] = $this->shopWithSubscription();
+        PaymentSubmission::create([
+            'shop_id' => $shop->id, 'status' => 'pending_review', 'expected_amount' => 200,
+            'credit_amount' => 200, 'slip_path' => 'slips/down.png', 'auto_slip_check' => 'unavailable',
+        ]);
+
+        $this->withSession(['admin_user_id' => $admin->id])->get(route('admin.top-ups.index'))
+            ->assertOk()->assertSee('flagged', false);
+    }
+
     public function test_top_up_list_has_index_filters_and_a_dedicated_review_page(): void
     {
         $admin = $this->admin();
@@ -176,7 +222,7 @@ class AdminManagementTest extends TestCase
     {
         $admin = $this->admin();
         [$shop] = $this->shopWithSubscription();
-        $item = \App\Models\InventoryItem::create([
+        $item = InventoryItem::create([
             'shop_id' => $shop->id, 'tag' => 'HIDE1', 'title' => 'ไอดี', 'cost' => 1000, 'list_price' => 2000, 'status' => 'available',
         ]);
 
@@ -211,13 +257,13 @@ class AdminManagementTest extends TestCase
 
     public function test_admin_sees_shop_logo_and_the_real_plan_status(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('private');
+        Storage::fake('private');
         $admin = $this->admin();
         [$shop] = $this->shopWithSubscription(); // has an active subscription
         // the shop row column reads "trialing" even though a plan is active
         $shop->forceFill([
             'status' => 'trialing',
-            'logo_path' => \Illuminate\Http\UploadedFile::fake()->create('logo.png', 6, 'image/png')->store("shops/{$shop->id}", 'private'),
+            'logo_path' => UploadedFile::fake()->create('logo.png', 6, 'image/png')->store("shops/{$shop->id}", 'private'),
         ])->save();
 
         $list = $this->withSession(['admin_user_id' => $admin->id])->get(route('admin.shops.index'))->assertOk();

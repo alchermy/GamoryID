@@ -32,10 +32,10 @@
                 <thead><tr><th scope="col">ร้าน</th><th scope="col">เครดิต</th><th scope="col">สถานะ</th><th scope="col">เวลา</th></tr></thead>
                 <tbody>
                 @forelse($recentTopUps as $topUp)
-                    <tr>
+                    <tr @class(['flagged' => $topUp->auto_check_failed])>
                         <td><a class="table-link" href="{{ route('admin.shops.show', $topUp->shop) }}">{{ $topUp->shop->name }}</a></td>
                         <td class="credit">{{ number_format($topUp->credit_amount) }}</td>
-                        <td><span class="status {{ $topUp->status }}">{{ $statusLabels[$topUp->status] ?? $topUp->status }}</span></td>
+                        <td><span class="status {{ $topUp->status }}">{{ $statusLabels[$topUp->status] ?? $topUp->status }}</span>@if($topUp->auto_check_failed)<span class="flag-badge" title="ตรวจสลิปอัตโนมัติไม่ทำงาน">⚠</span>@endif</td>
                         <td class="muted">{{ $topUp->created_at->timezone('Asia/Bangkok')->format('d/m H:i') }}</td>
                     </tr>
                 @empty

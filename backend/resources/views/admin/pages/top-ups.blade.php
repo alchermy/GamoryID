@@ -14,7 +14,7 @@
         </label>
         <label class="filter-field" for="topup-date"><span>วันที่ส่งรายการ</span><input id="topup-date" name="date" type="date" value="{{ $date }}"></label>
         <label class="filter-field" for="topup-status"><span>สถานะ</span><select id="topup-status" name="status">
-            @foreach(['all' => 'ทุกสถานะ', 'pending' => 'กำลังตรวจสลิป', 'pending_review' => 'รออนุมัติ', 'verified' => 'อนุมัติแล้ว', 'rejected' => 'ไม่อนุมัติ'] as $value => $label)
+            @foreach(['all' => 'ทุกสถานะ', 'pending' => 'กำลังตรวจสลิป', 'pending_review' => 'รออนุมัติ', 'verified' => 'อนุมัติแล้ว', 'rejected' => 'ไม่อนุมัติ', 'reversed' => 'ยกเลิกอนุมัติแล้ว'] as $value => $label)
                 <option value="{{ $value }}" @selected($status === $value)>{{ $label }}</option>
             @endforeach
         </select></label>
@@ -29,13 +29,13 @@
             <thead><tr><th scope="col">#</th><th scope="col">ร้านค้า</th><th scope="col">วันที่ส่ง</th><th scope="col">เครดิต</th><th scope="col">ผู้ส่ง</th><th scope="col">สถานะ</th><th scope="col">Action</th></tr></thead>
             <tbody>
             @forelse($topUps as $topUp)
-                <tr>
+                <tr @class(['flagged' => $topUp->auto_check_failed])>
                     <td class="row-index">{{ number_format(($topUps->firstItem() ?? 1) + $loop->index) }}</td>
                     <td class="shop-name"><a class="table-link" href="{{ route('admin.top-ups.show', $topUp) }}">{{ $topUp->shop->name }}</a><small>{{ $topUp->shop->slug }}</small></td>
                     <td class="muted">{{ $topUp->created_at->timezone('Asia/Bangkok')->format('d/m/Y H:i') }} น.</td>
                     <td class="credit">{{ number_format($topUp->credit_amount) }}</td>
                     <td>{{ $topUp->submittedBy?->name ?? 'ไม่ระบุผู้ส่ง' }}</td>
-                    <td><span class="status {{ $topUp->status }}">{{ $statusLabels[$topUp->status] ?? $topUp->status }}</span></td>
+                    <td><span class="status {{ $topUp->status }}">{{ $statusLabels[$topUp->status] ?? $topUp->status }}</span>@if($topUp->auto_check_failed)<span class="flag-badge" title="ตรวจสลิปอัตโนมัติไม่ทำงาน — ต้องตรวจเอง">⚠</span>@endif</td>
                     <td><a class="button secondary compact" href="{{ route('admin.top-ups.show', $topUp) }}">ดูรายละเอียด</a></td>
                 </tr>
             @empty

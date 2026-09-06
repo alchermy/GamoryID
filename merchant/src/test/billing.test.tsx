@@ -235,6 +235,26 @@ describe("BillingPanel", () => {
       screen.getByText(/กำลังตรวจสลิปเติมเครดิต 2,500/),
     ).toBeInTheDocument();
   });
+
+  it("warns when the credit balance is negative after an admin reversal", () => {
+    render(
+      <BillingPanel
+        plans={PLANS}
+        shop={shopOnPro({ credit_balance: -410 })}
+        loading={false}
+        error=""
+        canManage
+        busy={false}
+        onOpenTopUp={noop}
+        onPurchase={noop}
+        onAutoRenewChange={noop}
+        retry={noop}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /ยอดเครดิตติดลบ -410/,
+    );
+  });
 });
 
 describe("TopUpDialog", () => {
