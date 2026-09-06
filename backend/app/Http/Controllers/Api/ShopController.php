@@ -8,6 +8,7 @@ use App\Models\Shop;
 use App\Services\AuditLogger;
 use App\Services\CurrentShop;
 use App\Services\PlanEntitlements;
+use App\Services\TagGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -52,6 +53,20 @@ class ShopController extends Controller
         $audit->record($request, $shop, 'shop.updated', $shop, ['fields' => array_keys($data)]);
 
         return response()->json(['data' => $this->payload($shop->fresh(), $entitlements)]);
+    }
+
+    /** Rebrand every existing "PREFIX-number" item code to the shop's current prefix. */
+    public function retag(Request $request, CurrentShop $currentShop, AuditLogger $audit, PlanEntitlements $entitlements, TagGenerator $tags)
+    {
+        $shop = $currentShop->from($request);
+        $result = $tags->retagShop($shop);
+        $audit->record($request, $shop, 'shop.retagged', $shop, $result);
+
+        return response()->json([
+            'data' => $this->payload($shop->fresh(), $entitlements),
+            'renamed' => $result['renamed'],
+            'skipped' => $result['skipped'],
+        ]);
     }
 
     /** Upload or replace the shop's storefront logo and/or banner. */
@@ -175,6 +190,7 @@ class ShopController extends Controller
             'inventory_copy_footer' => $shop->inventory_copy_footer,
             'tag_prefix' => $shop->tag_prefix,
             'effective_tag_prefix' => $shop->effective_tag_prefix,
+            'retaggable_count' => app(TagGenerator::class)->retaggableCount($shop),
             'storefront_enabled' => $shop->storefront_enabled,
             'onboarding_dismissed_at' => $shop->onboarding_dismissed_at,
             'logo_url' => $this->signedBrandingUrl($shop, 'logo'),

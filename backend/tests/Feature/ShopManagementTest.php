@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ActivityLog;
+use App\Models\InventoryItem;
 use App\Models\Shop;
 use App\Models\ShopMember;
 use App\Models\SubscriptionPlan;
@@ -50,6 +51,26 @@ class ShopManagementTest extends TestCase
             'inventory_copy_footer' => 'สอบถามเพิ่มเติมทาง LINE รับประกัน 7 วัน',
             'storefront_enabled' => true,
         ]);
+    }
+
+    public function test_owner_can_rebrand_existing_item_codes_to_the_current_prefix(): void
+    {
+        [$user, $shop] = $this->owner('retag@example.test', 'Retag Store');
+        $shop->update(['tag_prefix' => 'NEW']);
+        InventoryItem::create(['shop_id' => $shop->id, 'tag' => 'OLD-0001', 'title' => 'a', 'cost' => 0, 'list_price' => 1, 'status' => 'available']);
+        InventoryItem::create(['shop_id' => $shop->id, 'tag' => '23DX5', 'title' => 'b', 'cost' => 0, 'list_price' => 1, 'status' => 'available']);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->getJson('/api/v1/shop')->assertOk()->assertJsonPath('data.retaggable_count', 1);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->postJson('/api/v1/shop/retag')
+            ->assertOk()->assertJsonPath('renamed', 1)->assertJsonPath('skipped', 0)
+            ->assertJsonPath('data.retaggable_count', 0);
+
+        $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'tag' => 'NEW-0001']);
+        $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'tag' => '23DX5']);
+        $this->assertDatabaseHas('activity_logs', ['shop_id' => $shop->id, 'event' => 'shop.retagged']);
     }
 
     public function test_a_fresh_shop_has_not_dismissed_the_onboarding_guide(): void

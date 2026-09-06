@@ -286,7 +286,7 @@ class InventoryImportTest extends TestCase
         InventoryItem::create(['shop_id' => $shop->id, 'tag' => 'DUP01', 'title' => 'มีอยู่แล้ว', 'cost' => 0, 'list_price' => 0, 'status' => 'available']);
         $this->app->bind(TagGenerator::class, fn () => new class extends TagGenerator
         {
-            public function generate(Shop $shop, ?string $providedNumber = null): string
+            public function generate(Shop $shop, ?string $providedNumber = null, ?int $ignoreItemId = null): string
             {
                 return 'DUP01';
             }

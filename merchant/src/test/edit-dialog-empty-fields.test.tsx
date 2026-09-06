@@ -45,6 +45,34 @@ describe("EditDialog", () => {
     expect(screen.getByLabelText("แรงก์")).toHaveValue("");
   });
 
+  it("prefills the id-number field with the tag's number part", () => {
+    render(
+      <EditDialog
+        item={item({ tag: "#PCX-1282" })}
+        close={vi.fn()}
+        submit={vi.fn()}
+        busy={false}
+      />,
+    );
+    expect(
+      screen.getByLabelText(/เลขรหัสไอดี/, { selector: "input" }),
+    ).toHaveValue("1282");
+    cleanup();
+
+    // legacy 5-char code → the whole thing shows as the number part
+    render(
+      <EditDialog
+        item={item({ tag: "#2VS8D" })}
+        close={vi.fn()}
+        submit={vi.fn()}
+        busy={false}
+      />,
+    );
+    expect(
+      screen.getByLabelText(/เลขรหัสไอดี/, { selector: "input" }),
+    ).toHaveValue("2VS8D");
+  });
+
   it("keeps a real rank/username value as-is", () => {
     render(
       <EditDialog

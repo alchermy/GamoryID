@@ -316,6 +316,7 @@ export type ShopDetails = Shop & {
   inventory_copy_footer?: string | null;
   tag_prefix?: string | null;
   effective_tag_prefix?: string;
+  retaggable_count?: number;
   storefront_enabled?: boolean;
   onboarding_dismissed_at?: string | null;
   logo_url?: string | null;

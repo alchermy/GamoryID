@@ -668,6 +668,14 @@ export function EditDialog({
                 defaultValue={item.title}
               />
             </Field>
+            <Field label={`เลขรหัสไอดี (รหัสปัจจุบัน ${item.tag})`}>
+              <input
+                name="tag_number"
+                defaultValue={item.tag.replace(/^#/, "").replace(/^.*-/, "")}
+                pattern="[A-Za-z0-9]+"
+                inputMode="numeric"
+              />
+            </Field>
             <Field label="Username">
               <input
                 name="username"

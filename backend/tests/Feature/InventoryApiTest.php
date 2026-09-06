@@ -114,6 +114,24 @@ class InventoryApiTest extends TestCase
         ]);
     }
 
+    public function test_editing_the_id_number_changes_the_item_code_and_a_clash_is_rejected(): void
+    {
+        [$user, $shop] = $this->owner('retag-edit@example.test', 'Retag Shop');
+        $shop->update(['tag_prefix' => 'RTG']);
+        $item = $this->item($shop, 'RTG-0001');
+        $other = $this->item($shop, 'RTG-0009');
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson("/api/v1/inventory/{$item->id}", ['title' => 'x', 'cost' => 0, 'list_price' => 1, 'tag_number' => '1282'])
+            ->assertOk()->assertJsonPath('data.tag', '#RTG-1282');
+        $this->assertDatabaseHas('inventory_items', ['id' => $item->id, 'tag' => 'RTG-1282']);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson("/api/v1/inventory/{$item->id}", ['title' => 'x', 'cost' => 0, 'list_price' => 1, 'tag_number' => '9'])
+            ->assertStatus(422)->assertJsonValidationErrors('tag_number');
+        $this->assertDatabaseHas('inventory_items', ['id' => $other->id, 'tag' => 'RTG-0009']);
+    }
+
     public function test_inventory_note_is_tenant_scoped_permission_checked_and_audited_without_its_content(): void
     {
         [$owner, $shop] = $this->owner('note-owner@example.test', 'ร้านโน้ต');

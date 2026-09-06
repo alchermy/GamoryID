@@ -874,6 +874,7 @@ export function MerchantApp() {
     const d = new FormData(e.currentTarget),
       title = String(d.get("title") ?? ""),
       description = String(d.get("description") ?? ""),
+      tagNumber = String(d.get("tag_number") ?? "").trim(),
       password = String(d.get("password") ?? "");
     try {
       let updated: InventoryItem;
@@ -884,6 +885,7 @@ export function MerchantApp() {
           method: "PUT",
           body: JSON.stringify({
             title,
+            tag_number: tagNumber || null,
             username: d.get("username"),
             email: String(d.get("email") ?? "").trim() || null,
             description: description || null,
@@ -1102,6 +1104,26 @@ export function MerchantApp() {
     } catch (error) {
       notify(
         error instanceof Error ? error.message : "บันทึกตั้งค่าร้านไม่สำเร็จ",
+      );
+    }
+  };
+  const retagShop = async () => {
+    if (!shop) return;
+    try {
+      const result = await shopRequest<{
+        data: ShopDetails;
+        renamed: number;
+        skipped: number;
+      }>("/shop/retag", shop.id, { method: "POST" });
+      setShopDetails(result.data);
+      setManagementRevision((value) => value + 1);
+      notify(
+        `ปรับรหัสไอดีแล้ว ${result.renamed} รายการ` +
+          (result.skipped ? ` · ข้ามที่รหัสชนกัน ${result.skipped} รายการ` : ""),
+      );
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "ปรับรหัสไอดีไม่สำเร็จ",
       );
     }
   };
@@ -1650,6 +1672,7 @@ export function MerchantApp() {
                 : null
             }
             onSubmit={saveShopSettings}
+            onRetag={retagShop}
             onUploadBranding={(target, file) => {
               void (async () => {
                 const sized = await shrinkImage(

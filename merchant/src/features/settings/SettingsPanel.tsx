@@ -29,6 +29,7 @@ export function SettingsPanel({
   logoUrl,
   bannerUrl,
   onSubmit,
+  onRetag,
   onUploadBranding,
   onRemoveBranding,
   onSignOut,
@@ -41,6 +42,7 @@ export function SettingsPanel({
   logoUrl: string | null;
   bannerUrl: string | null;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onRetag?: () => void;
   onUploadBranding: (target: BrandingTarget, file: File) => void;
   onRemoveBranding: (target: BrandingTarget) => void;
   onSignOut: () => void;
@@ -77,6 +79,8 @@ export function SettingsPanel({
   if (!shop) return null;
   const copyFooter =
     "inventory_copy_footer" in shop ? (shop.inventory_copy_footer ?? "") : "";
+  const retaggableCount =
+    "retaggable_count" in shop ? (shop.retaggable_count ?? 0) : 0;
   const tagPrefix = "tag_prefix" in shop ? (shop.tag_prefix ?? "") : "";
   const effectiveTagPrefix =
     "effective_tag_prefix" in shop ? (shop.effective_tag_prefix ?? "") : "";
@@ -211,6 +215,26 @@ export function SettingsPanel({
                   <code>{tagPrefix || effectiveTagPrefix || "PCX"}-1282</code> ·
                   มีผลกับไอดีที่เพิ่มใหม่เท่านั้น
                 </small>
+                {retaggableCount > 0 && (
+                  <button
+                    type="button"
+                    className="button ghost compact"
+                    style={{ marginTop: 8 }}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `ปรับรหัสไอดีเดิม ${retaggableCount} รายการ ให้ขึ้นต้นด้วย "${
+                            tagPrefix || effectiveTagPrefix
+                          }-" ? ลิงก์หน้าร้านเดิมของไอดีเหล่านั้นจะเปลี่ยนตาม`,
+                        )
+                      ) {
+                        onRetag?.();
+                      }
+                    }}
+                  >
+                    ปรับรหัสไอดีเดิม {retaggableCount} รายการ ให้ใช้ prefix นี้
+                  </button>
+                )}
               </Field>
             </div>
           </section>

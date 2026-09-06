@@ -111,16 +111,24 @@ class InventoryController extends Controller
         return new InventoryItemResource($item->load(['shop', 'media']));
     }
 
-    public function update(StoreInventoryRequest $request, int $inventory, CurrentShop $currentShop, CredentialCipher $cipher, AuditLogger $audit): InventoryItemResource
+    public function update(StoreInventoryRequest $request, int $inventory, CurrentShop $currentShop, CredentialCipher $cipher, AuditLogger $audit, TagGenerator $tags): InventoryItemResource
     {
         $shop = $currentShop->from($request);
         $item = InventoryItem::forShop($shop)->findOrFail($inventory);
-        DB::transaction(function () use ($request, $item, $cipher) {
+        $tagNumber = trim((string) $request->validated('tag_number'));
+        DB::transaction(function () use ($request, $item, $shop, $tags, $tagNumber, $cipher) {
             $credentials = $request->validated('credentials');
             $data = Arr::except($request->validated(), ['credentials', 'tag_number']);
             $data['region'] = 'TH';
             $data['title'] = $data['title'] ?? $item->title;
             $data['username'] = $data['username'] ?? $credentials['username'] ?? $item->username;
+            if ($tagNumber !== '' && $tagNumber !== $tags->numberOf($item->tag)) {
+                try {
+                    $data['tag'] = $tags->generate($shop, $tagNumber, $item->id);
+                } catch (TagConflictException $conflict) {
+                    throw ValidationException::withMessages(['tag_number' => $conflict->getMessage()]);
+                }
+            }
             $item->update([...$data, 'lock_version' => $item->lock_version + 1]);
             if ($credentials) {
                 $encrypted = $cipher->encrypt($credentials);

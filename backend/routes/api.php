@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\ActivityController;
-use App\Http\Controllers\Api\StorefrontAnalyticsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CredentialController;
 use App\Http\Controllers\Api\CreditController;
@@ -23,6 +22,7 @@ use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SensitiveAccessController;
 use App\Http\Controllers\Api\ShopController;
+use App\Http\Controllers\Api\StorefrontAnalyticsController;
 use App\Http\Controllers\Api\TeamController;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
@@ -156,6 +156,7 @@ Route::prefix('v1')->group(function () {
             Route::put('/team/{member}/password', [TeamController::class, 'resetPassword'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::delete('/team/{member}', [TeamController::class, 'destroy'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::put('/shop', [ShopController::class, 'update'])->middleware(['shop.writable', 'shop.permission:team.manage']);
+            Route::post('/shop/retag', [ShopController::class, 'retag'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::post('/shop/branding', [ShopController::class, 'updateBranding'])->middleware(['shop.writable', 'shop.permission:team.manage']);
             Route::delete('/shop/branding', [ShopController::class, 'deleteBranding'])->middleware(['shop.writable', 'shop.permission:team.manage']);
 
