@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ImportError extends Model
 {
-    protected $fillable = ['import_job_id', 'row_number', 'field', 'message', 'row_data'];
+    protected $fillable = ['import_job_id', 'row_number', 'field', 'message', 'kind', 'row_data'];
 
     protected function casts(): array
     {

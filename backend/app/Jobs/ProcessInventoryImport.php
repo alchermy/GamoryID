@@ -39,7 +39,8 @@ class ProcessInventoryImport implements ShouldQueue
         $import->update(['status' => 'processing']);
         $sheet = $reader->read($import->disk, $import->path);
         $records = [];
-        $errors = [];
+        $errors = [];   // hard problems — these abort the whole batch
+        $skipped = [];  // username already exists (in file or shop) — skip the row, import the rest
         $usernames = [];
         // Usernames already in this shop's inventory (available / reserved /
         // sold / archived) — a re-import of the same account must not create a
@@ -55,24 +56,38 @@ class ProcessInventoryImport implements ShouldQueue
             $rowNumber++;
             $mapped = $this->mapped($import, $data);
             $message = $this->validationMessage($mapped);
-            $username = mb_strtolower(trim((string) ($mapped['username'] ?? '')));
-            if (! $message && $username !== '') {
-                if (isset($usernames[$username])) {
-                    $message = "พบ Username ซ้ำกับแถว {$usernames[$username]}";
-                } elseif ($existingUsernames->has($username)) {
-                    $message = "Username \"{$username}\" มีอยู่ในคลังแล้ว";
-                }
-                $usernames[$username] = $rowNumber;
-            }
             if ($message) {
                 $errors[] = [
                     'row_number' => $rowNumber,
                     'message' => $message,
+                    'kind' => 'error',
                     'row_data' => $this->redactRowData($import, $data),
                 ];
 
                 continue;
             }
+
+            $username = mb_strtolower(trim((string) ($mapped['username'] ?? '')));
+            if ($username !== '') {
+                $duplicateOf = null;
+                if (isset($usernames[$username])) {
+                    $duplicateOf = "ซ้ำกับแถว {$usernames[$username]} ในไฟล์";
+                } elseif ($existingUsernames->has($username)) {
+                    $duplicateOf = 'มีอยู่ในคลังแล้ว';
+                }
+                if ($duplicateOf !== null) {
+                    $skipped[] = [
+                        'row_number' => $rowNumber,
+                        'message' => "Username \"{$username}\" {$duplicateOf} — ข้ามรายการนี้",
+                        'kind' => 'duplicate',
+                        'row_data' => $this->redactRowData($import, $data),
+                    ];
+
+                    continue;
+                }
+                $usernames[$username] = $rowNumber;
+            }
+
             $records[] = $mapped;
         }
 
@@ -86,8 +101,8 @@ class ProcessInventoryImport implements ShouldQueue
                 'updated_at' => $now,
             ], $errors));
             $import->update([
-                'status' => 'failed', 'processed_rows' => count($records) + count($errors),
-                'imported_rows' => 0, 'failed_rows' => count($errors), 'completed_at' => $now,
+                'status' => 'failed', 'processed_rows' => count($records) + count($errors) + count($skipped),
+                'imported_rows' => 0, 'failed_rows' => count($errors), 'skipped_rows' => 0, 'completed_at' => $now,
             ]);
             Storage::disk($import->disk)->delete($import->path);
             $log->warning('ยกเลิกการนำเข้าทั้งชุดเพราะข้อมูลบางแถวไม่ผ่านการตรวจสอบ', [
@@ -137,12 +152,29 @@ class ProcessInventoryImport implements ShouldQueue
                     }
                 }
             }, 3);
+            if ($skipped !== []) {
+                $now = now();
+                ImportError::insert(array_map(fn (array $row) => [
+                    ...$row,
+                    'row_data' => json_encode($row['row_data'], JSON_THROW_ON_ERROR),
+                    'import_job_id' => $import->id,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ], $skipped));
+            }
             $import->update([
-                'status' => 'completed', 'processed_rows' => count($records),
-                'imported_rows' => count($records), 'failed_rows' => 0, 'completed_at' => now(),
+                'status' => 'completed',
+                'processed_rows' => count($records) + count($skipped),
+                'imported_rows' => count($records),
+                'failed_rows' => 0,
+                'skipped_rows' => count($skipped),
+                'completed_at' => now(),
             ]);
-            $log->info('นำเข้าสำเร็จ', ['imported_rows' => count($records)]);
-            $this->audit($import, 'import.completed', ['imported_rows' => count($records)]);
+            $log->info('นำเข้าสำเร็จ', ['imported_rows' => count($records), 'skipped_rows' => count($skipped)]);
+            $this->audit($import, 'import.completed', [
+                'imported_rows' => count($records),
+                'skipped_rows' => count($skipped),
+            ]);
         } catch (Throwable $exception) {
             ImportError::create([
                 'import_job_id' => $import->id, 'row_number' => 0,

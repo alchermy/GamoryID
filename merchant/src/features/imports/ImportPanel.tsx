@@ -22,12 +22,14 @@ type ImportState = {
   processed_rows: number;
   imported_rows: number;
   failed_rows: number;
+  skipped_rows: number;
 };
 
 type ImportErrorRow = {
   id: number;
   row_number: number;
   message: string;
+  kind: "error" | "duplicate";
 };
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -462,7 +464,10 @@ export function ImportPanel({
                     <span>
                       <strong>{statusLabels[job.status]}</strong> · ประมวลผล{" "}
                       {job.processed_rows.toLocaleString("th-TH")} แถว · สำเร็จ{" "}
-                      {job.imported_rows.toLocaleString("th-TH")} · ผิดพลาด{" "}
+                      {job.imported_rows.toLocaleString("th-TH")}
+                      {job.skipped_rows > 0 &&
+                        ` · ข้ามรายการซ้ำ ${job.skipped_rows.toLocaleString("th-TH")}`}
+                      {" · ผิดพลาด "}
                       {job.failed_rows.toLocaleString("th-TH")}
                     </span>
                     {["queued", "processing"].includes(job.status) && (
@@ -478,16 +483,37 @@ export function ImportPanel({
                   </div>
                 )}
 
-                {importErrors.length > 0 && (
+                {importErrors.some((e) => e.kind !== "duplicate") && (
                   <div className="import-error-list" role="alert">
                     <h4>แถวที่ต้องแก้ไข</h4>
                     <ul>
-                      {importErrors.map((item) => (
-                        <li key={item.id}>
-                          <strong>แถว {item.row_number}</strong>
-                          <span>{item.message}</span>
-                        </li>
-                      ))}
+                      {importErrors
+                        .filter((e) => e.kind !== "duplicate")
+                        .map((item) => (
+                          <li key={item.id}>
+                            <strong>แถว {item.row_number}</strong>
+                            <span>{item.message}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+
+                {importErrors.some((e) => e.kind === "duplicate") && (
+                  <div className="import-skip-list" role="note">
+                    <h4>
+                      รายการที่มีอยู่ในระบบแล้ว — ข้ามไป (
+                      {importErrors.filter((e) => e.kind === "duplicate").length})
+                    </h4>
+                    <ul>
+                      {importErrors
+                        .filter((e) => e.kind === "duplicate")
+                        .map((item) => (
+                          <li key={item.id}>
+                            <strong>แถว {item.row_number}</strong>
+                            <span>{item.message}</span>
+                          </li>
+                        ))}
                     </ul>
                   </div>
                 )}

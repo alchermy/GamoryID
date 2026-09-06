@@ -181,12 +181,12 @@ class InventoryImportTest extends TestCase
         Storage::disk('private')->assertMissing($path);
     }
 
-    public function test_a_duplicate_username_within_the_file_fails_the_whole_batch(): void
+    public function test_a_username_repeated_in_the_file_is_skipped_not_fatal(): void
     {
         Storage::fake('private');
         [$user, $shop] = $this->verifiedMerchant();
         $path = "imports/{$shop->id}/duplicate-username.csv";
-        Storage::disk('private')->put($path, "title,list_price,username\nไอดีที่หนึ่ง,5000,same.user@example.test\nไอดีที่สอง,6000,same.user@example.test\n");
+        Storage::disk('private')->put($path, "title,list_price,username\nไอดีที่หนึ่ง,5000,same.user\nไอดีที่สอง,6000,same.user\nไอดีที่สาม,7000,other.user\n");
         $job = ImportJob::create([
             'shop_id' => $shop->id,
             'user_id' => $user->id,
@@ -194,7 +194,7 @@ class InventoryImportTest extends TestCase
             'disk' => 'private',
             'path' => $path,
             'mapping' => ['title' => 'title', 'list_price' => 'list_price', 'username' => 'username'],
-            'total_rows' => 2,
+            'total_rows' => 3,
         ]);
 
         (new ProcessInventoryImport($job->id))->handle(
@@ -203,13 +203,17 @@ class InventoryImportTest extends TestCase
             app(InventoryImportReader::class),
         );
 
-        $this->assertDatabaseCount('inventory_items', 0);
-        $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'failed', 'imported_rows' => 0]);
-        $error = ImportError::where('import_job_id', $job->id)->firstOrFail();
-        $this->assertStringContainsString('พบ Username ซ้ำกับแถว', $error->message);
+        // first "same.user" + "other.user" import; the repeat is skipped
+        $this->assertDatabaseCount('inventory_items', 2);
+        $this->assertDatabaseHas('import_jobs', [
+            'id' => $job->id, 'status' => 'completed', 'imported_rows' => 2, 'skipped_rows' => 1, 'failed_rows' => 0,
+        ]);
+        $skip = ImportError::where('import_job_id', $job->id)->where('kind', 'duplicate')->firstOrFail();
+        $this->assertSame(3, $skip->row_number);
+        $this->assertStringContainsString('ซ้ำกับแถว 2 ในไฟล์', $skip->message);
     }
 
-    public function test_a_username_already_in_the_shops_inventory_fails_the_batch(): void
+    public function test_a_username_already_in_the_shop_is_skipped_and_the_rest_imports(): void
     {
         Storage::fake('private');
         [$user, $shop] = $this->verifiedMerchant();
@@ -230,9 +234,14 @@ class InventoryImportTest extends TestCase
             app(TagGenerator::class), app(CredentialCipher::class), app(InventoryImportReader::class),
         );
 
-        $this->assertDatabaseCount('inventory_items', 1);
-        $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'failed', 'imported_rows' => 0]);
-        $this->assertStringContainsString('มีอยู่ในคลังแล้ว', ImportError::where('import_job_id', $job->id)->firstOrFail()->message);
+        // "taken.user" already exists -> skipped; "fresh.user" imports
+        $this->assertDatabaseCount('inventory_items', 2);
+        $this->assertDatabaseHas('inventory_items', ['title' => 'ไอดีอีกอัน', 'username' => 'fresh.user']);
+        $this->assertDatabaseMissing('inventory_items', ['title' => 'ไอดีใหม่']);
+        $this->assertDatabaseHas('import_jobs', [
+            'id' => $job->id, 'status' => 'completed', 'imported_rows' => 1, 'skipped_rows' => 1, 'failed_rows' => 0,
+        ]);
+        $this->assertStringContainsString('มีอยู่ในคลังแล้ว', ImportError::where('import_job_id', $job->id)->where('kind', 'duplicate')->firstOrFail()->message);
     }
 
     public function test_a_whole_batch_database_failure_is_recorded_and_nothing_is_left_partially_imported(): void
