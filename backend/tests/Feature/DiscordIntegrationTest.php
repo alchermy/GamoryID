@@ -330,9 +330,11 @@ class DiscordIntegrationTest extends TestCase
         $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('add-manager', 'เพิ่มไอดี', ['ชื่อ' => 'Added#TH01', 'ต้นทุน' => 700, 'ราคา' => 1500, 'username' => 'added-login', 'แรงก์' => 'Platinum 1', 'เลเวล' => 88], 'guild-commands', 'commands-room', 'discord-staff'))
             ->assertOk()
             ->assertJsonPath('data.content', fn ($content) => str_contains($content, 'เข้าคลังแล้ว'))
-            ->assertJsonPath('data.components.0.components.0.custom_id', fn ($id) => str_starts_with((string) $id, 'gid:menu:addmore:'))
-            ->assertJsonPath('data.components.0.components.1.style', 5)
-            ->assertJsonPath('data.components.0.components.1.label', 'เปิดข้อมูลไอดีใน GamoryID');
+            ->assertJsonPath('data.components.0.components.0.type', 3)
+            ->assertJsonPath('data.components.0.components.0.custom_id', fn ($id) => str_starts_with((string) $id, 'gid:menu:rank:'))
+            ->assertJsonPath('data.components.1.components.0.custom_id', fn ($id) => str_starts_with((string) $id, 'gid:menu:addmore:'))
+            ->assertJsonPath('data.components.1.components.1.style', 5)
+            ->assertJsonPath('data.components.1.components.1.label', 'เปิดข้อมูลไอดีใน GamoryID');
         $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'title' => 'Added#TH01', 'username' => 'added-login', 'rank' => 'Platinum 1', 'level' => 88]);
         $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('reserve-denied', 'จอง', ['แท็ก' => '#BOOK1'], 'guild-commands', 'commands-room', 'discord-staff'))
             ->assertOk()
@@ -385,29 +387,38 @@ class DiscordIntegrationTest extends TestCase
             ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'จอง **#PANL1** สำเร็จ'));
         $this->assertDatabaseHas('inventory_items', ['tag' => 'PANL1', 'status' => 'reserved']);
 
-        // the 5-field add modal creates the item; its reply carries a follow-up button
+        // the 5-field add modal creates the item; the reply carries a rank
+        // dropdown (row 0) and the "add more" button (row 1)
         $this->postJson('/api/v1/discord/interactions', $this->modalInteraction('modal-add', 'gid:modal:add', [
             'title' => 'ไอดีจากปุ่ม', 'cost' => '120', 'price' => '640', 'username' => 'panel-login',
         ], 'guild-panel', 'panel-room', 'discord-panel'))
             ->assertOk()
             ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'เข้าคลังแล้ว'))
-            ->assertJsonPath('data.components.0.components.0.custom_id', fn ($id) => str_starts_with((string) $id, 'gid:menu:addmore:'));
+            ->assertJsonPath('data.components.0.components.0.type', 3)
+            ->assertJsonPath('data.components.0.components.0.custom_id', fn ($id) => str_starts_with((string) $id, 'gid:menu:rank:'))
+            ->assertJsonPath('data.components.1.components.0.custom_id', fn ($id) => str_starts_with((string) $id, 'gid:menu:addmore:'));
         $added = InventoryItem::query()->where('shop_id', $shop->id)->where('title', 'ไอดีจากปุ่ม')->firstOrFail();
 
-        // the follow-up button opens a second modal for the optional fields
+        // picking a rank from the dropdown sets it in one tap
+        $this->postJson('/api/v1/discord/interactions', $this->componentInteraction('sel-rank', "gid:menu:rank:{$added->id}", 'guild-panel', 'panel-room', 'discord-panel', ['Immortal 3']))
+            ->assertOk()
+            ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'ตั้งแรงก์'));
+        $this->assertDatabaseHas('inventory_items', ['id' => $added->id, 'rank' => 'Immortal 3']);
+
+        // the follow-up button opens a second modal for the optional fields (no rank field)
         $this->postJson('/api/v1/discord/interactions', $this->componentInteraction('btn-addmore', "gid:menu:addmore:{$added->id}", 'guild-panel', 'panel-room', 'discord-panel'))
             ->assertOk()
             ->assertJsonPath('type', 9)
             ->assertJsonPath('data.custom_id', "gid:modal:addmore:{$added->id}")
-            ->assertJsonPath('data.components.0.components.0.custom_id', 'rank');
+            ->assertJsonPath('data.components.0.components.0.custom_id', 'level');
 
         // submitting the second modal fills in the extras
         $this->postJson('/api/v1/discord/interactions', $this->modalInteraction('modal-addmore', "gid:modal:addmore:{$added->id}", [
-            'rank' => 'Diamond 2', 'level' => '145', 'email' => 'panel@example.test',
+            'level' => '145', 'email' => 'panel@example.test',
         ], 'guild-panel', 'panel-room', 'discord-panel'))
             ->assertOk()
             ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'บันทึกข้อมูลเพิ่มเติม'));
-        $this->assertDatabaseHas('inventory_items', ['id' => $added->id, 'rank' => 'Diamond 2', 'level' => 145, 'email' => 'panel@example.test']);
+        $this->assertDatabaseHas('inventory_items', ['id' => $added->id, 'level' => 145, 'email' => 'panel@example.test']);
 
         // a staff member without inventory.manage cannot use the add button
         $staff = User::create(['name' => 'สตาฟ', 'email' => 'panel-staff@example.test', 'password' => 'password', 'current_shop_id' => $shop->id, 'email_verified_at' => now()]);
@@ -549,7 +560,7 @@ class DiscordIntegrationTest extends TestCase
         return $this->commandInteraction($id, $subcommand, [$optionName => $value], $guildId, $channelId);
     }
 
-    private function componentInteraction(string $id, string $customId, string $guildId, string $channelId, string $discordUserId): array
+    private function componentInteraction(string $id, string $customId, string $guildId, string $channelId, string $discordUserId, array $values = []): array
     {
         return [
             'id' => $id,
@@ -557,7 +568,11 @@ class DiscordIntegrationTest extends TestCase
             'guild_id' => $guildId,
             'channel_id' => $channelId,
             'member' => ['permissions' => '32', 'user' => ['id' => $discordUserId, 'username' => 'merchant', 'global_name' => 'Merchant']],
-            'data' => ['custom_id' => $customId, 'component_type' => 2],
+            'data' => array_filter([
+                'custom_id' => $customId,
+                'component_type' => $values === [] ? 2 : 3,
+                'values' => $values === [] ? null : $values,
+            ], fn ($value) => $value !== null),
         ];
     }
 

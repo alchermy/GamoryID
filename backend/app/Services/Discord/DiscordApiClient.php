@@ -315,7 +315,7 @@ class DiscordApiClient
      *
      * @return array<int, array{name: string, value: string}>
      */
-    private function valorantRankChoices(): array
+    public function valorantRankChoices(): array
     {
         $tiers = ['Iron', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Ascendant', 'Immortal'];
         $choices = [];

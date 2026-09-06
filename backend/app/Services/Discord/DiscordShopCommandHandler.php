@@ -483,7 +483,6 @@ class DiscordShopCommandHandler
         }
 
         $updates = array_filter([
-            'rank' => $this->blankToNull($params['rank'] ?? ''),
             'level' => $this->nullableInteger($params['level'] ?? ''),
             'email' => $this->blankToNull($params['email'] ?? ''),
             'description' => $this->blankToNull($params['description'] ?? ''),
@@ -502,6 +501,35 @@ class DiscordShopCommandHandler
         ]);
 
         return $this->success('บันทึกข้อมูลเพิ่มเติมของ **#'.$item->tag.'** แล้ว');
+    }
+
+    /**
+     * Rank dropdown on the "เพิ่มไอดี" reply — one tap instead of typing.
+     *
+     * @return array{content: string, status: string}
+     */
+    public function applyRank(DiscordInstallation $installation, DiscordUserLink $link, int $itemId, string $rank): array
+    {
+        $rank = trim($rank);
+        if ($rank === '') {
+            return $this->failure('ยังไม่ได้เลือกแรงก์');
+        }
+        $item = InventoryItem::query()
+            ->where('shop_id', $installation->shop_id)
+            ->whereKey($itemId)
+            ->first();
+        if (! $item) {
+            return $this->failure('ไม่พบไอดีที่จะตั้งแรงก์ อาจถูกลบไปแล้ว', 'not_found');
+        }
+
+        $item->update(['rank' => $rank]);
+        $this->activity($installation->shop_id, $link->user_id, 'inventory.updated', [
+            'tag' => '#'.$item->tag,
+            'fields' => ['rank'],
+            'source' => 'discord',
+        ]);
+
+        return $this->success('ตั้งแรงก์ของ **#'.$item->tag.'** เป็น '.$this->escape($rank).' แล้ว');
     }
 
     /**

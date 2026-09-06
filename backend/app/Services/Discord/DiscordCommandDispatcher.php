@@ -101,13 +101,18 @@ class DiscordCommandDispatcher
         'sellmore' => 'ร้าน.ปิดการขาย',
     ];
 
+    /** Follow-up select menus that run inline (modals can't hold a dropdown). */
+    private const MENU_INLINE = [
+        'rank' => 'ร้าน.เพิ่มไอดี',
+    ];
+
     /**
      * Button on the pinned panel — run it now, or open a modal to collect input.
      */
     private function component(array $interaction): array
     {
         ['action' => $action, 'id' => $id] = $this->parseCustomId((string) ($interaction['data']['custom_id'] ?? ''));
-        $command = self::MENU_COMMANDS[$action] ?? self::MENU_FOLLOWUPS[$action] ?? null;
+        $command = self::MENU_COMMANDS[$action] ?? self::MENU_FOLLOWUPS[$action] ?? self::MENU_INLINE[$action] ?? null;
         if (! $command) {
             return [$this->ephemeral('ปุ่มนี้ไม่รองรับแล้ว กรุณากด `/ร้าน เมนู` เพื่อสร้างแผงใหม่'), ['shop_id' => null, 'user_id' => null, 'status' => 'not_found']];
         }
@@ -120,6 +125,16 @@ class DiscordCommandDispatcher
             return [$this->ephemeral($this->shopCommands->permissionDeniedMessage($command)), [...$ctx['context'], 'status' => 'denied']];
         }
 
+        if ($action === 'rank' && $id) {
+            $result = $this->shopCommands->applyRank(
+                $ctx['installation'],
+                $ctx['link'],
+                $id,
+                (string) ($interaction['data']['values'][0] ?? ''),
+            );
+
+            return [$this->ephemeral($result['content']), [...$ctx['context'], 'status' => $result['status']]];
+        }
         if (isset(self::MENU_FOLLOWUPS[$action])) {
             return [$this->modalResponse($action, $id), [...$ctx['context'], 'status' => 'modal']];
         }
@@ -207,14 +222,16 @@ class DiscordCommandDispatcher
         }
 
         $followUp = null;
+        $rankPicker = null;
         if ($result['item_id'] ?? null) {
-            $followUp = ['action' => 'addmore', 'id' => (int) $result['item_id'], 'label' => '➕ เพิ่มข้อมูลไอดี (แรงก์ เลเวล อีเมล…)'];
+            $followUp = ['action' => 'addmore', 'id' => (int) $result['item_id'], 'label' => '➕ เพิ่มข้อมูลไอดี (เลเวล อีเมล รายละเอียด)'];
+            $rankPicker = (int) $result['item_id'];
         } elseif ($result['sale_id'] ?? null) {
             $followUp = ['action' => 'sellmore', 'id' => (int) $result['sale_id'], 'label' => '➕ เพิ่มข้อมูลลูกค้า/ประกัน'];
         }
 
         return [
-            $this->ephemeral($result['content'], $result['link'] ?? null, $followUp),
+            $this->ephemeral($result['content'], $result['link'] ?? null, $followUp, $rankPicker),
             [...$ctx['context'], 'status' => $result['status']],
         ];
     }
@@ -281,8 +298,8 @@ class DiscordCommandDispatcher
                 ['name' => 'username', 'label' => 'ยูสเซอร์เนม — ห้ามใส่รหัสผ่าน', 'max' => 200],
             ]],
             // Second step opened by the "เพิ่มข้อมูล" button after the item is created.
+            // Rank is picked from the dropdown on the reply, not typed here.
             'addmore' => ['ข้อมูลเพิ่มเติมของไอดี', [
-                ['name' => 'rank', 'label' => 'แรงก์', 'max' => 60],
                 ['name' => 'level', 'label' => 'เลเวล', 'max' => 6],
                 ['name' => 'email', 'label' => 'อีเมลติดไอดี', 'max' => 200],
                 ['name' => 'description', 'label' => 'รายละเอียด (แสดงหน้าร้าน)', 'style' => 2, 'max' => 2000],
@@ -628,14 +645,28 @@ class DiscordCommandDispatcher
     /**
      * @param  array{label: string, url: string}|null  $link
      * @param  array{action: string, id: int, label: string}|null  $followUp  opens a second modal
+     * @param  int|null  $rankPicker  item id — adds a Valorant rank select above the buttons
      */
-    private function ephemeral(string $content, ?array $link = null, ?array $followUp = null): array
+    private function ephemeral(string $content, ?array $link = null, ?array $followUp = null, ?int $rankPicker = null): array
     {
         $data = [
             'content' => $content,
             'flags' => 64,
             'allowed_mentions' => ['parse' => []],
         ];
+
+        $rows = [];
+        if ($rankPicker) {
+            $rows[] = ['type' => 1, 'components' => [[
+                'type' => 3, // string select — a dropdown can't live inside a modal, so it rides on the reply
+                'custom_id' => "gid:menu:rank:{$rankPicker}",
+                'placeholder' => 'เลือกแรงก์ของไอดี (ไม่บังคับ)',
+                'options' => array_map(
+                    fn (array $choice) => ['label' => $choice['name'], 'value' => $choice['value']],
+                    $this->api->valorantRankChoices(),
+                ),
+            ]]];
+        }
 
         $buttons = [];
         if ($followUp) {
@@ -655,7 +686,10 @@ class DiscordCommandDispatcher
             ];
         }
         if ($buttons) {
-            $data['components'] = [['type' => 1, 'components' => $buttons]];
+            $rows[] = ['type' => 1, 'components' => $buttons];
+        }
+        if ($rows) {
+            $data['components'] = $rows;
         }
 
         return ['type' => 4, 'data' => $data];
