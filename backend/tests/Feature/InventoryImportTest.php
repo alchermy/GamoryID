@@ -209,6 +209,32 @@ class InventoryImportTest extends TestCase
         $this->assertStringContainsString('พบ Username ซ้ำกับแถว', $error->message);
     }
 
+    public function test_a_username_already_in_the_shops_inventory_fails_the_batch(): void
+    {
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        InventoryItem::create([
+            'shop_id' => $shop->id, 'tag' => 'HAVE1', 'title' => 'มีอยู่แล้ว',
+            'username' => 'Taken.User', 'cost' => 1, 'list_price' => 100, 'status' => 'available',
+        ]);
+        $path = "imports/{$shop->id}/existing-username.csv";
+        Storage::disk('private')->put($path, "title,list_price,username\nไอดีใหม่,5000,taken.user\nไอดีอีกอัน,6000,fresh.user\n");
+        $job = ImportJob::create([
+            'shop_id' => $shop->id, 'user_id' => $user->id, 'status' => 'queued',
+            'disk' => 'private', 'path' => $path,
+            'mapping' => ['title' => 'title', 'list_price' => 'list_price', 'username' => 'username'],
+            'total_rows' => 2,
+        ]);
+
+        (new ProcessInventoryImport($job->id))->handle(
+            app(TagGenerator::class), app(CredentialCipher::class), app(InventoryImportReader::class),
+        );
+
+        $this->assertDatabaseCount('inventory_items', 1);
+        $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'failed', 'imported_rows' => 0]);
+        $this->assertStringContainsString('มีอยู่ในคลังแล้ว', ImportError::where('import_job_id', $job->id)->firstOrFail()->message);
+    }
+
     public function test_a_whole_batch_database_failure_is_recorded_and_nothing_is_left_partially_imported(): void
     {
         Storage::fake('private');

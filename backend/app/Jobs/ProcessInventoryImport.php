@@ -41,6 +41,15 @@ class ProcessInventoryImport implements ShouldQueue
         $records = [];
         $errors = [];
         $usernames = [];
+        // Usernames already in this shop's inventory (available / reserved /
+        // sold / archived) — a re-import of the same account must not create a
+        // duplicate item.
+        $existingUsernames = InventoryItem::query()
+            ->where('shop_id', $import->shop_id)
+            ->whereNotNull('username')
+            ->pluck('username')
+            ->map(fn ($name) => mb_strtolower(trim((string) $name)))
+            ->flip();
         $rowNumber = 1;
         foreach ($sheet['rows'] as $data) {
             $rowNumber++;
@@ -50,6 +59,8 @@ class ProcessInventoryImport implements ShouldQueue
             if (! $message && $username !== '') {
                 if (isset($usernames[$username])) {
                     $message = "พบ Username ซ้ำกับแถว {$usernames[$username]}";
+                } elseif ($existingUsernames->has($username)) {
+                    $message = "Username \"{$username}\" มีอยู่ในคลังแล้ว";
                 }
                 $usernames[$username] = $rowNumber;
             }
