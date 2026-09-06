@@ -203,8 +203,20 @@ class DiscordIntegrationTest extends TestCase
             $addId = collect(data_get($commands, '0.options', []))->firstWhere('name', 'เพิ่มไอดี');
             $addIdOptions = collect(data_get($addId, 'options', []));
             $rankOption = $addIdOptions->firstWhere('name', 'แรงก์');
+            // Discord rejects a required option that appears after an optional one.
+            $seenOptional = false;
+            $orderingValid = $addIdOptions->every(function ($option) use (&$seenOptional) {
+                $required = (bool) ($option['required'] ?? false);
+                if (! $required) {
+                    $seenOptional = true;
+                }
+
+                return ! ($required && $seenOptional);
+            });
 
             return $request->method() === 'PUT'
+                && $orderingValid
+                && $addIdOptions->pluck('name')->contains('รหัส')
                 && data_get($commands, '0.name') === 'ร้าน'
                 && $subcommands->contains('ตั้งค่า')
                 && $subcommands->contains('เชื่อมบัญชี')

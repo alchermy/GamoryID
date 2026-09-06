@@ -247,7 +247,6 @@ class DiscordApiClient
                     'description' => 'เพิ่มไอดีใหม่ — ใส่ได้ถึงชื่อผู้ใช้ ไม่รับรหัสผ่าน',
                     'options' => [
                         $this->stringOption('ชื่อ', 'ชื่อรายการที่จะแสดงในระบบ เช่น ไอดี Diamond สกินเยอะ', true),
-                        $this->stringOption('รหัส', 'เลขรหัสไอดีของร้าน (เว้นว่าง = ระบบรันให้)', false, 16),
                         [
                             'type' => 10,
                             'name' => 'ต้นทุน',
@@ -262,6 +261,8 @@ class DiscordApiClient
                             'required' => true,
                             'min_value' => 0,
                         ],
+                        // Discord requires every optional option after the required ones.
+                        $this->stringOption('รหัส', 'เลขรหัสไอดีของร้าน (เว้นว่าง = ระบบรันให้)', false, 16),
                         $this->stringOption('username', 'ชื่อผู้ใช้สำหรับล็อกอิน (ห้ามใส่รหัสผ่าน)'),
                         $this->stringOption('email', 'อีเมลของบัญชีเกม (ห้ามใส่รหัสผ่าน)'),
                         [
