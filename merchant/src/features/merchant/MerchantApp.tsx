@@ -15,6 +15,7 @@ import {
   PackagePlus,
   Rocket,
   Search,
+  ShieldCheck,
   ShoppingBag,
   Tag,
   UserRound,
@@ -81,6 +82,7 @@ import { ActivityPanel } from "../activity/ActivityPanel";
 import { NotificationBell } from "../notifications/NotificationBell";
 import { AnalyticsPanel } from "../analytics/AnalyticsPanel";
 import { SettingsPanel } from "../settings/SettingsPanel";
+import { AccountSecurityPanel } from "../account/AccountSecurityPanel";
 import { DashboardPanel, Kpi } from "../dashboard/DashboardPanel";
 import {
   AddDialog,
@@ -1277,6 +1279,8 @@ export function MerchantApp() {
           ? "คู่มือการใช้งานระบบ"
           : page === "onboarding"
             ? "เริ่มต้นใช้งาน"
+            : page === "account"
+              ? "บัญชีและความปลอดภัย"
           : (mainNavigation.find((n) => n[0] === page)?.[1] ??
           managementNavigation.find((n) => n[0] === page)?.[1] ??
           "GamoryID");
@@ -1373,6 +1377,13 @@ export function MerchantApp() {
             คู่มือการใช้งานระบบ
           </button>
           <button
+            className={`nav-button ${page === "account" ? "active" : ""}`}
+            onClick={() => go("account")}
+          >
+            <ShieldCheck size={18} />
+            บัญชีและความปลอดภัย
+          </button>
+          <button
             className="nav-button nav-signout"
             onClick={() => void signOut()}
             disabled={signingOut}
@@ -1395,10 +1406,15 @@ export function MerchantApp() {
           <div className="avatar">
             {(session?.name ?? "PT").slice(0, 2).toUpperCase()}
           </div>
-          <div className="account-text">
+          <button
+            type="button"
+            className="account-text"
+            onClick={() => go("account")}
+            title="บัญชีและความปลอดภัย"
+          >
             <strong>{session?.name ?? "พีท เจ้าของร้าน"}</strong>
             <span>{shop?.name ?? "Nexus Store"}</span>
-          </div>
+          </button>
           <button
             className="icon-button"
             aria-label="ออกจากระบบ"
@@ -1411,7 +1427,7 @@ export function MerchantApp() {
         </div>
       </header>
       <main
-        className={`page ${page === "dashboard" ? "dashboard-page" : ""} ${page === "inventory" ? "inventory-page" : ""} ${page === "inventory" && selected ? "inventory-detail-page" : ""} ${page === "sales" ? "sales-page" : ""} ${saleDetailId ? "sale-detail-page" : ""} ${page === "customers" ? "customers-page" : ""} ${["team", "billing", "transactions", "discord", "settings", "manual", "onboarding", "activity", "analytics"].includes(page) ? "management-page" : ""}`}
+        className={`page ${page === "dashboard" ? "dashboard-page" : ""} ${page === "inventory" ? "inventory-page" : ""} ${page === "inventory" && selected ? "inventory-detail-page" : ""} ${page === "sales" ? "sales-page" : ""} ${saleDetailId ? "sale-detail-page" : ""} ${page === "customers" ? "customers-page" : ""} ${["team", "billing", "transactions", "discord", "settings", "manual", "onboarding", "activity", "analytics", "account"].includes(page) ? "management-page" : ""}`}
       >
         <div className="page-head">
           <div>
@@ -1656,6 +1672,9 @@ export function MerchantApp() {
             retry={() => setManagementRevision((value) => value + 1)}
           />
         )}
+        {page === "account" && (
+          <AccountSecurityPanel session={session} notify={notify} />
+        )}
         {page === "manual" && <ManualPanel />}
         {page === "onboarding" && (
           <OnboardingPanel
@@ -1703,6 +1722,10 @@ export function MerchantApp() {
             canManage={hasShopPermission("inventory.manage")}
             canSell={hasShopPermission("inventory.sell")}
             canViewAnalytics={canViewAnalytics}
+            canReveal={hasShopPermission("credentials.reveal")}
+            shopId={shop?.id ?? 0}
+            twoFactorEnabled={session?.two_factor_enabled ?? false}
+            notify={notify}
             canNote={
               hasShopPermission("inventory.manage") ||
               hasShopPermission("inventory.sell")

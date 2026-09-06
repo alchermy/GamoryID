@@ -29,6 +29,7 @@ export const PAGE_PATHS: Record<MerchantPage, string> = {
   manual: "/manual",
   onboarding: "/onboarding",
   analytics: "/analytics",
+  account: "/account",
 };
 
 export const PATH_PAGES = new Map(

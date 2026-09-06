@@ -38,6 +38,15 @@ class Totp
         return "otpauth://totp/{$label}?secret={$secret}&issuer=GamoryID&digits=6&period=30";
     }
 
+    /**
+     * The valid 6-digit code for a secret right now. Test-only helper — there is
+     * no way to bypass verify().
+     */
+    public function currentCode(string $secret): string
+    {
+        return $this->code($secret, (int) floor(time() / 30));
+    }
+
     private function code(string $secret, int $counter): string
     {
         $binaryCounter = pack('N*', 0).pack('N*', $counter);

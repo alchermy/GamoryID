@@ -33,6 +33,7 @@ import type {
   InventoryStatus,
   SalePayload,
 } from "../../types/models";
+import { CredentialReveal } from "./CredentialReveal";
 import {
   InventoryMediaFields,
   InventoryMediaGallery,
@@ -1081,6 +1082,10 @@ export function InventoryDetailPage({
   canSell,
   canNote,
   canViewAnalytics,
+  canReveal,
+  shopId,
+  twoFactorEnabled,
+  notify,
   onBack,
   onEdit,
   onCopyDetails,
@@ -1094,6 +1099,10 @@ export function InventoryDetailPage({
   canSell: boolean;
   canNote: boolean;
   canViewAnalytics: boolean;
+  canReveal: boolean;
+  shopId: number;
+  twoFactorEnabled: boolean;
+  notify: (message: string) => void;
   onBack: () => void;
   onEdit: () => void;
   onCopyDetails: () => void;
@@ -1204,6 +1213,15 @@ export function InventoryDetailPage({
               <Copy size={17} />
               คัดลอกข้อความส่งลูกค้า
             </button>
+            {canReveal && (
+              <CredentialReveal
+                itemId={item.id}
+                shopId={shopId}
+                hasCredentials={Boolean(item.hasCredentials)}
+                twoFactorEnabled={twoFactorEnabled}
+                notify={notify}
+              />
+            )}
             {canSell && item.status === "available" && (
               <button className="button" onClick={onReserve}>
                 <Clock3 size={17} />

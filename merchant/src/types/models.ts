@@ -24,7 +24,8 @@ export type MerchantPage =
   | "settings"
   | "manual"
   | "onboarding"
-  | "analytics";
+  | "analytics"
+  | "account";
 
 export type ActivityEntry = {
   id: number;
@@ -87,6 +88,8 @@ export type SessionUser = {
   email_verified_at: string | null;
   /** false when the user must re-accept an updated Terms of Service version. */
   terms_current: boolean;
+  /** true once the account has finished setting up TOTP two-factor auth. */
+  two_factor_enabled: boolean;
   current_shop_id: number;
   shops: Shop[];
 };

@@ -91,8 +91,9 @@ Route::prefix('v1')->group(function () {
 
             return response()->json(['message' => 'ส่งอีเมลยืนยันแล้ว']);
         })->middleware('throttle:6,1');
-        Route::post('/security/2fa/begin', [SensitiveAccessController::class, 'beginTwoFactor']);
-        Route::post('/security/2fa/confirm', [SensitiveAccessController::class, 'confirmTwoFactor']);
+        Route::post('/security/2fa/begin', [SensitiveAccessController::class, 'beginTwoFactor'])->middleware('throttle:5,1');
+        Route::post('/security/2fa/confirm', [SensitiveAccessController::class, 'confirmTwoFactor'])->middleware('throttle:5,1');
+        Route::post('/security/2fa/disable', [SensitiveAccessController::class, 'disableTwoFactor'])->middleware('throttle:5,1');
         Route::post('/security/reauth', [SensitiveAccessController::class, 'confirmReauth'])->middleware('throttle:5,1');
 
         Route::middleware(['verified', 'terms.current'])->group(function () {

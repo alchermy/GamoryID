@@ -180,6 +180,19 @@
   color: var(--primary);
   font: 800 13px var(--font-data);
 }
+button.account-text {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+button.account-text:hover strong {
+  text-decoration: underline;
+}
 .account-text strong,
 .account-text span {
   display: block;
