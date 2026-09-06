@@ -12,7 +12,6 @@ function item(over: Partial<InventoryItem> = {}): InventoryItem {
     id: 1,
     tag: "#TEST1",
     title: "Test#TH01",
-    riotId: "Test#TH01",
     // mapInventoryItem substitutes "–" for a null rank/username so list and
     // detail views have something to show — that sentinel must not leak
     // into this form's starting value.

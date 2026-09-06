@@ -51,7 +51,6 @@ export type InventoryItem = {
   id: number;
   tag: string;
   title: string;
-  riotId: string;
   username: string;
   email: string;
   rank: string;
@@ -205,8 +204,7 @@ export type InventoryResponse = {
   data: Array<{
     id: number;
     tag: string;
-    title: string;
-    riot_id: string | null;
+    title: string;
     username: string | null;
     email: string | null;
     rank: string | null;
@@ -256,8 +254,7 @@ export type SaleRecord = {
   inventory_item: {
     id: number;
     tag: string;
-    title: string;
-    riot_id: string | null;
+    title: string;
     rank: string | null;
     level: number | null;
     list_price: number | string;

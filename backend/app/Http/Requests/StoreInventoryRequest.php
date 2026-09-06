@@ -14,8 +14,7 @@ class StoreInventoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => ['nullable', 'string', 'max:190', 'required_without:riot_id'],
-            'riot_id' => ['nullable', 'string', 'max:190', 'required_without:title'],
+            'title' => ['required', 'string', 'max:190'],
             'username' => ['nullable', 'string', 'max:500'],
             'email' => ['nullable', 'string', 'max:254'],
             'rank' => ['nullable', 'string', 'max:80'],

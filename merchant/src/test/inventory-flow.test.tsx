@@ -63,11 +63,11 @@ describe("inventory flow", () => {
     );
     const search = screen.getByRole("textbox", { name: "ค้นหาไอดี" });
     await user.type(search, "#Q7N2P");
-    expect(screen.getAllByText("Vega#TH03").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Nova#TH02")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Champions 2023 · Vandal").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Prime 2.0 · Phantom")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "ปิดการขาย #Q7N2P" }));
-    expect(screen.getByText("#Q7N2P · Vega#TH03")).toBeInTheDocument();
+    expect(screen.getByText("#Q7N2P · Champions 2023 · Vandal")).toBeInTheDocument();
     await user.type(
       screen.getByLabelText("ชื่อ-นามสกุลลูกค้า *"),
       "ลูกค้าทดสอบ",
@@ -150,7 +150,7 @@ describe("inventory flow", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole("button", { name: "เพิ่มไอดี" }));
-    await user.type(screen.getByLabelText("Riot ID"), "Test#TH99");
+    await user.type(screen.getByLabelText("ชื่อรายการ"), "Test#TH99");
     await user.type(screen.getByLabelText("Username"), "test.user99");
     await user.type(screen.getByLabelText("ต้นทุน"), "1000");
     await user.type(screen.getByLabelText("ราคาตั้งขาย"), "1500");
@@ -181,7 +181,7 @@ describe("inventory flow", () => {
       screen.getByRole("button", { name: "ดูรายละเอียด #23DX5" }),
     );
     expect(
-      screen.getByRole("heading", { level: 2, name: "Gammy#TH01" }),
+      screen.getByRole("heading", { level: 2, name: "Reaver Collection · Vandal" }),
     ).toBeInTheDocument();
     expect(screen.getByText("ไอดีนี้ยังไม่มีรูปภาพ")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "แก้ไขข้อมูล" }));
@@ -327,8 +327,7 @@ describe("inventory flow", () => {
     );
     expect(writeText).toHaveBeenCalledOnce();
     const copied = String(writeText.mock.calls[0][0]);
-    expect(copied).toContain("#23DX5\n\nRiotID=Gammy#TH01");
-    expect(copied).toContain("Rank=Ascendant 2");
+    expect(copied).toContain("#23DX5\n\nRank=Ascendant 2");
     expect(copied).toContain("Level=238");
     expect(copied).toContain("ราคา=8,900 บาท");
     expect(copied).toContain("สนใจรายละเอียดเพิ่มเติม");
@@ -342,7 +341,6 @@ describe("inventory flow", () => {
       {
         tag: "#8KM4R",
         title: "Prime",
-        riotId: "Nova#TH02",
         rank: "Diamond 3",
         level: 191,
         price: 6900,
@@ -351,7 +349,7 @@ describe("inventory flow", () => {
       "ติดต่อ LINE @gamory",
     );
     expect(text).toBe(
-      "#8KM4R\n\nRiotID=Nova#TH02\n\nRank=Diamond 3\n\nLevel=191\n\nรายละเอียด=Prime Collection\n\nราคา=6,900 บาท\n\nติดต่อ LINE @gamory",
+      "#8KM4R\n\nRank=Diamond 3\n\nLevel=191\n\nรายละเอียด=Prime Collection\n\nราคา=6,900 บาท\n\nติดต่อ LINE @gamory",
     );
     expect(text).not.toContain("Username");
   });

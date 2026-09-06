@@ -49,7 +49,8 @@ class ReservationController extends Controller
             $shop->id,
             'reservations',
             'มีการจองไอดี',
-            $item ? "**#{$item->tag}** · {$item->riot_id}\nหมดเวลาจอง ".$reservation->expires_at->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.' : "รายการ #{$inventory}",
+            $item ? "**#{$item->tag}** · {$item->title}\nหมดเวลาจอง ".$reservation->expires_at->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.' : "รายการ #{$inventory}",
+            actor: $request->user()?->name,
         );
 
         return response()->json(['data' => $reservation], 201);
@@ -73,7 +74,8 @@ class ReservationController extends Controller
             $shop->id,
             'reservations',
             'ยกเลิกการจองแล้ว',
-            "**#{$item->tag}** · {$item->riot_id}\nรายการกลับเป็นสถานะพร้อมขาย",
+            "**#{$item->tag}** · {$item->title}\nรายการกลับเป็นสถานะพร้อมขาย",
+            actor: $request->user()?->name,
         );
 
         return response()->json(['message' => 'ยกเลิกการจองแล้ว']);

@@ -11,7 +11,7 @@ class DiscordNotificationMessageBuilder
     public function inventoryCreated(InventoryItem $item, User $actor): string
     {
         return implode("\n", [
-            "**#{$item->tag} · {$this->escape($item->riot_id ?: $item->title)}**",
+            "**#{$item->tag} · {$this->escape($item->title)}**",
             'แรงก์: '.$this->escape($item->rank ?: 'ไม่ระบุ'),
             'เลเวล: '.($item->level !== null ? number_format((int) $item->level) : 'ไม่ระบุ'),
             'ราคาขาย: '.number_format((float) $item->list_price, 2).' บาท',
@@ -39,7 +39,7 @@ class DiscordNotificationMessageBuilder
 
         return implode("\n", [
             $item
-                ? "**#{$item->tag} · {$this->escape($item->riot_id ?: $item->title)}**"
+                ? "**#{$item->tag} · {$this->escape($item->title)}**"
                 : '**รายการขาย #'.$sale->id.'**',
             'ขายให้: '.$this->escape($customer?->name ?: 'ไม่ระบุ'),
             'ผู้ขาย: '.$this->escape($creator?->name ?: 'ไม่ระบุ'),

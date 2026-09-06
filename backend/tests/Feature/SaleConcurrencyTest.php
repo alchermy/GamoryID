@@ -106,6 +106,6 @@ class SaleConcurrencyTest extends TestCase
 
     private function item(Shop $shop, string $tag): InventoryItem
     {
-        return InventoryItem::create(['shop_id' => $shop->id, 'tag' => $tag, 'title' => "Item {$tag}", 'riot_id' => 'player#'.$tag, 'cost' => 3000, 'list_price' => 5900, 'status' => 'available']);
+        return InventoryItem::create(['shop_id' => $shop->id, 'tag' => $tag, 'title' => "Item {$tag}", 'cost' => 3000, 'list_price' => 5900, 'status' => 'available']);
     }
 }

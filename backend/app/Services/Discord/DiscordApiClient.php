@@ -240,7 +240,7 @@ class DiscordApiClient
                     'name' => 'เพิ่มไอดี',
                     'description' => 'เพิ่มไอดีใหม่ — ใส่ได้ถึงชื่อผู้ใช้ ไม่รับรหัสผ่าน',
                     'options' => [
-                        $this->stringOption('riot-id', 'Riot ID เช่น Player#TH1', true),
+                        $this->stringOption('ชื่อ', 'ชื่อรายการที่จะแสดงในระบบ เช่น ไอดี Diamond สกินเยอะ', true),
                         [
                             'type' => 10,
                             'name' => 'ต้นทุน',

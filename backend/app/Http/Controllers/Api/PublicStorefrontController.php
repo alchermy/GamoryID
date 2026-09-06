@@ -8,6 +8,8 @@ use App\Models\InventoryItem;
 use App\Models\InventoryMedia;
 use App\Models\Shop;
 use App\Services\PlanEntitlements;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -16,9 +18,7 @@ use Illuminate\Support\Str;
 
 class PublicStorefrontController extends Controller
 {
-    public function __construct(private readonly PlanEntitlements $entitlements)
-    {
-    }
+    public function __construct(private readonly PlanEntitlements $entitlements) {}
 
     public function show(Request $request, Shop $shop)
     {
@@ -210,7 +210,7 @@ class PublicStorefrontController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-            } catch (\Illuminate\Database\QueryException) {
+            } catch (QueryException) {
                 // Lost the insert race — the row exists now, just bump it.
                 DB::table('shop_view_daily')
                     ->where('shop_id', $shopId)->where('date', $today)
@@ -219,7 +219,7 @@ class PublicStorefrontController extends Controller
         }
     }
 
-    private function meta(\Illuminate\Contracts\Pagination\LengthAwarePaginator $page): array
+    private function meta(LengthAwarePaginator $page): array
     {
         return [
             'current_page' => $page->currentPage(),
@@ -229,7 +229,7 @@ class PublicStorefrontController extends Controller
     }
 
     /**
-     * Public-safe fields only — cost, username, riot_id, notes, custom_values,
+     * Public-safe fields only — cost, username, notes, custom_values,
      * view_count, and credential flags are deliberately omitted.
      */
     private function listingPayload(InventoryItem $item): array

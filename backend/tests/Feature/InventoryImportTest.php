@@ -95,10 +95,10 @@ class InventoryImportTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonPath('data.total_rows', 1)
-            ->assertJsonPath('data.rows.0.riot_id', 'Example#TH01')
+            ->assertJsonPath('data.rows.0.username', 'example.user01')
             ->assertJsonPath('data.rows.0.password', '••••••••')
-            ->assertJsonPath('data.headers.7', 'list_price')
-            ->assertJsonPath('data.headers.8', 'notes');
+            ->assertJsonPath('data.headers.6', 'list_price')
+            ->assertJsonPath('data.headers.7', 'notes');
     }
 
     public function test_excel_template_can_be_confirmed_and_imported(): void
@@ -120,7 +120,6 @@ class InventoryImportTest extends TestCase
             ->withHeader('X-Shop-Id', $shop->id)
             ->postJson("/api/v1/imports/{$importId}/confirm", [
                 'mapping' => [
-                    'riot_id' => 'riot_id',
                     'username' => 'username',
                     'password' => 'password',
                     'description' => 'description',
@@ -143,7 +142,7 @@ class InventoryImportTest extends TestCase
 
         $this->assertDatabaseHas('inventory_items', [
             'shop_id' => $shop->id,
-            'riot_id' => 'Example#TH01',
+            'title' => 'example.user01',
             'username' => 'example.user01',
             'list_price' => 3900,
             'notes' => 'ตัวอย่าง: ลูกค้ากำลังพิจารณา',
@@ -251,6 +250,35 @@ class InventoryImportTest extends TestCase
         $this->assertStringContainsString('มีอยู่ในคลังแล้ว', ImportError::where('import_job_id', $job->id)->where('kind', 'duplicate')->firstOrFail()->message);
     }
 
+    public function test_a_username_that_only_clashes_with_a_sold_item_still_imports(): void
+    {
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        InventoryItem::create([
+            'shop_id' => $shop->id, 'tag' => 'SOLD1', 'title' => 'ขายไปแล้ว',
+            'username' => 'Resell.User', 'cost' => 1, 'list_price' => 100, 'status' => 'sold',
+        ]);
+        $path = "imports/{$shop->id}/resell-username.csv";
+        Storage::disk('private')->put($path, "title,list_price,username\nนำกลับมาขาย,5000,resell.user\n");
+        $job = ImportJob::create([
+            'shop_id' => $shop->id, 'user_id' => $user->id, 'status' => 'queued',
+            'disk' => 'private', 'path' => $path,
+            'mapping' => ['title' => 'title', 'list_price' => 'list_price', 'username' => 'username'],
+            'total_rows' => 1,
+        ]);
+
+        (new ProcessInventoryImport($job->id))->handle(
+            app(TagGenerator::class), app(CredentialCipher::class), app(InventoryImportReader::class),
+        );
+
+        // the only clash is a sold item -> the row is imported, nothing skipped
+        $this->assertDatabaseCount('inventory_items', 2);
+        $this->assertDatabaseHas('inventory_items', ['title' => 'นำกลับมาขาย', 'username' => 'resell.user', 'status' => 'available']);
+        $this->assertDatabaseHas('import_jobs', [
+            'id' => $job->id, 'status' => 'completed', 'imported_rows' => 1, 'skipped_rows' => 0, 'failed_rows' => 0,
+        ]);
+    }
+
     public function test_a_whole_batch_database_failure_is_recorded_and_nothing_is_left_partially_imported(): void
     {
         Storage::fake('private');
@@ -321,7 +349,8 @@ class InventoryImportTest extends TestCase
             SendDiscordShopNotification::class,
             fn (SendDiscordShopNotification $job) => $job->purpose === 'inventory'
                 && $job->title === 'นำเข้าข้อมูลไอดีสำเร็จ'
-                && str_contains($job->description, 'เพิ่มเข้าคลัง 2 รายการ'),
+                && str_contains($job->description, 'เพิ่มเข้าคลัง 2 รายการ')
+                && $job->actor === $user->name,
         );
     }
 

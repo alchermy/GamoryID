@@ -7,8 +7,7 @@ export const initialInventoryItems: InventoryItem[] = [
   {
     id: 1,
     tag: "#23DX5",
-    title: "รายละเอียดไอดี Reaver Collection",
-    riotId: "Gammy#TH01",
+    title: "Reaver Collection · Vandal",
     username: "gammy.ops01",
     email: "gammy.ops01@mail.test",
     rank: "Ascendant 2",
@@ -24,8 +23,7 @@ export const initialInventoryItems: InventoryItem[] = [
   {
     id: 2,
     tag: "#8KM4R",
-    title: "รายละเอียดไอดี Prime Collection",
-    riotId: "Nova#TH02",
+    title: "Prime 2.0 · Phantom",
     username: "nova.trade02",
     email: "nova.trade02@mail.test",
     rank: "Diamond 3",
@@ -41,8 +39,7 @@ export const initialInventoryItems: InventoryItem[] = [
   {
     id: 3,
     tag: "#Q7N2P",
-    title: "รายละเอียดไอดี Champions",
-    riotId: "Vega#TH03",
+    title: "Champions 2023 · Vandal",
     username: "vega.market03",
     email: "vega.market03@mail.test",
     rank: "Immortal 1",
@@ -58,8 +55,7 @@ export const initialInventoryItems: InventoryItem[] = [
   {
     id: 4,
     tag: "#4WT9C",
-    title: "รายละเอียดไอดี Kuronami",
-    riotId: "Sora#TH04",
+    title: "Kuronami · Bundle",
     username: "sora.store04",
     email: "sora.store04@mail.test",
     rank: "Platinum 2",
@@ -74,8 +70,7 @@ export const initialInventoryItems: InventoryItem[] = [
   {
     id: 5,
     tag: "#M6J3X",
-    title: "รายละเอียดไอดี RGX",
-    riotId: "Milo#TH05",
+    title: "RGX 11z Pro · Operator",
     username: "milo.trade05",
     email: "milo.trade05@mail.test",
     rank: "Diamond 1",
@@ -90,8 +85,7 @@ export const initialInventoryItems: InventoryItem[] = [
   {
     id: 6,
     tag: "#9RA5K",
-    title: "รายละเอียดไอดี Prelude",
-    riotId: "Rin#TH06",
+    title: "Prelude to Chaos · Vandal",
     username: "rin.market06",
     email: "rin.market06@mail.test",
     rank: "Ascendant 1",
@@ -106,8 +100,7 @@ export const initialInventoryItems: InventoryItem[] = [
   {
     id: 7,
     tag: "#C3Y8N",
-    title: "รายละเอียดไอดี Gaia",
-    riotId: "Aster#TH07",
+    title: "Gaia Vengeance · Bundle",
     username: "aster.store07",
     email: "aster.store07@mail.test",
     rank: "Gold 3",
@@ -122,8 +115,7 @@ export const initialInventoryItems: InventoryItem[] = [
   {
     id: 8,
     tag: "#H5P7D",
-    title: "รายละเอียดไอดี Neo Frontier",
-    riotId: "Kai#TH08",
+    title: "Neo Frontier · Sheriff",
     username: "kai.trade08",
     email: "kai.trade08@mail.test",
     rank: "Diamond 2",

@@ -121,7 +121,6 @@ class ReservationLifecycleTest extends TestCase
             'shop_id' => $shop->id,
             'tag' => $tag,
             'title' => "Item {$tag}",
-            'riot_id' => 'player#'.$tag,
             'cost' => 3000,
             'list_price' => 5900,
             'status' => 'reserved',

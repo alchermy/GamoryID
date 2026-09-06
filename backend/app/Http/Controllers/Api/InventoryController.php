@@ -39,7 +39,6 @@ class InventoryController extends Controller
             $query->where(function ($builder) use ($q, $normalizedTag) {
                 $builder->where('tag', $normalizedTag)
                     ->orWhere('title', 'like', "%{$q}%")
-                    ->orWhere('riot_id', 'like', "%{$q}%")
                     ->orWhere('username', 'like', "%{$q}%")
                     ->orWhere('email', 'like', "%{$q}%")
                     ->orWhere('rank', 'like', "%{$q}%");
@@ -63,7 +62,6 @@ class InventoryController extends Controller
             $credentials = $request->validated('credentials');
             $data = Arr::except($request->validated(), 'credentials');
             $data['region'] = 'TH';
-            $data['title'] = $data['title'] ?? $data['riot_id'];
             $data['username'] = $data['username'] ?? $credentials['username'] ?? null;
             // skin_count is nullable in the request but the column defaults to 0 —
             // Eloquent doesn't know about that DB-level default until the model is
@@ -90,6 +88,7 @@ class InventoryController extends Controller
             'เพิ่มไอดีใหม่เข้าคลัง',
             $discordMessages->inventoryCreated($item, $request->user()),
             $discordMessages->inventoryLink($item),
+            actor: $request->user()?->name,
         );
 
         return (new InventoryItemResource($item->load(['shop', 'media'])))->response()->setStatusCode(201);
@@ -111,7 +110,7 @@ class InventoryController extends Controller
             $credentials = $request->validated('credentials');
             $data = Arr::except($request->validated(), 'credentials');
             $data['region'] = 'TH';
-            $data['title'] = $data['title'] ?? $data['riot_id'] ?? $item->title;
+            $data['title'] = $data['title'] ?? $item->title;
             $data['username'] = $data['username'] ?? $credentials['username'] ?? $item->username;
             $item->update([...$data, 'lock_version' => $item->lock_version + 1]);
             if ($credentials) {

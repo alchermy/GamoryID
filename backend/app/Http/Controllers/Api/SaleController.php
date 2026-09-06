@@ -30,7 +30,7 @@ class SaleController extends Controller
         $query = Sale::query()
             ->where('shop_id', $shop->id)
             ->with([
-                'inventoryItem:id,tag,title,riot_id,rank,level,list_price',
+                'inventoryItem:id,tag,title,rank,level,list_price',
                 'customer:id,name,phone,line_id,facebook_url',
                 'creator:id,name',
             ])
@@ -62,7 +62,7 @@ class SaleController extends Controller
         $record = Sale::query()
             ->where('shop_id', $shop->id)
             ->with([
-                'inventoryItem:id,tag,title,riot_id,rank,level,list_price',
+                'inventoryItem:id,tag,title,rank,level,list_price',
                 'customer:id,name,phone,line_id,facebook_url',
                 'creator:id,name',
             ])
@@ -128,7 +128,7 @@ class SaleController extends Controller
             'warranty_ends_at' => $sale->warranty_ends_at?->toDateString(),
         ]);
         $sale->load([
-            'inventoryItem:id,tag,title,riot_id,rank,level,list_price',
+            'inventoryItem:id,tag,title,rank,level,list_price',
             'customer:id,name,phone,line_id,facebook_url',
             'creator:id,name',
         ]);
@@ -138,6 +138,7 @@ class SaleController extends Controller
             'ปิดการขายสำเร็จ',
             $discordMessages->saleCompleted($sale),
             $discordMessages->saleLink($sale),
+            actor: $request->user()?->name,
         );
 
         return response()->json(['data' => $sale], 201);
@@ -158,7 +159,6 @@ class SaleController extends Controller
                 'id' => $sale->inventoryItem->id,
                 'tag' => $sale->inventoryItem->tag,
                 'title' => $sale->inventoryItem->title,
-                'riot_id' => $sale->inventoryItem->riot_id,
                 'rank' => $sale->inventoryItem->rank,
                 'level' => $sale->inventoryItem->level,
                 'list_price' => $sale->inventoryItem->list_price,

@@ -110,7 +110,6 @@ export function mapInventoryItem(
     id: record.id,
     tag: record.tag,
     title: record.title,
-    riotId: record.riot_id ?? record.title,
     username: record.username ?? "–",
     email: record.email ?? "–",
     rank: record.rank ?? "–",
@@ -272,7 +271,7 @@ export function MerchantApp() {
         const q = query.trim().toLowerCase();
         return (
           (!q ||
-            `${i.tag} ${i.riotId} ${i.username} ${i.rank}`
+            `${i.tag} ${i.title} ${i.username} ${i.rank}`
               .toLowerCase()
               .includes(q)) &&
           (status === "all" || i.status === status)
@@ -785,7 +784,7 @@ export function MerchantApp() {
         { length: 5 },
         () => abc[Math.floor(Math.random() * abc.length)],
       ).join("");
-    const riotId = String(d.get("riot_id") ?? "");
+    const title = String(d.get("title") ?? "");
     const username = String(d.get("username") ?? "");
     const description = String(d.get("description") ?? "");
     try {
@@ -795,8 +794,7 @@ export function MerchantApp() {
         }>("/inventory", shop.id, {
           method: "POST",
           body: JSON.stringify({
-            title: riotId,
-            riot_id: riotId,
+            title,
             username,
             email: String(d.get("email") ?? "").trim() || null,
             description: description || null,
@@ -835,9 +833,8 @@ export function MerchantApp() {
           {
             id: Date.now(),
             tag,
-            title: description || riotId,
+            title,
             description: description || null,
-            riotId,
             username,
             email: String(d.get("email") ?? "") || "–",
             rank: String(d.get("rank")),
@@ -873,7 +870,7 @@ export function MerchantApp() {
     if (!selected || inventoryBusy) return;
     setInventoryBusy(true);
     const d = new FormData(e.currentTarget),
-      riotId = String(d.get("riot_id") ?? ""),
+      title = String(d.get("title") ?? ""),
       description = String(d.get("description") ?? ""),
       password = String(d.get("password") ?? "");
     try {
@@ -884,8 +881,7 @@ export function MerchantApp() {
         }>(`/inventory/${selected.id}`, shop.id, {
           method: "PUT",
           body: JSON.stringify({
-            title: riotId,
-            riot_id: riotId,
+            title,
             username: d.get("username"),
             email: String(d.get("email") ?? "").trim() || null,
             description: description || null,
@@ -902,8 +898,7 @@ export function MerchantApp() {
       } else
         updated = {
           ...selected,
-          title: description || riotId,
-          riotId,
+          title,
           username: String(d.get("username") ?? ""),
           email: String(d.get("email") ?? "") || "–",
           description: description || null,

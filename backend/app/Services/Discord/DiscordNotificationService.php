@@ -14,8 +14,9 @@ class DiscordNotificationService
 
     /**
      * @param  array{label: string, url: string}|null  $link  rendered as a Discord link button under the embed
+     * @param  string|null  $actor  name of the person who triggered the event; shown in the footer
      */
-    public function send(Shop $shop, string $purpose, string $title, string $description, ?array $link = null): bool
+    public function send(Shop $shop, string $purpose, string $title, string $description, ?array $link = null, ?string $actor = null): bool
     {
         $log = Log::channel('discord')->withContext(['shop_id' => $shop->id, 'purpose' => $purpose]);
 
@@ -43,12 +44,16 @@ class DiscordNotificationService
             return true;
         }
 
+        $footer = 'GamoryID · ไม่แสดงรหัสผ่านไอดีในการแจ้งเตือน';
+        if (($actor = trim((string) $actor)) !== '') {
+            $footer = 'ผู้ทำรายการ: '.$actor.' · '.$footer;
+        }
         $payload = [
             'embeds' => [[
                 'title' => $title,
                 'description' => $description,
                 'color' => 748543,
-                'footer' => ['text' => 'GamoryID · ไม่ส่งชื่อผู้ใช้ รหัสผ่าน ต้นทุน หรือโน้ตภายใน'],
+                'footer' => ['text' => $footer],
                 'timestamp' => now()->toIso8601String(),
             ]],
         ];

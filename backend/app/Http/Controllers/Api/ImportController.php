@@ -20,7 +20,7 @@ use Throwable;
 class ImportController extends Controller
 {
     private const MAPPABLE_FIELDS = [
-        'title', 'riot_id', 'username', 'email', 'rank', 'level', 'skin_count', 'cost', 'list_price',
+        'title', 'username', 'email', 'rank', 'level', 'skin_count', 'cost', 'list_price',
         'description', 'notes', 'password', 'recovery_email',
     ];
 
@@ -95,9 +95,8 @@ class ImportController extends Controller
         $shop = $currentShop->from($request);
         $data = $request->validate([
             'mapping' => ['required', 'array'],
-            'mapping.title' => ['nullable', 'string', 'required_without:mapping.riot_id'],
-            'mapping.riot_id' => ['nullable', 'string', 'required_without:mapping.title'],
-            'mapping.username' => ['nullable', 'string'],
+            'mapping.title' => ['nullable', 'string'],
+            'mapping.username' => ['required', 'string'],
             'mapping.email' => ['nullable', 'string'],
             'mapping.password' => ['nullable', 'string'],
             'mapping.description' => ['nullable', 'string'],

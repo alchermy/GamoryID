@@ -2,10 +2,12 @@
 
 namespace App\Jobs;
 
+use App\Enums\InventoryStatus;
 use App\Models\ImportError;
 use App\Models\ImportJob;
 use App\Models\InventoryCredential;
 use App\Models\InventoryItem;
+use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\CredentialCipher;
 use App\Services\InventoryImportReader;
@@ -42,12 +44,13 @@ class ProcessInventoryImport implements ShouldQueue
         $errors = [];   // hard problems — these abort the whole batch
         $skipped = [];  // username already exists (in file or shop) — skip the row, import the rest
         $usernames = [];
-        // Usernames already in this shop's inventory (available / reserved /
-        // sold / archived) — a re-import of the same account must not create a
-        // duplicate item.
+        // Usernames already live in this shop's inventory (available / reserved).
+        // A username that only clashes with a *sold* item is fine — the account
+        // was handed over and the shop may legitimately be re-stocking it.
         $existingUsernames = InventoryItem::query()
             ->where('shop_id', $import->shop_id)
             ->whereNotNull('username')
+            ->where('status', '!=', InventoryStatus::Sold)
             ->pluck('username')
             ->map(fn ($name) => mb_strtolower(trim((string) $name)))
             ->flip();
@@ -131,8 +134,10 @@ class ProcessInventoryImport implements ShouldQueue
                         'shop_id' => $import->shop_id,
                         'created_by' => $import->user_id,
                         'tag' => $tags->generate(),
-                        'title' => trim((string) ($mapped['title'] ?? $mapped['riot_id'])),
-                        'riot_id' => $this->blankToNull($mapped['riot_id'] ?? null),
+                        // The import UI no longer asks for a display name — the
+                        // account username is the item's name. A title column is
+                        // still honoured if an API caller maps one.
+                        'title' => trim((string) ($mapped['title'] ?? '')) ?: trim((string) ($mapped['username'] ?? '')),
                         'username' => $this->blankToNull($mapped['username'] ?? null),
                         'email' => $this->blankToNull($mapped['email'] ?? null),
                         'region' => 'TH',
@@ -225,6 +230,7 @@ class ProcessInventoryImport implements ShouldQueue
             'inventory',
             $title,
             $description,
+            actor: $import->user_id ? User::find($import->user_id)?->name : null,
         );
     }
 
@@ -251,8 +257,8 @@ class ProcessInventoryImport implements ShouldQueue
 
     private function validationMessage(array $mapped): ?string
     {
-        if (blank($mapped['title'] ?? null) && blank($mapped['riot_id'] ?? null)) {
-            return 'ต้องมี Riot ID หรือชื่อรายการ';
+        if (blank($mapped['title'] ?? null) && blank($mapped['username'] ?? null)) {
+            return 'ต้องมี Username';
         }
         if (! isset($mapped['list_price']) || ! is_numeric($mapped['list_price']) || (float) $mapped['list_price'] < 0) {
             return 'ราคาตั้งขายต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป';

@@ -25,7 +25,6 @@ const sale: SaleRecord = {
     id: 7,
     tag: "Q7N2P",
     title: "Vega#TH03",
-    riot_id: "Vega#TH03",
     rank: "Immortal 1",
     level: 201,
     list_price: "13900.00",

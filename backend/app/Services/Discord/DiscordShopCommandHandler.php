@@ -182,7 +182,7 @@ class DiscordShopCommandHandler
         $lines = $items->map(fn (InventoryItem $item) => sprintf(
             '**#%s** · %s · %s · %s บาท · %s',
             $item->tag,
-            $this->escape($item->riot_id ?: $item->title),
+            $this->escape($item->title),
             $this->escape($item->rank ?: 'ไม่ระบุแรงก์'),
             number_format((float) $item->list_price, 0),
             $this->statusLabel($item->status->value),
@@ -238,7 +238,8 @@ class DiscordShopCommandHandler
             $installation->shop_id,
             'reservations',
             'มีการจองไอดี',
-            "**#{$item->tag}** · {$this->escape($item->riot_id ?: $item->title)}\nหมดเวลาจอง ".$reservation->expires_at->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.',
+            "**#{$item->tag}** · {$this->escape($item->title)}\nหมดเวลาจอง ".$reservation->expires_at->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.',
+            actor: $link->user?->name,
         );
 
         return $this->success("จอง **#{$item->tag}** สำเร็จ\nหมดเวลาจอง ".$reservation->expires_at->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.');
@@ -278,7 +279,8 @@ class DiscordShopCommandHandler
             $installation->shop_id,
             'reservations',
             'ยกเลิกการจองแล้ว',
-            "**#{$item->tag}** · {$this->escape($item->riot_id ?: $item->title)}\nรายการกลับเป็นสถานะพร้อมขาย",
+            "**#{$item->tag}** · {$this->escape($item->title)}\nรายการกลับเป็นสถานะพร้อมขาย",
+            actor: $link->user?->name,
         );
 
         return $this->success("ยกเลิกการจอง **#{$item->tag}** แล้ว รายการกลับเป็นสถานะพร้อมขาย");
@@ -371,6 +373,7 @@ class DiscordShopCommandHandler
             'ปิดการขายสำเร็จ',
             $this->notifications->saleCompleted($sale),
             $this->notifications->saleLink($sale),
+            actor: $link->user?->name,
         );
 
         return $this->success("ปิดการขาย **#{$sale->inventoryItem?->tag}** สำเร็จ\nราคาขาย ".number_format((float) $sale->sold_price, 2).' บาท');
@@ -405,11 +408,11 @@ class DiscordShopCommandHandler
     /** @return array{content: string, status: string} */
     private function createInventory(array $interaction, DiscordInstallation $installation, DiscordUserLink $link): array
     {
-        $riotId = trim($this->optionValue($interaction, 'riot-id', 'ไอดี', 'riot_id'));
+        $name = trim($this->optionValue($interaction, 'ชื่อ', 'riot-id', 'ไอดี'));
         $costValue = $this->optionValue($interaction, 'ต้นทุน', 'cost');
         $priceValue = $this->optionValue($interaction, 'ราคา', 'price');
-        if ($riotId === '' || ! is_numeric($costValue) || ! is_numeric($priceValue) || (float) $costValue < 0 || (float) $priceValue < 0) {
-            return $this->failure('กรุณาระบุ Riot ID ต้นทุน และราคาขายให้ถูกต้อง');
+        if ($name === '' || ! is_numeric($costValue) || ! is_numeric($priceValue) || (float) $costValue < 0 || (float) $priceValue < 0) {
+            return $this->failure('กรุณาระบุชื่อรายการ ต้นทุน และราคาขายให้ถูกต้อง');
         }
         $shop = $installation->shop;
         if (! $shop) {
@@ -421,8 +424,7 @@ class DiscordShopCommandHandler
             'shop_id' => $installation->shop_id,
             'created_by' => $link->user_id,
             'tag' => $this->tags->generate(),
-            'title' => $riotId,
-            'riot_id' => $riotId,
+            'title' => $name,
             'username' => $this->blankToNull($this->optionValue($interaction, 'username', 'ยูสเซอร์เนม')),
             'email' => $this->blankToNull($this->optionValue($interaction, 'email', 'อีเมล')),
             'region' => 'TH',
@@ -445,11 +447,12 @@ class DiscordShopCommandHandler
                 'เพิ่มไอดีใหม่เข้าคลัง',
                 $this->notifications->inventoryCreated($item, $link->user),
                 $this->notifications->inventoryLink($item),
+                actor: $link->user?->name,
             );
         }
 
         return $this->success(
-            "เพิ่ม **#{$item->tag} · {$this->escape($item->riot_id)}** เข้าคลังแล้ว\n".
+            "เพิ่ม **#{$item->tag} · {$this->escape($item->title)}** เข้าคลังแล้ว\n".
             'รหัสผ่านต้องเพิ่มจากหน้ารายละเอียดไอดีใน GamoryID เท่านั้น',
             $this->notifications->inventoryLink($item),
         );
@@ -481,7 +484,7 @@ class DiscordShopCommandHandler
     {
         $lines = [
             "**#{$item->tag}**",
-            'ไอดี Riot: '.$this->escape($item->riot_id ?: $item->title),
+            'ชื่อรายการ: '.$this->escape($item->title),
             'แรงก์: '.$this->escape($item->rank ?: '–'),
             'เลเวล: '.($item->level !== null ? number_format((int) $item->level) : '–'),
             'ราคา: ฿'.number_format((float) $item->list_price, 0),

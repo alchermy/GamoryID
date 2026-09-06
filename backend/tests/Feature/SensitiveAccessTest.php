@@ -53,6 +53,7 @@ class SensitiveAccessTest extends TestCase
                 && $job->title === 'มีการเปิดดูรหัสผ่านไอดี'
                 && str_contains($job->description, '#SEC01')
                 && str_contains($job->description, 'เจ้าของร้าน')
+                && $job->actor === 'เจ้าของร้าน'
                 && ! str_contains($job->description, 'the-secret-pw'),
         );
     }

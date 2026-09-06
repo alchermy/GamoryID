@@ -44,7 +44,7 @@ class ExportControllerTest extends TestCase
         $body = $response->streamedContent();
 
         $this->assertStringStartsWith("\xEF\xBB\xBF", $body);
-        $this->assertStringContainsString('tag,riot_id,username,rank,status,list_price,cost', $body);
+        $this->assertStringContainsString('tag,title,username,rank,status,list_price,cost', $body);
         $this->assertStringContainsString('#AAAAA', $body);
     }
 

@@ -72,7 +72,6 @@ export function ImportPanel({
   }, [onComplete]);
 
   const fields: [string, string][] = [
-    ["riot_id", "Riot ID"],
     ["username", "Username"],
     ["email", "Email"],
     ["password", "Password"],
@@ -82,7 +81,6 @@ export function ImportPanel({
     ["cost", "ต้นทุน"],
     ["list_price", "ราคาขาย"],
     ["notes", "โน้ตช่วยจำ"],
-    ["title", "ชื่อรายการ (ไฟล์เดิม)"],
   ];
 
   const refreshJob = useCallback(
@@ -198,8 +196,8 @@ export function ImportPanel({
     const selected = Object.fromEntries(
       Object.entries(mapping).filter(([, source]) => source),
     );
-    if ((!selected.title && !selected.riot_id) || !selected.list_price) {
-      setError("ต้องเลือกคอลัมน์ Riot ID หรือชื่อรายการ และราคาขาย");
+    if (!selected.username || !selected.list_price) {
+      setError("ต้องเลือกคอลัมน์ Username และราคาขาย");
       return;
     }
     setBusy(true);
@@ -227,7 +225,8 @@ export function ImportPanel({
           <span className="eyebrow">Bulk inventory</span>
           <h2 id="import-title">นำเข้าข้อมูลหลายรายการ</h2>
           <small>
-            ใช้ Excel หรือ CSV ขนาดไม่เกิน 5 MB ระบบจะตรวจทุกแถวก่อนบันทึก
+            ใช้ Excel หรือ CSV ขนาดไม่เกิน 5 MB ระบบจะตรวจทุกแถวก่อนบันทึก ·
+            นำเข้าเฉพาะไอดีที่พร้อมขายเท่านั้น (ไอดีที่ขายแล้วหรือยังไม่พร้อมขายไม่ต้องนำเข้า)
           </small>
         </div>
       </div>
@@ -361,7 +360,7 @@ export function ImportPanel({
                   {fields.map(([key, label]) => (
                     <Field
                       key={key}
-                      label={`${label}${["riot_id", "list_price"].includes(key) ? " *" : ""}`}
+                      label={`${label}${["username", "list_price"].includes(key) ? " *" : ""}`}
                     >
                       <select
                         aria-label={`คอลัมน์สำหรับ ${label}`}

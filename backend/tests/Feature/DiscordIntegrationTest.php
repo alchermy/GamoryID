@@ -51,7 +51,6 @@ class DiscordIntegrationTest extends TestCase
             'shop_id' => $shop->id,
             'tag' => '23DX5',
             'title' => 'Gammy#TH01',
-            'riot_id' => 'Gammy#TH01',
             'username' => 'private-login',
             'rank' => 'Ascendant 2',
             'level' => 121,
@@ -218,7 +217,7 @@ class DiscordIntegrationTest extends TestCase
                 && $subcommands->contains('โน้ต')
                 && $subcommands->contains('เพิ่มไอดี')
                 && $subcommands->contains('ช่วยเหลือ')
-                && $addIdOptions->pluck('name')->contains('riot-id')
+                && $addIdOptions->pluck('name')->contains('ชื่อ')
                 && $addIdOptions->pluck('name')->contains('username')
                 && collect(data_get($rankOption, 'choices', []))->pluck('value')->contains('Radiant')
                 && collect(data_get($rankOption, 'choices', []))->count() === 25;
@@ -264,13 +263,12 @@ class DiscordIntegrationTest extends TestCase
             'discord_username' => 'staff',
             'linked_at' => now(),
         ]);
-        foreach ([['BOOK1', 'Book#TH01'], ['SELL1', 'Sell#TH01']] as [$tag, $riotId]) {
+        foreach ([['BOOK1', 'Book#TH01'], ['SELL1', 'Sell#TH01']] as [$tag, $name]) {
             InventoryItem::create([
                 'shop_id' => $shop->id,
                 'created_by' => $staff->id,
                 'tag' => $tag,
-                'title' => $riotId,
-                'riot_id' => $riotId,
+                'title' => $name,
                 'rank' => 'Gold 2',
                 'level' => 50,
                 'description' => 'รายละเอียดสาธารณะ',
@@ -311,18 +309,18 @@ class DiscordIntegrationTest extends TestCase
         $this->assertDatabaseHas('sales', ['shop_id' => $shop->id, 'sold_price' => 2800, 'created_by' => $staff->id]);
         $this->assertSame('คุณเอ', Sale::query()->firstOrFail()->customer->name);
 
-        $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('add-denied', 'เพิ่มไอดี', ['ไอดี' => 'Denied#TH01', 'ต้นทุน' => 500, 'ราคา' => 1000], 'guild-commands', 'commands-room', 'discord-staff'))
+        $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('add-denied', 'เพิ่มไอดี', ['ชื่อ' => 'Denied#TH01', 'ต้นทุน' => 500, 'ราคา' => 1000], 'guild-commands', 'commands-room', 'discord-staff'))
             ->assertOk()
             ->assertJsonPath('data.content', fn ($content) => str_contains($content, 'ไม่มีสิทธิ์'));
-        $this->assertDatabaseMissing('inventory_items', ['shop_id' => $shop->id, 'riot_id' => 'Denied#TH01']);
+        $this->assertDatabaseMissing('inventory_items', ['shop_id' => $shop->id, 'title' => 'Denied#TH01']);
 
         $member->update(['permissions' => ['inventory.manage']]);
-        $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('add-manager', 'เพิ่มไอดี', ['riot-id' => 'Added#TH01', 'ต้นทุน' => 700, 'ราคา' => 1500, 'username' => 'added-login', 'แรงก์' => 'Platinum 1', 'เลเวล' => 88], 'guild-commands', 'commands-room', 'discord-staff'))
+        $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('add-manager', 'เพิ่มไอดี', ['ชื่อ' => 'Added#TH01', 'ต้นทุน' => 700, 'ราคา' => 1500, 'username' => 'added-login', 'แรงก์' => 'Platinum 1', 'เลเวล' => 88], 'guild-commands', 'commands-room', 'discord-staff'))
             ->assertOk()
             ->assertJsonPath('data.content', fn ($content) => str_contains($content, 'เข้าคลังแล้ว'))
             ->assertJsonPath('data.components.0.components.0.style', 5)
             ->assertJsonPath('data.components.0.components.0.label', 'เปิดข้อมูลไอดีใน GamoryID');
-        $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'riot_id' => 'Added#TH01', 'username' => 'added-login', 'rank' => 'Platinum 1', 'level' => 88]);
+        $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'title' => 'Added#TH01', 'username' => 'added-login', 'rank' => 'Platinum 1', 'level' => 88]);
         $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('reserve-denied', 'จอง', ['แท็ก' => '#BOOK1'], 'guild-commands', 'commands-room', 'discord-staff'))
             ->assertOk()
             ->assertJsonPath('data.content', fn ($content) => str_contains($content, 'ไม่มีสิทธิ์'));

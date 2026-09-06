@@ -1,7 +1,6 @@
 export type InventoryCopyItem = {
   tag: string;
   title: string;
-  riotId: string;
   rank: string;
   level: number;
   price: number;
@@ -11,8 +10,6 @@ export type InventoryCopyItem = {
 export function buildInventoryCopyText(item: InventoryCopyItem, footer = "") {
   const lines = [
     item.tag,
-    "",
-    `RiotID=${item.riotId || "–"}`,
     "",
     `Rank=${item.rank || "–"}`,
     "",

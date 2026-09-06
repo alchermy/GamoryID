@@ -27,9 +27,10 @@ class CredentialController extends Controller
             $shop->id,
             'system',
             'มีการเปิดดูรหัสผ่านไอดี',
-            "**#{$item->tag}** · ".($item->riot_id ?: $item->title)."\n"
+            "**#{$item->tag}** · ".$item->title."\n"
                 .'โดย: '.($request->user()?->name ?? 'ไม่ทราบผู้ใช้')."\n"
                 .'เวลา: '.now()->timezone('Asia/Bangkok')->format('d/m/Y H:i').' น.',
+            actor: $request->user()?->name,
         );
 
         return response()->json(['data' => $cipher->decrypt($item->credentials->encrypted_payload)]);

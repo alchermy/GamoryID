@@ -30,6 +30,7 @@ class SendDiscordShopNotification implements ShouldQueue
         public readonly string $title,
         public readonly string $description,
         public readonly ?array $link = null,
+        public readonly ?string $actor = null,
     ) {
         $this->onQueue('notifications');
     }
@@ -47,7 +48,7 @@ class SendDiscordShopNotification implements ShouldQueue
             return;
         }
 
-        $notifications->send($shop, $this->purpose, $this->title, $this->description, $this->link);
+        $notifications->send($shop, $this->purpose, $this->title, $this->description, $this->link, $this->actor);
     }
 
     public function failed(Throwable $exception): void

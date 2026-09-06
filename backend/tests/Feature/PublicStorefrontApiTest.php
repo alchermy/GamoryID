@@ -37,7 +37,6 @@ class PublicStorefrontApiTest extends TestCase
             'shop_id' => $shop->id,
             'tag' => $tag,
             'title' => "ไอดี {$tag}",
-            'riot_id' => 'Secret#TH01',
             'username' => 'secret.login',
             'region' => 'TH',
             'rank' => 'Immortal 1',

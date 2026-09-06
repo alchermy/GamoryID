@@ -186,7 +186,7 @@ export function InventoryPanel({
         <div className="empty">
           <img src="/mascot/gammy-search.png" alt="Gammy กำลังค้นหา" />
           <strong>ยังไม่พบไอดีที่ตรงกัน</strong>
-          <p>ลองค้นด้วยแท็ก 5 ตัว, Username หรือ Riot ID</p>
+          <p>ลองค้นด้วยแท็ก 5 ตัว, Username หรือ ชื่อรายการ</p>
         </div>
       ) : (
         <>
@@ -196,7 +196,7 @@ export function InventoryPanel({
                 <tr>
                   <th>แท็ก</th>
                   <th>Username</th>
-                  <th>Riot ID</th>
+                  <th>ชื่อรายการ</th>
                   <th>แรงก์</th>
                   <th>ราคาขาย</th>
                   <th>สถานะ</th>
@@ -218,7 +218,7 @@ export function InventoryPanel({
                     </td>
                     <td className="title-cell">{i.username}</td>
                     <td className="title-cell">
-                      <span>{i.riotId}</span>
+                      <span>{i.title}</span>
                       {i.notes && canNote && (
                         <button
                           type="button"
@@ -339,7 +339,7 @@ export function InventoryPanel({
                   className="mobile-record-link"
                   onClick={() => onSelect(i)}
                 >
-                  <h3>{i.riotId}</h3>
+                  <h3>{i.title}</h3>
                   <div className="mobile-meta">
                     <span>{i.username}</span>
                     <span>{i.rank}</span>
@@ -547,12 +547,12 @@ export function AddDialog({
         />
         <div className="dialog-body">
           <div className="form-grid">
-            <Field label="Riot ID" full>
+            <Field label="ชื่อรายการ" full>
               <input
-                name="riot_id"
+                name="title"
                 required
                 autoFocus
-                placeholder="เช่น Gammy#TH01"
+                placeholder="เช่น ไอดี Diamond สกินเยอะ พร้อมส่ง"
               />
             </Field>
             <Field label="Username">
@@ -652,12 +652,12 @@ export function EditDialog({
         />
         <div className="dialog-body">
           <div className="form-grid">
-            <Field label="Riot ID" full>
+            <Field label="ชื่อรายการ" full>
               <input
-                name="riot_id"
+                name="title"
                 required
                 autoFocus
-                defaultValue={item.riotId}
+                defaultValue={item.title}
               />
             </Field>
             <Field label="Username">
@@ -838,7 +838,7 @@ export function SellDialog({
               <div>
                 <small id="sale-preview-title">ไอดีที่กำลังปิดการขาย</small>
                 <strong>
-                  {item.tag} · {item.riotId}
+                  {item.tag} · {item.title}
                 </strong>
               </div>
             </div>
@@ -1128,7 +1128,7 @@ export function InventoryDetailPage({
               {statusLabel[item.status]}
             </span>
           </div>
-          <h2 id="inventory-detail-title">{item.riotId}</h2>
+          <h2 id="inventory-detail-title">{item.title}</h2>
           <p>อัปเดตล่าสุด {item.updated}</p>
         </div>
         <div className="inventory-detail-actions">

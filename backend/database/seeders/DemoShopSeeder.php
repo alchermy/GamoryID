@@ -57,22 +57,21 @@ class DemoShopSeeder extends Seeder
         );
 
         $samples = [
-            ['23DX5', 'Reaver Collection · Vandal', 'Gammy#TH01', 'gammy.ops01', 'Ascendant 2', 238, 67, 6200, 8900, 'available'],
-            ['8KM4R', 'Prime 2.0 · Phantom', 'Nova#TH02', 'nova.trade02', 'Diamond 3', 191, 49, 4400, 6900, 'reserved'],
-            ['Q7N2P', 'Champions 2023 · Vandal', 'Vega#TH03', 'vega.market03', 'Immortal 1', 306, 82, 9900, 13900, 'available'],
-            ['4WT9C', 'Kuronami · Bundle', 'Sora#TH04', 'sora.store04', 'Platinum 2', 144, 35, 2700, 4500, 'available'],
-            ['M6J3X', 'RGX 11z Pro · Operator', 'Milo#TH05', 'milo.trade05', 'Diamond 1', 217, 55, 5200, 7600, 'sold'],
-            ['9RA5K', 'Prelude to Chaos · Vandal', 'Rin#TH06', 'rin.market06', 'Ascendant 1', 262, 71, 6800, 9600, 'available'],
-            ['C3Y8N', 'Gaia’s Vengeance · Bundle', 'Aster#TH07', 'aster.store07', 'Gold 3', 128, 42, 3100, 4900, 'reserved'],
-            ['H5P7D', 'Neo Frontier · Sheriff', 'Kai#TH08', 'kai.trade08', 'Diamond 2', 174, 38, 3900, 6100, 'available'],
+            ['23DX5', 'Reaver Collection · Vandal', 'gammy.ops01', 'Ascendant 2', 238, 67, 6200, 8900, 'available'],
+            ['8KM4R', 'Prime 2.0 · Phantom', 'nova.trade02', 'Diamond 3', 191, 49, 4400, 6900, 'reserved'],
+            ['Q7N2P', 'Champions 2023 · Vandal', 'vega.market03', 'Immortal 1', 306, 82, 9900, 13900, 'available'],
+            ['4WT9C', 'Kuronami · Bundle', 'sora.store04', 'Platinum 2', 144, 35, 2700, 4500, 'available'],
+            ['M6J3X', 'RGX 11z Pro · Operator', 'milo.trade05', 'Diamond 1', 217, 55, 5200, 7600, 'sold'],
+            ['9RA5K', 'Prelude to Chaos · Vandal', 'rin.market06', 'Ascendant 1', 262, 71, 6800, 9600, 'available'],
+            ['C3Y8N', 'Gaia’s Vengeance · Bundle', 'aster.store07', 'Gold 3', 128, 42, 3100, 4900, 'reserved'],
+            ['H5P7D', 'Neo Frontier · Sheriff', 'kai.trade08', 'Diamond 2', 174, 38, 3900, 6100, 'available'],
         ];
         $cipher = app(CredentialCipher::class);
-        foreach ($samples as $index => [$tag, $title, $riotId, $username, $rank, $level, $skins, $cost, $price, $status]) {
+        foreach ($samples as $index => [$tag, $title, $username, $rank, $level, $skins, $cost, $price, $status]) {
             $item = InventoryItem::updateOrCreate(['tag' => $tag], [
                 'shop_id' => $shop->id,
                 'created_by' => $owner->id,
                 'title' => $title,
-                'riot_id' => $riotId,
                 'username' => $username,
                 'region' => 'TH',
                 'rank' => $rank,

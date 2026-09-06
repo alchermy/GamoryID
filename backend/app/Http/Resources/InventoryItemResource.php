@@ -13,7 +13,6 @@ class InventoryItemResource extends JsonResource
             'id' => $this->id,
             'tag' => '#'.$this->tag,
             'title' => $this->title,
-            'riot_id' => $this->riot_id,
             'username' => $this->username,
             'email' => $this->email,
             'rank' => $this->rank,
