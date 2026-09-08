@@ -28,6 +28,9 @@ class StoreInventoryRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:5000'],
             'cost' => ['required', 'numeric', 'min:0'],
             'list_price' => ['required', 'numeric', 'min:0'],
+            // Only the two "plain" states are settable here; reserved/sold/archived
+            // go through their own flows (reserve, sell, archive).
+            'status' => ['nullable', 'in:available,draft'],
             'custom_values' => ['nullable', 'array'],
             'credentials' => ['nullable', 'array'],
             'credentials.username' => ['nullable', 'string', 'max:500'],

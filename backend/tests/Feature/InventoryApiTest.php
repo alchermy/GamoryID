@@ -310,6 +310,63 @@ class InventoryApiTest extends TestCase
         });
     }
 
+    public function test_an_id_can_be_added_unlisted_and_toggled_listed(): void
+    {
+        Queue::fake();
+        [$user, $shop] = $this->owner('unlisted@example.test', 'ร้านไม่ลงขาย');
+
+        $created = $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->postJson('/api/v1/inventory', ['title' => 'ไอดีพิเศษ', 'username' => 'vip.login', 'cost' => 1000, 'list_price' => 9900, 'status' => 'draft'])
+            ->assertCreated()->assertJsonPath('data.status', 'draft');
+        $id = $created->json('data.id');
+
+        // shows in the merchant list (default view) and under the draft filter
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->getJson('/api/v1/inventory')->assertOk()->assertJsonPath('data.0.tag', $created->json('data.tag'));
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->getJson('/api/v1/inventory?status=draft')->assertOk()->assertJsonCount(1, 'data');
+
+        // list it, then unlist it again
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson("/api/v1/inventory/{$id}", ['title' => 'ไอดีพิเศษ', 'cost' => 1000, 'list_price' => 9900, 'status' => 'available'])
+            ->assertOk()->assertJsonPath('data.status', 'available');
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson("/api/v1/inventory/{$id}", ['title' => 'ไอดีพิเศษ', 'cost' => 1000, 'list_price' => 9900, 'status' => 'draft'])
+            ->assertOk()->assertJsonPath('data.status', 'draft');
+    }
+
+    public function test_a_sold_item_status_cannot_be_rewritten_through_update(): void
+    {
+        [$user, $shop] = $this->owner('nostatusrewrite@example.test', 'ร้านกันแก้สถานะ');
+        $item = $this->item($shop, 'SLD99');
+        $item->update(['status' => 'sold']);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->putJson("/api/v1/inventory/{$item->id}", ['title' => 'x', 'cost' => 1, 'list_price' => 1, 'status' => 'available'])
+            ->assertOk();
+        $this->assertSame('sold', $item->fresh()->status->value);
+    }
+
+    public function test_an_unlisted_id_can_be_sold_and_reserved_directly(): void
+    {
+        Queue::fake();
+        [$user, $shop] = $this->owner('unlisted-sell@example.test', 'ร้านขายไอดีพิเศษ');
+        $toSell = $this->item($shop, 'DRFS1');
+        $toSell->update(['status' => 'draft']);
+        $toReserve = $this->item($shop, 'DRFR1');
+        $toReserve->update(['status' => 'draft']);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->postJson("/api/v1/inventory/{$toReserve->id}/reserve", [])->assertCreated();
+        $this->assertSame('reserved', $toReserve->fresh()->status->value);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->postJson("/api/v1/inventory/{$toSell->id}/sell", ['customer' => ['name' => 'ลูกค้า'], 'sold_price' => 9900, 'has_warranty' => false])
+            ->assertCreated();
+        $this->assertSame('sold', $toSell->fresh()->status->value);
+        $this->assertDatabaseHas('sales', ['inventory_item_id' => $toSell->id]);
+    }
+
     public function test_grace_shop_is_read_only_but_can_list_inventory(): void
     {
         [$user, $shop] = $this->owner('grace@example.test', 'ร้านหมดอายุ');

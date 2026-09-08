@@ -22,15 +22,20 @@ const SYSTEM_STATUSES: [string, string][] = [
   ["available", "พร้อมขาย"],
   ["reserved", "ถูกจอง"],
   ["sold", "ขายแล้ว"],
+  ["draft", "ยังไม่เปิดขาย"],
   ["archived", "เก็บถาวร"],
 ];
 
 /** Best-guess mapping of a shop's own status label onto a system status. */
 function guessSystemStatus(raw: string): string {
   const v = raw.toLowerCase();
+  // Check draft first — "ยังไม่เปิดขาย" would otherwise trip the archived rule.
+  if (/ยังไม่เปิด|ยังไม่พร้อม|ยังไม่ลง|เตรียม|ร่าง|draft|pending|unlist/.test(v))
+    return "draft";
   if (/ขาย.*แล้ว|ออก|sold|sell/.test(v)) return "sold";
   if (/จอง|reserv|hold|ติด/.test(v)) return "reserved";
-  if (/เก็บ|archiv|ปิด|ยกเลิก|cancel|เลิก/.test(v)) return "archived";
+  if (/เก็บถาวร|archiv|ปิดการขาย|ยกเลิก|cancel|เลิกขาย/.test(v))
+    return "archived";
   return "available";
 }
 

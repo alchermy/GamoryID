@@ -104,7 +104,7 @@ class PlanEntitlements
         if ($limit === null) {
             return;
         }
-        $active = InventoryItem::forShop($shop)->whereIn('status', ['available', 'reserved'])->count();
+        $active = InventoryItem::forShop($shop)->whereIn('status', ['available', 'reserved', 'draft'])->count();
         abort_if($active + $additional > $limit, 422, "สต็อกพร้อมขายเต็มตามแพ็กเกจ ({$limit} รายการ)");
     }
 
@@ -122,7 +122,7 @@ class PlanEntitlements
     public function usage(Shop $shop): array
     {
         return [
-            'inventory_active' => InventoryItem::forShop($shop)->whereIn('status', ['available', 'reserved'])->count(),
+            'inventory_active' => InventoryItem::forShop($shop)->whereIn('status', ['available', 'reserved', 'draft'])->count(),
             'members' => ShopMember::where('shop_id', $shop->id)->count(),
         ];
     }

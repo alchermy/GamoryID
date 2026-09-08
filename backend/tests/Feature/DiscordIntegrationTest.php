@@ -341,6 +341,39 @@ class DiscordIntegrationTest extends TestCase
             ->assertJsonPath('data.content', fn ($content) => str_contains($content, 'ไม่มีสิทธิ์'));
     }
 
+    public function test_discord_covers_the_not_yet_listed_status(): void
+    {
+        Queue::fake();
+        [$owner, $shop] = $this->owner('draft-discord@example.test', 'Draft Discord Shop');
+        $installation = DiscordInstallation::create([
+            'shop_id' => $shop->id, 'installed_by' => $owner->id, 'guild_id' => 'guild-draft',
+            'guild_name' => 'Draft Guild', 'status' => 'connected', 'installed_at' => now(),
+        ]);
+        $installation->channels()->create(['purpose' => 'commands', 'channel_id' => 'draft-room', 'channel_name' => 'คำสั่งทั่วไป', 'enabled' => true]);
+        DiscordUserLink::create(['shop_id' => $shop->id, 'user_id' => $owner->id, 'discord_user_id' => 'discord-draft', 'discord_username' => 'owner', 'linked_at' => now()]);
+        InventoryItem::create(['shop_id' => $shop->id, 'created_by' => $owner->id, 'tag' => 'DRF01', 'title' => 'ไอดีเก็บไว้', 'cost' => 10, 'list_price' => 990, 'status' => 'draft']);
+
+        // add as unlisted via the boolean option
+        $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('draft-add', 'เพิ่มไอดี', ['ชื่อ' => 'ไอดีใหม่ไม่ลงขาย', 'ต้นทุน' => 100, 'ราคา' => 1500, 'เปิดขาย' => false], 'guild-draft', 'draft-room', 'discord-draft'))
+            ->assertOk()
+            ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'เข้าคลังแล้ว'));
+        $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'title' => 'ไอดีใหม่ไม่ลงขาย', 'status' => 'draft']);
+
+        // summary line + list filter
+        $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('draft-summary', 'สรุป', [], 'guild-draft', 'draft-room', 'discord-draft'))
+            ->assertOk()
+            ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'ยังไม่เปิดขาย: 2 รายการ'));
+        $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('draft-list', 'รายการ', ['สถานะ' => 'draft'], 'guild-draft', 'draft-room', 'discord-draft'))
+            ->assertOk()
+            ->assertJsonPath('data.content', fn ($c) => str_contains($c, '#DRF01') && str_contains($c, 'ยังไม่เปิดขาย'));
+
+        // an unlisted id can still be sold straight from Discord
+        $this->postJson('/api/v1/discord/interactions', $this->commandInteraction('draft-sell', 'ปิดการขาย', ['แท็ก' => '#DRF01', 'ลูกค้า' => 'ลูกค้า', 'ราคา' => 900], 'guild-draft', 'draft-room', 'discord-draft'))
+            ->assertOk()
+            ->assertJsonPath('data.content', fn ($c) => str_contains($c, 'ปิดการขาย **#DRF01** สำเร็จ'));
+        $this->assertDatabaseHas('inventory_items', ['tag' => 'DRF01', 'status' => 'sold']);
+    }
+
     public function test_pinned_button_panel_runs_and_opens_modals(): void
     {
         Queue::fake();

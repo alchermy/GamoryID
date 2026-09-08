@@ -343,6 +343,7 @@ class ProcessInventoryImport implements ShouldQueue
         foreach ([
             InventoryStatus::Sold->value => 'ขายแล้ว',
             InventoryStatus::Reserved->value => 'ถูกจอง',
+            InventoryStatus::Draft->value => 'ยังไม่เปิดขาย',
             InventoryStatus::Archived->value => 'เก็บถาวร',
         ] as $value => $label) {
             if (($byStatus[$value] ?? 0) > 0) {

@@ -426,6 +426,31 @@ class InventoryImportTest extends TestCase
         $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'completed', 'imported_rows' => 4, 'skipped_rows' => 0, 'failed_rows' => 0]);
     }
 
+    public function test_status_can_map_to_the_not_yet_listed_status(): void
+    {
+        Queue::fake();
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        $path = "imports/{$shop->id}/unlisted-status.csv";
+        Storage::disk('private')->put($path, "list_price,username,stat\n5000,park.user,ยังไม่เปิดขาย\n");
+        $job = ImportJob::create([
+            'shop_id' => $shop->id, 'user_id' => $user->id, 'status' => 'queued', 'disk' => 'private', 'path' => $path,
+            'mapping' => ['list_price' => 'list_price', 'username' => 'username', 'status' => 'stat'],
+            'status_map' => ['ยังไม่เปิดขาย' => 'draft'],
+            'total_rows' => 1,
+        ]);
+
+        (new ProcessInventoryImport($job->id))->handle(
+            app(TagGenerator::class), app(CredentialCipher::class), app(InventoryImportReader::class),
+        );
+
+        $item = InventoryItem::where('shop_id', $shop->id)->where('username', 'park.user')->firstOrFail();
+        $this->assertSame('draft', $item->status->value);
+        $this->assertNull($item->archived_at);
+        $this->assertDatabaseCount('sales', 0);
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
     public function test_a_status_value_that_is_not_mapped_falls_back_to_available(): void
     {
         Queue::fake();

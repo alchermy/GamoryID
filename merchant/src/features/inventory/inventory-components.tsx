@@ -94,15 +94,18 @@ function RankSelect({ defaultValue }: { defaultValue?: string }) {
 function InventoryStatusControl({
   item,
   canSell,
+  canManage,
   busy,
   onChange,
 }: {
   item: InventoryItem;
   canSell: boolean;
+  canManage: boolean;
   busy: boolean;
   onChange: (item: InventoryItem, status: InventoryStatus) => void;
 }) {
   const locked = item.status === "sold" || item.status === "archived";
+  const plain = item.status === "available" || item.status === "draft";
   return (
     <span
       className={`status-picker ${item.status} ${locked ? "is-locked" : ""}`}
@@ -111,7 +114,7 @@ function InventoryStatusControl({
       <select
         aria-label={`เปลี่ยนสถานะ ${item.tag}`}
         value={item.status}
-        disabled={!canSell || busy || locked}
+        disabled={(!canSell && !canManage) || busy || locked}
         onChange={(event) =>
           onChange(item, event.target.value as InventoryStatus)
         }
@@ -119,6 +122,7 @@ function InventoryStatusControl({
         <option value="available">พร้อมขาย</option>
         <option value="reserved">ถูกจอง</option>
         <option value="sold">ขายแล้ว</option>
+        {plain && <option value="draft">ยังไม่เปิดขาย</option>}
         {item.status === "archived" && (
           <option value="archived">เก็บถาวร</option>
         )}
@@ -183,6 +187,7 @@ export function InventoryPanel({
             <option value="available">พร้อมขาย</option>
             <option value="reserved">ถูกจอง</option>
             <option value="sold">ขายแล้ว</option>
+            <option value="draft">ยังไม่เปิดขาย</option>
             <option value="archived">เก็บถาวร</option>
           </select>
         </div>
@@ -254,6 +259,7 @@ export function InventoryPanel({
                       <InventoryStatusControl
                         item={i}
                         canSell={canSell}
+                        canManage={canManage}
                         busy={busy}
                         onChange={onStatusChange}
                       />
@@ -294,18 +300,21 @@ export function InventoryPanel({
                         >
                           <Copy size={16} />
                         </button>
-                        {canSell && i.status === "available" && (
-                          <button
-                            className="icon-button"
-                            aria-label={`จอง ${i.tag}`}
-                            title="จอง"
-                            onClick={() => onReserve(i)}
-                          >
-                            <Clock3 size={16} />
-                          </button>
-                        )}
                         {canSell &&
-                          ["available", "reserved"].includes(i.status) && (
+                          ["available", "draft"].includes(i.status) && (
+                            <button
+                              className="icon-button"
+                              aria-label={`จอง ${i.tag}`}
+                              title="จอง"
+                              onClick={() => onReserve(i)}
+                            >
+                              <Clock3 size={16} />
+                            </button>
+                          )}
+                        {canSell &&
+                          ["available", "reserved", "draft"].includes(
+                            i.status,
+                          ) && (
                             <button
                               className="icon-button sell-action"
                               aria-label={`ปิดการขาย ${i.tag}`}
@@ -348,6 +357,7 @@ export function InventoryPanel({
                   <InventoryStatusControl
                     item={i}
                     canSell={canSell}
+                    canManage={canManage}
                     busy={busy}
                     onChange={onStatusChange}
                   />
@@ -407,11 +417,12 @@ export function InventoryPanel({
                     <Copy size={16} />
                     คัดลอกรายละเอียด
                   </button>
-                  {canSell && ["available", "reserved"].includes(i.status) && (
-                    <button className="button blue" onClick={() => onSell(i)}>
-                      <Tag size={16} />
-                      ปิดการขาย
-                    </button>
+                  {canSell &&
+                    ["available", "reserved", "draft"].includes(i.status) && (
+                      <button className="button blue" onClick={() => onSell(i)}>
+                        <Tag size={16} />
+                        ปิดการขาย
+                      </button>
                   )}
                   {canManage &&
                     i.status !== "sold" &&
@@ -622,6 +633,15 @@ export function AddDialog({
             </Field>
             <Field label="ราคาตั้งขาย">
               <input name="price" type="number" min="0" required />
+            </Field>
+            <Field label="การแสดงผล" full>
+              <label className="warranty-check">
+                <input type="checkbox" name="draft" />
+                <span>
+                  <strong>ยังไม่เปิดขาย</strong>
+                  <small>เพิ่มเข้าคลังแต่ยังไม่แสดงในหน้าร้าน</small>
+                </span>
+              </label>
             </Field>
           </div>
           <InventoryMediaFields value={media} onChange={setMedia} />
@@ -1262,18 +1282,19 @@ export function InventoryDetailPage({
                 notify={notify}
               />
             )}
-            {canSell && item.status === "available" && (
+            {canSell && ["available", "draft"].includes(item.status) && (
               <button className="button" onClick={onReserve}>
                 <Clock3 size={17} />
                 จองไอดี
               </button>
             )}
-            {canSell && ["available", "reserved"].includes(item.status) && (
-              <button className="button primary" onClick={onSell}>
-                <Tag size={17} />
-                ปิดการขาย
-              </button>
-            )}
+            {canSell &&
+              ["available", "reserved", "draft"].includes(item.status) && (
+                <button className="button primary" onClick={onSell}>
+                  <Tag size={17} />
+                  ปิดการขาย
+                </button>
+              )}
             {canNote && (
               <button className="button" onClick={onEditNote}>
                 <MessageSquareText size={17} />

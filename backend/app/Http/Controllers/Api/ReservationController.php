@@ -21,7 +21,9 @@ class ReservationController extends Controller
         $shop = $currentShop->from($request);
         $reservation = DB::transaction(function () use ($request, $shop, $inventory) {
             $item = InventoryItem::forShop($shop)->lockForUpdate()->findOrFail($inventory);
-            if ($item->status !== InventoryStatus::Available) {
+            // Draft (unlisted) items can be reserved directly — "unlisted" only
+            // hides them from the public storefront.
+            if (! in_array($item->status, [InventoryStatus::Available, InventoryStatus::Draft], true)) {
                 abort(409, 'รายการนี้ไม่พร้อมให้จอง');
             }
             $customerId = $request->validated('customer_id');

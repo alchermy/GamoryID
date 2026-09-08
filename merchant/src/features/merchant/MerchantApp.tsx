@@ -8,6 +8,7 @@ import {
   CircleHelp,
   Clock3,
   Download,
+  EyeOff,
   FileUp,
   House,
   LogOut,
@@ -287,6 +288,9 @@ export function MerchantApp() {
       reserved:
         dashboard?.summary.reserved ??
         items.filter((i) => i.status === "reserved").length,
+      draft:
+        dashboard?.summary.draft ??
+        items.filter((i) => i.status === "draft").length,
       sold:
         dashboard?.summary.sold_this_month ??
         items.filter((i) => i.status === "sold").length,
@@ -631,7 +635,7 @@ export function MerchantApp() {
     if (
       i.status === "sold" ||
       i.status === "archived" ||
-      !["available", "reserved"].includes(next)
+      !["available", "reserved", "draft"].includes(next)
     ) {
       notify("สถานะนี้ไม่สามารถเปลี่ยนจากตารางได้");
       return;
@@ -640,7 +644,19 @@ export function MerchantApp() {
     setInventoryBusy(true);
     try {
       if (shop) {
-        if (i.status === "available" && next === "reserved")
+        // "ยังไม่เปิดขาย" ⇄ "พร้อมขาย" is just a listing toggle — a plain update.
+        if (
+          (i.status === "available" && next === "draft") ||
+          (i.status === "draft" && next === "available")
+        )
+          await shopRequest(`/inventory/${i.id}`, shop.id, {
+            method: "PUT",
+            body: JSON.stringify({ status: next }),
+          });
+        else if (
+          ["available", "draft"].includes(i.status) &&
+          next === "reserved"
+        )
           await shopRequest(`/inventory/${i.id}/reserve`, shop.id, {
             method: "POST",
             body: JSON.stringify({}),
@@ -667,7 +683,9 @@ export function MerchantApp() {
       notify(
         next === "reserved"
           ? `จอง ${i.tag} แล้ว`
-          : `เปลี่ยน ${i.tag} เป็นพร้อมขายแล้ว`,
+          : next === "draft"
+            ? `พัก ${i.tag} เป็นยังไม่เปิดขายแล้ว`
+            : `เปลี่ยน ${i.tag} เป็นพร้อมขายแล้ว`,
       );
     } catch (error) {
       notify(
@@ -804,6 +822,7 @@ export function MerchantApp() {
             level: Number(d.get("level") || 0),
             cost: Number(d.get("cost")),
             list_price: Number(d.get("price")),
+            status: d.get("draft") ? "draft" : "available",
             credentials: d.get("password")
               ? { password: d.get("password") }
               : undefined,
@@ -1779,6 +1798,14 @@ export function MerchantApp() {
             note="รายการที่ล็อกให้ลูกค้า"
             icon={<Clock3 size={16} />}
           />
+          {summary.draft > 0 && (
+            <Kpi
+              label="ยังไม่เปิดขาย"
+              value={`${summary.draft}`}
+              note="อยู่ในคลังแต่ไม่แสดงหน้าร้าน"
+              icon={<EyeOff size={16} />}
+            />
+          )}
           <Kpi
             label="ขายเดือนนี้"
             value={`${summary.sold}`}

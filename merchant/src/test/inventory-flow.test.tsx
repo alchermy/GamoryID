@@ -206,6 +206,27 @@ describe("inventory flow", () => {
     expect((await screen.findAllByText("Test#TH99")).length).toBeGreaterThan(0);
   });
 
+  it("มีตัวเลือก “ยังไม่เปิดขาย” ในฟอร์มเพิ่มไอดีและตัวกรองสถานะ", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // filter dropdown carries the new status
+    const filter = screen.getByLabelText("กรองสถานะ");
+    expect(
+      within(filter).getByRole("option", { name: "ยังไม่เปิดขาย" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "เพิ่มไอดี" }));
+    expect(
+      screen.getByText(
+        "เพิ่มเข้าคลังแต่ยังไม่แสดงในหน้าร้าน",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: /ยังไม่เปิดขาย/ }),
+    ).toBeInTheDocument();
+  });
+
   it("ยืนยันก่อนเก็บไอดีถาวร", async () => {
     const user = userEvent.setup();
     render(<App />);

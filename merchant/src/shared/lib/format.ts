@@ -11,6 +11,7 @@ export const statusLabel: Record<InventoryStatus, string> = {
   reserved: "ถูกจอง",
   sold: "ขายแล้ว",
   archived: "เก็บถาวร",
+  draft: "ยังไม่เปิดขาย",
 };
 
 const thaiDateTime = new Intl.DateTimeFormat("th-TH", {

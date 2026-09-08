@@ -148,6 +148,7 @@ class DiscordShopCommandHandler
             '**สรุปร้าน '.$this->escape($installation->shop?->name ?: 'GamoryID').'**',
             'พร้อมขาย: '.number_format((int) ($counts[InventoryStatus::Available->value] ?? 0)).' รายการ',
             'ถูกจอง: '.number_format((int) ($counts[InventoryStatus::Reserved->value] ?? 0)).' รายการ',
+            'ยังไม่เปิดขาย: '.number_format((int) ($counts[InventoryStatus::Draft->value] ?? 0)).' รายการ',
             'ขายเดือนนี้: '.number_format((clone $sales)->count()).' รายการ',
             'ยอดขายเดือนนี้: '.number_format((float) (clone $sales)->sum('sold_price'), 2).' บาท',
         ];
@@ -162,7 +163,7 @@ class DiscordShopCommandHandler
     private function inventoryList(array $interaction, DiscordInstallation $installation): array
     {
         $status = $this->optionValue($interaction, 'สถานะ', 'status') ?: 'all';
-        if (! in_array($status, ['all', 'available', 'reserved', 'sold'], true)) {
+        if (! in_array($status, ['all', 'available', 'reserved', 'sold', 'draft'], true)) {
             return $this->failure('สถานะที่เลือกไม่ถูกต้อง');
         }
         $limit = (int) ($this->optionValue($interaction, 'จำนวน', 'limit') ?: 5);
@@ -208,7 +209,7 @@ class DiscordShopCommandHandler
                 if (! $item) {
                     throw new DiscordCommandException("ไม่พบไอดี #{$tag} ในร้านนี้");
                 }
-                if ($item->status !== InventoryStatus::Available) {
+                if (! in_array($item->status, [InventoryStatus::Available, InventoryStatus::Draft], true)) {
                     throw new DiscordCommandException('รายการนี้ไม่พร้อมให้จอง');
                 }
                 $customerId = $customerName !== ''
@@ -426,6 +427,14 @@ class DiscordShopCommandHandler
             return $this->failure($conflict->getMessage(), 'conflict');
         }
 
+        // "เปิดขาย" is a boolean option; absent or true = list it now, false = park as draft.
+        $sellNow = true;
+        foreach ($interaction['data']['options'][0]['options'] ?? [] as $option) {
+            if (in_array($option['name'] ?? null, ['เปิดขาย', 'listed'], true)) {
+                $sellNow = (bool) ($option['value'] ?? true);
+            }
+        }
+
         $item = InventoryItem::create([
             'shop_id' => $installation->shop_id,
             'created_by' => $link->user_id,
@@ -440,7 +449,7 @@ class DiscordShopCommandHandler
             'notes' => $this->blankToNull($this->optionValue($interaction, 'โน้ต', 'note')),
             'cost' => (float) $costValue,
             'list_price' => (float) $priceValue,
-            'status' => InventoryStatus::Available,
+            'status' => $sellNow ? InventoryStatus::Available : InventoryStatus::Draft,
         ]);
         $this->activity($installation->shop_id, $link->user_id, 'inventory.created', [
             'tag' => '#'.$item->tag,
@@ -661,6 +670,7 @@ class DiscordShopCommandHandler
             InventoryStatus::Available->value => 'พร้อมขาย',
             InventoryStatus::Reserved->value => 'ถูกจอง',
             InventoryStatus::Sold->value => 'ขายแล้ว',
+            InventoryStatus::Draft->value => 'ยังไม่เปิดขาย',
             default => 'เก็บถาวร',
         };
     }

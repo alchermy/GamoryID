@@ -173,6 +173,7 @@ class DiscordApiClient
                                 ['name' => 'พร้อมขาย', 'value' => 'available'],
                                 ['name' => 'ถูกจอง', 'value' => 'reserved'],
                                 ['name' => 'ขายแล้ว', 'value' => 'sold'],
+                                ['name' => 'ยังไม่เปิดขาย', 'value' => 'draft'],
                             ],
                         ],
                         [
@@ -281,6 +282,12 @@ class DiscordApiClient
                         ],
                         $this->stringOption('รายละเอียด', 'รายละเอียดไอดี'),
                         $this->stringOption('โน้ต', 'ข้อความเตือนความจำภายในทีม'),
+                        [
+                            'type' => 5,
+                            'name' => 'เปิดขาย',
+                            'description' => 'เปิดขายเลยไหม (ไม่ใส่ = เปิด, ใส่ false = เก็บเป็น “ยังไม่เปิดขาย”)',
+                            'required' => false,
+                        ],
                     ],
                 ],
                 [

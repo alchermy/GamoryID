@@ -30,7 +30,7 @@ class InventoryController extends Controller
         $shop = $currentShop->from($request);
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
-            'status' => ['nullable', 'in:available,reserved,sold,archived'],
+            'status' => ['nullable', 'in:available,reserved,sold,archived,draft'],
             'sort' => ['nullable', 'in:updated_at,tag,list_price,rank,view_count'],
             'direction' => ['nullable', 'in:asc,desc'],
             'per_page' => ['nullable', 'integer', 'in:25,50,100'],
@@ -78,7 +78,10 @@ class InventoryController extends Controller
             } catch (TagConflictException $conflict) {
                 throw ValidationException::withMessages(['tag_number' => $conflict->getMessage()]);
             }
-            $item = InventoryItem::create([...$data, 'shop_id' => $shop->id, 'created_by' => $request->user()->id, 'tag' => $tag, 'status' => InventoryStatus::Available]);
+            $status = ($data['status'] ?? null) === InventoryStatus::Draft->value
+                ? InventoryStatus::Draft
+                : InventoryStatus::Available;
+            $item = InventoryItem::create([...$data, 'shop_id' => $shop->id, 'created_by' => $request->user()->id, 'tag' => $tag, 'status' => $status]);
             if ($credentials) {
                 $encrypted = $cipher->encrypt($credentials);
                 InventoryCredential::create([
@@ -122,6 +125,12 @@ class InventoryController extends Controller
             $data['region'] = 'TH';
             $data['title'] = $data['title'] ?? $item->title;
             $data['username'] = $data['username'] ?? $credentials['username'] ?? $item->username;
+            // A status change here only toggles between the two "plain" states.
+            // Reserved/sold/archived items keep their status (reserve/sell/archive
+            // flows own those transitions).
+            if (isset($data['status']) && ! in_array($item->status, [InventoryStatus::Available, InventoryStatus::Draft], true)) {
+                unset($data['status']);
+            }
             if ($tagNumber !== '' && $tagNumber !== $tags->numberOf($item->tag)) {
                 try {
                     $data['tag'] = $tags->generate($shop, $tagNumber, $item->id);

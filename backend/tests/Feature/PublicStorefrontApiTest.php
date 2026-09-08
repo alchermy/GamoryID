@@ -77,6 +77,23 @@ class PublicStorefrontApiTest extends TestCase
         $this->assertSame('Immortal 1', $row['rank']);
     }
 
+    public function test_unlisted_draft_items_are_hidden_from_the_storefront_and_listings(): void
+    {
+        $shop = $this->shop();
+        $this->item($shop, 'LISTA', 'available');
+        $this->item($shop, 'DRFT1', 'draft');
+
+        $tags = collect($this->getJson('/api/v1/public/shops/test-storefront/inventory')->assertOk()->json('data'))
+            ->pluck('tag')->all();
+        $this->assertSame(['#LISTA'], $tags);
+
+        $this->getJson('/api/v1/public/shops/test-storefront/items/DRFT1')->assertNotFound();
+
+        $listingTags = collect($this->getJson('/api/v1/public/listings')->assertOk()->json('data'))
+            ->pluck('tag')->all();
+        $this->assertNotContains('#DRFT1', $listingTags);
+    }
+
     public function test_a_disabled_storefront_is_not_found(): void
     {
         $shop = $this->shop(enabled: false);

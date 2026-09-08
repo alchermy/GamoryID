@@ -106,6 +106,31 @@ class PlanEntitlementsTest extends TestCase
         }
     }
 
+    public function test_unlisted_draft_ids_count_towards_the_inventory_limit(): void
+    {
+        $ent = app(PlanEntitlements::class);
+        $shop = $this->shop('active'); // free → limit 10
+
+        for ($i = 0; $i < 10; $i++) {
+            InventoryItem::create([
+                'shop_id' => $shop->id,
+                'tag' => str_pad(base_convert((string) $i, 10, 36), 5, 'A', STR_PAD_LEFT),
+                'title' => 't', 'cost' => 0, 'list_price' => 0,
+                'status' => $i % 2 === 0 ? 'available' : 'draft',
+            ]);
+        }
+
+        $this->assertSame(10, $ent->summary($shop)['usage']['inventory_active']);
+        try {
+            $ent->ensureInventoryCapacity($shop);
+            $this->fail('expected a 422');
+        } catch (HttpException $e) {
+            $this->assertSame(422, $e->getStatusCode());
+        } catch (HttpResponseException $e) {
+            $this->assertSame(422, $e->getResponse()->getStatusCode());
+        }
+    }
+
     public function test_summary_exposes_features_limits_and_usage(): void
     {
         $ent = app(PlanEntitlements::class);

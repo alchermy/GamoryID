@@ -38,12 +38,13 @@ class DashboardController extends Controller
             'summary' => [
                 'available' => (int) ($counts[InventoryStatus::Available->value] ?? 0),
                 'reserved' => (int) ($counts[InventoryStatus::Reserved->value] ?? 0),
+                'draft' => (int) ($counts[InventoryStatus::Draft->value] ?? 0),
                 'sold_this_month' => (clone $monthly)->count(),
                 'sold_total' => (int) ($counts[InventoryStatus::Sold->value] ?? 0),
                 'revenue_this_month' => (float) (clone $monthly)->sum('sold_price'),
                 'profit_this_month' => $showProfit ? (float) (clone $monthly)->sum('profit') : null,
                 'inventory_value' => $showProfit
-                    ? (float) InventoryItem::forShop($shop)->whereIn('status', ['available', 'reserved'])->sum('cost')
+                    ? (float) InventoryItem::forShop($shop)->whereIn('status', ['available', 'reserved', 'draft'])->sum('cost')
                     : null,
                 'storefront_views' => $canAnalytics ? (int) $shop->storefront_view_count : null,
             ],

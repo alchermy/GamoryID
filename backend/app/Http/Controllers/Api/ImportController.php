@@ -115,7 +115,7 @@ class ImportController extends Controller
             'mapping.status' => ['nullable', 'string'],
             // Maps a shop's own status label (the raw cell value) to a system status.
             'status_map' => ['nullable', 'array'],
-            'status_map.*' => ['string', Rule::in(['available', 'reserved', 'sold', 'archived'])],
+            'status_map.*' => ['string', Rule::in(['available', 'reserved', 'sold', 'archived', 'draft'])],
         ]);
         $job = ImportJob::where('shop_id', $shop->id)->where('status', 'preview')->findOrFail($import);
         $headers = $reader->read($job->disk, $job->path, 0)['headers'];

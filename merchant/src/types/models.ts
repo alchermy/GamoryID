@@ -1,4 +1,9 @@
-export type InventoryStatus = "available" | "reserved" | "sold" | "archived";
+export type InventoryStatus =
+  | "available"
+  | "reserved"
+  | "sold"
+  | "archived"
+  | "draft";
 
 export type InventoryMedia = {
   id: number;
@@ -98,6 +103,7 @@ export type DashboardData = {
   summary: {
     available: number;
     reserved: number;
+    draft: number;
     sold_this_month: number;
     sold_total: number;
     inventory_value: number | null;
