@@ -13,6 +13,7 @@ use App\Services\PlanEntitlements;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
@@ -21,7 +22,7 @@ class ImportController extends Controller
 {
     private const MAPPABLE_FIELDS = [
         'title', 'tag_number', 'username', 'email', 'rank', 'level', 'skin_count', 'cost', 'list_price',
-        'description', 'notes', 'password', 'recovery_email',
+        'description', 'notes', 'password', 'recovery_email', 'status',
     ];
 
     public function template(): BinaryFileResponse
@@ -87,6 +88,9 @@ class ImportController extends Controller
             'headers' => $sheet['headers'],
             'rows' => $this->maskSensitivePreview($sheet['rows']),
             'total_rows' => $sheet['total_rows'],
+            // Distinct values per low-cardinality column — the UI uses these to
+            // let the merchant map their own status labels onto system statuses.
+            'distinct_values' => $sheet['distinct_values'],
         ]], 201);
     }
 
@@ -108,6 +112,10 @@ class ImportController extends Controller
             'mapping.list_price' => ['required', 'string'],
             'mapping.notes' => ['nullable', 'string'],
             'mapping.recovery_email' => ['nullable', 'string'],
+            'mapping.status' => ['nullable', 'string'],
+            // Maps a shop's own status label (the raw cell value) to a system status.
+            'status_map' => ['nullable', 'array'],
+            'status_map.*' => ['string', Rule::in(['available', 'reserved', 'sold', 'archived'])],
         ]);
         $job = ImportJob::where('shop_id', $shop->id)->where('status', 'preview')->findOrFail($import);
         $headers = $reader->read($job->disk, $job->path, 0)['headers'];
@@ -117,7 +125,11 @@ class ImportController extends Controller
             }
         }
         $planGate->ensureInventoryCapacity($shop, $job->total_rows);
-        $job->update(['mapping' => $data['mapping'], 'status' => 'queued']);
+        $job->update([
+            'mapping' => $data['mapping'],
+            'status_map' => isset($data['mapping']['status']) ? ($data['status_map'] ?? []) : null,
+            'status' => 'queued',
+        ]);
         ProcessInventoryImport::dispatch($job->id);
         $audit->record($request, $shop, 'import.queued', $job, ['total_rows' => $job->total_rows]);
 

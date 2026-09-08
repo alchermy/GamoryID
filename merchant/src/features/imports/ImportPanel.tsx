@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   Download,
@@ -15,7 +15,24 @@ type ImportPreview = {
   headers: string[];
   rows: Array<Record<string, string | null>>;
   total_rows: number;
+  distinct_values?: Record<string, string[]>;
 };
+
+const SYSTEM_STATUSES: [string, string][] = [
+  ["available", "พร้อมขาย"],
+  ["reserved", "ถูกจอง"],
+  ["sold", "ขายแล้ว"],
+  ["archived", "เก็บถาวร"],
+];
+
+/** Best-guess mapping of a shop's own status label onto a system status. */
+function guessSystemStatus(raw: string): string {
+  const v = raw.toLowerCase();
+  if (/ขาย.*แล้ว|ออก|sold|sell/.test(v)) return "sold";
+  if (/จอง|reserv|hold|ติด/.test(v)) return "reserved";
+  if (/เก็บ|archiv|ปิด|ยกเลิก|cancel|เลิก/.test(v)) return "archived";
+  return "available";
+}
 
 type ImportState = {
   status: "preview" | "queued" | "processing" | "completed" | "failed";
@@ -64,7 +81,8 @@ export function ImportPanel({
     [busy, setBusy] = useState(false),
     [downloading, setDownloading] = useState(false),
     [isDragOver, setIsDragOver] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [statusMap, setStatusMap] = useState<Record<string, string>>({});
   const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
@@ -83,7 +101,30 @@ export function ImportPanel({
     ["cost", "ต้นทุน"],
     ["list_price", "ราคาขาย"],
     ["notes", "โน้ตช่วยจำ"],
+    ["status", "สถานะ"],
   ];
+
+  const statusHeader = mapping.status ?? "";
+  const statusValues = useMemo(() => {
+    if (!preview || !statusHeader) return [];
+    return (
+      preview.distinct_values?.[statusHeader] ?? [
+        ...new Set(
+          preview.rows
+            .map((row) => String(row[statusHeader] ?? "").trim())
+            .filter(Boolean),
+        ),
+      ]
+    );
+  }, [preview, statusHeader]);
+
+  useEffect(() => {
+    setStatusMap(
+      Object.fromEntries(
+        statusValues.map((value) => [value, guessSystemStatus(value)]),
+      ),
+    );
+  }, [statusValues]);
 
   const refreshJob = useCallback(
     async (signal?: AbortSignal) => {
@@ -208,7 +249,13 @@ export function ImportPanel({
       const result = await shopRequest<{ data: ImportState }>(
         `/imports/${preview.id}/confirm`,
         shopId,
-        { method: "POST", body: JSON.stringify({ mapping: selected }) },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            mapping: selected,
+            ...(selected.status ? { status_map: statusMap } : {}),
+          }),
+        },
       );
       setJob(result.data);
     } catch (reason) {
@@ -228,7 +275,8 @@ export function ImportPanel({
           <h2 id="import-title">นำเข้าข้อมูลหลายรายการ</h2>
           <small>
             ใช้ Excel หรือ CSV ขนาดไม่เกิน 5 MB ระบบจะตรวจทุกแถวก่อนบันทึก ·
-            นำเข้าเฉพาะไอดีที่พร้อมขายเท่านั้น (ไอดีที่ขายแล้วหรือยังไม่พร้อมขายไม่ต้องนำเข้า)
+            ถ้าไฟล์มีคอลัมน์สถานะ จับคู่กับสถานะระบบได้ในขั้นตอนถัดไป
+            (ไม่จับคู่ = พร้อมขายทั้งหมด)
           </small>
         </div>
       </div>
@@ -385,6 +433,37 @@ export function ImportPanel({
                     </Field>
                   ))}
                 </div>
+                {statusHeader && statusValues.length > 0 && (
+                  <div className="import-status-map">
+                    <h4>จับคู่สถานะ</h4>
+                    <p className="import-status-map-hint">
+                      ค่าสถานะในไฟล์ = สถานะในระบบ · ค่าที่ไม่จับคู่จะเป็น
+                      “พร้อมขาย”
+                    </p>
+                    {statusValues.map((raw) => (
+                      <div className="import-status-map-row" key={raw}>
+                        <code>{raw || "(ว่าง)"}</code>
+                        <span aria-hidden="true">→</span>
+                        <select
+                          aria-label={`สถานะระบบสำหรับ ${raw}`}
+                          value={statusMap[raw] ?? "available"}
+                          onChange={(event) =>
+                            setStatusMap((current) => ({
+                              ...current,
+                              [raw]: event.target.value,
+                            }))
+                          }
+                        >
+                          {SYSTEM_STATUSES.map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="table-wrap import-preview-table">
                   <table>
                     <thead>
@@ -447,10 +526,10 @@ export function ImportPanel({
                 )}
                 <div className="import-confirm-row">
                   <p>
-                    ข้อมูลที่นำเข้าควรเป็นไอดีที่พร้อมขายเท่านั้น · แถวที่
-                    username หรือรหัสไอดีซ้ำจะถูกข้ามแล้วนำเข้าที่เหลือ
+                    แถวที่ username หรือรหัสไอดีซ้ำจะถูกข้ามแล้วนำเข้าที่เหลือ
                     ส่วนแถวที่ข้อมูลไม่ถูกต้อง (เช่น ราคาไม่ใช่ตัวเลข)
-                    จะทำให้ยกเลิกทั้งชุด
+                    จะทำให้ยกเลิกทั้งชุด · แถวที่เป็น “ขายแล้ว” หรือ “ถูกจอง”
+                    จะสร้างรายการขาย/จองให้อัตโนมัติ (ไม่มีข้อมูลลูกค้า)
                   </p>
                   <button
                     type="button"

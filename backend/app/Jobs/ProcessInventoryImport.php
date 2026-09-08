@@ -7,6 +7,8 @@ use App\Models\ImportError;
 use App\Models\ImportJob;
 use App\Models\InventoryCredential;
 use App\Models\InventoryItem;
+use App\Models\Reservation;
+use App\Models\Sale;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\AuditLogger;
@@ -42,6 +44,11 @@ class ProcessInventoryImport implements ShouldQueue
         $import->update(['status' => 'processing']);
         $sheet = $reader->read($import->disk, $import->path);
         $shop = Shop::findOrFail($import->shop_id);
+        // Shop status label (raw cell value, lower-cased) => system status.
+        // Empty when no status column was mapped — every row is then "available".
+        $statusLookup = collect($import->status_map ?? [])
+            ->mapWithKeys(fn ($system, $raw) => [mb_strtolower(trim((string) $raw)) => $system])
+            ->all();
         $records = [];
         $errors = [];   // hard problems — these abort the whole batch
         $skipped = [];  // username / item code already exists — skip the row, import the rest
@@ -156,9 +163,12 @@ class ProcessInventoryImport implements ShouldQueue
             return;
         }
 
+        $byStatus = [];
         try {
-            DB::transaction(function () use ($records, $import, $shop, $tags, $cipher) {
+            DB::transaction(function () use ($records, $import, $shop, $tags, $cipher, $statusLookup, &$byStatus) {
                 foreach ($records as $mapped) {
+                    $status = $this->resolveStatus($mapped, $statusLookup);
+                    $byStatus[$status] = ($byStatus[$status] ?? 0) + 1;
                     $item = InventoryItem::create([
                         'shop_id' => $import->shop_id,
                         'created_by' => $import->user_id,
@@ -176,7 +186,34 @@ class ProcessInventoryImport implements ShouldQueue
                         'list_price' => (float) ($mapped['list_price'] ?? 0),
                         'description' => $this->blankToNull($mapped['description'] ?? null),
                         'notes' => $this->blankToNull($mapped['notes'] ?? null),
+                        'status' => $status,
+                        'archived_at' => $status === InventoryStatus::Archived->value ? now() : null,
                     ]);
+                    // A "sold" / "reserved" import keeps the same invariants the
+                    // rest of the app assumes: sold ⇒ one Sale row, reserved ⇒ an
+                    // open Reservation. No customer is attached.
+                    if ($status === InventoryStatus::Sold->value) {
+                        Sale::create([
+                            'shop_id' => $import->shop_id,
+                            'inventory_item_id' => $item->id,
+                            'customer_id' => null,
+                            'created_by' => $import->user_id,
+                            'sold_price' => (float) $item->list_price,
+                            'cost_snapshot' => (float) $item->cost,
+                            'profit' => (float) $item->list_price - (float) $item->cost,
+                            'notes' => 'นำเข้าจากไฟล์',
+                            'sold_at' => now(),
+                        ]);
+                    } elseif ($status === InventoryStatus::Reserved->value) {
+                        Reservation::create([
+                            'shop_id' => $import->shop_id,
+                            'inventory_item_id' => $item->id,
+                            'customer_id' => null,
+                            'created_by' => $import->user_id,
+                            'notes' => 'นำเข้าจากไฟล์',
+                            'expires_at' => now()->addDays(30),
+                        ]);
+                    }
                     if (filled($mapped['username'] ?? null) || filled($mapped['password'] ?? null)) {
                         $encrypted = $cipher->encrypt([
                             'username' => $mapped['username'] ?? '',
@@ -209,15 +246,17 @@ class ProcessInventoryImport implements ShouldQueue
                 'skipped_rows' => count($skipped),
                 'completed_at' => now(),
             ]);
-            $log->info('นำเข้าสำเร็จ', ['imported_rows' => count($records), 'skipped_rows' => count($skipped)]);
+            $log->info('นำเข้าสำเร็จ', ['imported_rows' => count($records), 'skipped_rows' => count($skipped), 'by_status' => $byStatus]);
             $this->audit($import, 'import.completed', [
                 'imported_rows' => count($records),
                 'skipped_rows' => count($skipped),
+                'by_status' => $byStatus,
             ]);
             $this->notifyDiscord(
                 $import,
                 'นำเข้าข้อมูลไอดีสำเร็จ',
                 'เพิ่มเข้าคลัง '.count($records).' รายการ'
+                    .$this->statusBreakdown($byStatus)
                     .($skipped !== [] ? ' · ข้ามรายการซ้ำ '.count($skipped).' รายการ' : ''),
             );
         } catch (Throwable $exception) {
@@ -281,6 +320,37 @@ class ProcessInventoryImport implements ShouldQueue
         }
 
         return $mapped;
+    }
+
+    /**
+     * @param  array<string, mixed>  $mapped
+     * @param  array<string, string>  $statusLookup
+     */
+    private function resolveStatus(array $mapped, array $statusLookup): string
+    {
+        $raw = trim((string) ($mapped['status'] ?? ''));
+        if ($raw === '') {
+            return InventoryStatus::Available->value;
+        }
+
+        return $statusLookup[mb_strtolower($raw)] ?? InventoryStatus::Available->value;
+    }
+
+    /** @param  array<string, int>  $byStatus */
+    private function statusBreakdown(array $byStatus): string
+    {
+        $parts = [];
+        foreach ([
+            InventoryStatus::Sold->value => 'ขายแล้ว',
+            InventoryStatus::Reserved->value => 'ถูกจอง',
+            InventoryStatus::Archived->value => 'เก็บถาวร',
+        ] as $value => $label) {
+            if (($byStatus[$value] ?? 0) > 0) {
+                $parts[] = $label.' '.$byStatus[$value];
+            }
+        }
+
+        return $parts === [] ? '' : ' ('.implode(' · ', $parts).')';
     }
 
     private function validationMessage(array $mapped): ?string

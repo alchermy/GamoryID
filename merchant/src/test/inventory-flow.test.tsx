@@ -48,6 +48,54 @@ describe("inventory flow", () => {
     );
   });
 
+  it("จับคู่สถานะของไฟล์กับสถานะระบบเมื่อเลือกคอลัมน์สถานะ", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/sanctum/csrf-cookie")) {
+        document.cookie = "XSRF-TOKEN=test-token; path=/";
+        return new Response(null, { status: 204 });
+      }
+      if (url.includes("/imports/preview")) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              id: 7,
+              headers: ["username", "list_price", "stat"],
+              rows: [
+                { username: "a", list_price: "100", stat: "ออกแล้ว" },
+                { username: "b", list_price: "100", stat: "ยังไม่ขาย" },
+              ],
+              total_rows: 2,
+              distinct_values: { stat: ["ออกแล้ว", "ยังไม่ขาย", "ติดจอง"] },
+            },
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response("{}", { status: 500 });
+    });
+
+    render(<ImportPanel shopId={1} onComplete={() => undefined} />);
+    fireEvent.change(screen.getByLabelText("เลือกไฟล์ Excel หรือ CSV"), {
+      target: { files: [new File(["stat\nออกแล้ว"], "inv.csv", { type: "text/csv" })] },
+    });
+
+    // no status sub-section until the column is mapped
+    expect(await screen.findByRole("heading", { name: "จับคู่คอลัมน์" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "จับคู่สถานะ" })).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("คอลัมน์สำหรับ สถานะ"), "stat");
+
+    expect(screen.getByRole("heading", { name: "จับคู่สถานะ" })).toBeInTheDocument();
+    expect(screen.getByLabelText("สถานะระบบสำหรับ ออกแล้ว")).toHaveValue("sold");
+    expect(screen.getByLabelText("สถานะระบบสำหรับ ยังไม่ขาย")).toHaveValue("available");
+    expect(screen.getByLabelText("สถานะระบบสำหรับ ติดจอง")).toHaveValue("reserved");
+
+    vi.restoreAllMocks();
+    document.cookie = "XSRF-TOKEN=; Max-Age=0; path=/";
+  });
+
   it("ค้นหา exact tag และบันทึกขายได้", async () => {
     const user = userEvent.setup();
     render(<App />);

@@ -7,6 +7,7 @@ use App\Jobs\SendDiscordShopNotification;
 use App\Models\ImportError;
 use App\Models\ImportJob;
 use App\Models\InventoryItem;
+use App\Models\Reservation;
 use App\Models\Shop;
 use App\Models\ShopMember;
 use App\Models\User;
@@ -376,6 +377,114 @@ class InventoryImportTest extends TestCase
         $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'tag' => 'PCX-1295', 'username' => 'other.user']);
         $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'completed', 'imported_rows' => 1, 'skipped_rows' => 2, 'failed_rows' => 0]);
         $this->assertSame(2, ImportError::where('import_job_id', $job->id)->where('kind', 'duplicate')->count());
+    }
+
+    public function test_status_column_maps_shop_labels_to_system_statuses(): void
+    {
+        Queue::fake();
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        $path = "imports/{$shop->id}/with-status.csv";
+        Storage::disk('private')->put($path, implode("\n", [
+            'title,list_price,cost,username,stat',
+            'ขายไปแล้ว,5000,3000,sold.user,ออกแล้ว',
+            'ของใหม่,4000,2000,fresh.user,ยังไม่ขาย',
+            'ลูกค้าจอง,4500,2500,hold.user,ติดจอง',
+            'เลิกทำแล้ว,3000,1000,gone.user,เลิกขาย',
+        ])."\n");
+        $job = ImportJob::create([
+            'shop_id' => $shop->id, 'user_id' => $user->id, 'status' => 'queued', 'disk' => 'private', 'path' => $path,
+            'mapping' => ['title' => 'title', 'list_price' => 'list_price', 'cost' => 'cost', 'username' => 'username', 'status' => 'stat'],
+            'status_map' => ['ออกแล้ว' => 'sold', 'ยังไม่ขาย' => 'available', 'ติดจอง' => 'reserved', 'เลิกขาย' => 'archived'],
+            'total_rows' => 4,
+        ]);
+
+        (new ProcessInventoryImport($job->id))->handle(
+            app(TagGenerator::class), app(CredentialCipher::class), app(InventoryImportReader::class),
+        );
+
+        $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'username' => 'sold.user', 'status' => 'sold']);
+        $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'username' => 'fresh.user', 'status' => 'available']);
+        $this->assertDatabaseHas('inventory_items', ['shop_id' => $shop->id, 'username' => 'hold.user', 'status' => 'reserved']);
+        $archived = InventoryItem::where('shop_id', $shop->id)->where('username', 'gone.user')->firstOrFail();
+        $this->assertSame('archived', $archived->status->value);
+        $this->assertNotNull($archived->archived_at);
+
+        // sold ⇒ a Sale row with no customer, priced at list_price
+        $soldItem = InventoryItem::where('username', 'sold.user')->firstOrFail();
+        $this->assertDatabaseHas('sales', [
+            'inventory_item_id' => $soldItem->id, 'customer_id' => null, 'created_by' => $user->id,
+            'sold_price' => 5000, 'cost_snapshot' => 3000, 'profit' => 2000,
+        ]);
+        // reserved ⇒ an open Reservation with no customer and a ~30d expiry
+        $reservedItem = InventoryItem::where('username', 'hold.user')->firstOrFail();
+        $reservation = Reservation::where('inventory_item_id', $reservedItem->id)->firstOrFail();
+        $this->assertNull($reservation->released_at);
+        $this->assertNull($reservation->customer_id);
+        $this->assertTrue($reservation->expires_at->between(now()->addDays(29), now()->addDays(31)));
+
+        $this->assertDatabaseHas('import_jobs', ['id' => $job->id, 'status' => 'completed', 'imported_rows' => 4, 'skipped_rows' => 0, 'failed_rows' => 0]);
+    }
+
+    public function test_a_status_value_that_is_not_mapped_falls_back_to_available(): void
+    {
+        Queue::fake();
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        $path = "imports/{$shop->id}/loose-status.csv";
+        Storage::disk('private')->put($path, "list_price,username,stat\n1000,a.user,ออกแล้ว\n1000,b.user,สถานะแปลกๆ\n");
+        $job = ImportJob::create([
+            'shop_id' => $shop->id, 'user_id' => $user->id, 'status' => 'queued', 'disk' => 'private', 'path' => $path,
+            'mapping' => ['list_price' => 'list_price', 'username' => 'username', 'status' => 'stat'],
+            'status_map' => ['ออกแล้ว' => 'sold'],
+            'total_rows' => 2,
+        ]);
+
+        (new ProcessInventoryImport($job->id))->handle(
+            app(TagGenerator::class), app(CredentialCipher::class), app(InventoryImportReader::class),
+        );
+
+        $this->assertDatabaseHas('inventory_items', ['username' => 'a.user', 'status' => 'sold']);
+        $this->assertDatabaseHas('inventory_items', ['username' => 'b.user', 'status' => 'available']);
+    }
+
+    public function test_preview_returns_distinct_values_for_low_cardinality_columns(): void
+    {
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        $rows = ['list_price,username,stat'];
+        // 65 distinct usernames > DISTINCT_CAP (60) so that column is dropped;
+        // "stat" stays low-cardinality and is offered for mapping.
+        foreach (range(1, 65) as $i) {
+            $rows[] = "1000,user{$i}@example.test,".(['ออกแล้ว', 'ยังไม่ขาย', 'ติดจอง'][$i % 3]);
+        }
+        $file = UploadedFile::fake()->createWithContent('inventory.csv', implode("\n", $rows)."\n");
+
+        $preview = $this->actingAs($user)->withHeader('X-Shop-Id', $shop->id)
+            ->post('/api/v1/imports/preview', ['file' => $file])
+            ->assertCreated();
+
+        $distinct = $preview->json('data.distinct_values.stat');
+        sort($distinct);
+        $this->assertSame(['ติดจอง', 'ยังไม่ขาย', 'ออกแล้ว'], $distinct);
+        // a high-cardinality column is not offered
+        $this->assertArrayNotHasKey('username', $preview->json('data.distinct_values'));
+    }
+
+    public function test_confirm_rejects_a_status_map_value_outside_the_enum(): void
+    {
+        Storage::fake('private');
+        [$user, $shop] = $this->verifiedMerchant();
+        $file = UploadedFile::fake()->createWithContent('inventory.csv', "list_price,username,stat\n1000,a.user,ออกแล้ว\n");
+        $importId = (int) $this->actingAs($user)->withHeader('X-Shop-Id', $shop->id)
+            ->post('/api/v1/imports/preview', ['file' => $file])->assertCreated()->json('data.id');
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', $shop->id)
+            ->postJson("/api/v1/imports/{$importId}/confirm", [
+                'mapping' => ['username' => 'username', 'list_price' => 'list_price', 'status' => 'stat'],
+                'status_map' => ['ออกแล้ว' => 'gone'],
+            ])
+            ->assertStatus(422);
     }
 
     /** @return array{User, Shop} */

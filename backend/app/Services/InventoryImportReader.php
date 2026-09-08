@@ -14,8 +14,11 @@ class InventoryImportReader
 
     private const MAX_UNCOMPRESSED_BYTES = 25 * 1024 * 1024;
 
+    /** Stop tracking a column's distinct values past this — it isn't a status column. */
+    private const DISTINCT_CAP = 60;
+
     /**
-     * @return array{headers: array<int, string>, rows: array<int, array<string, string|null>>, total_rows: int}
+     * @return array{headers: array<int, string>, rows: array<int, array<string, string|null>>, total_rows: int, distinct_values: array<string, array<int, string>>}
      */
     public function read(string $disk, string $path, ?int $previewLimit = null): array
     {
@@ -28,7 +31,7 @@ class InventoryImportReader
     }
 
     /**
-     * @return array{headers: array<int, string>, rows: array<int, array<string, string|null>>, total_rows: int}
+     * @return array{headers: array<int, string>, rows: array<int, array<string, string|null>>, total_rows: int, distinct_values: array<string, array<int, string>>}
      */
     private function readCsv(string $path, ?int $previewLimit): array
     {
@@ -41,25 +44,30 @@ class InventoryImportReader
             $headers = $this->normalizeHeaders(fgetcsv($handle) ?: []);
             $rows = [];
             $totalRows = 0;
+            $distinct = [];
             while (($row = fgetcsv($handle)) !== false) {
                 $normalized = array_slice(array_pad($row, count($headers), null), 0, count($headers));
                 if ($this->isBlankRow($normalized)) {
                     continue;
                 }
                 $totalRows++;
+                $assoc = array_combine($headers, $normalized) ?: [];
                 if ($previewLimit === null || count($rows) < $previewLimit) {
-                    $rows[] = array_combine($headers, $normalized) ?: [];
+                    $rows[] = $assoc;
+                }
+                if ($previewLimit !== 0) {
+                    $this->trackDistinct($distinct, $assoc);
                 }
             }
         } finally {
             fclose($handle);
         }
 
-        return ['headers' => $headers, 'rows' => $rows, 'total_rows' => $totalRows];
+        return ['headers' => $headers, 'rows' => $rows, 'total_rows' => $totalRows, 'distinct_values' => $this->finalizeDistinct($distinct)];
     }
 
     /**
-     * @return array{headers: array<int, string>, rows: array<int, array<string, string|null>>, total_rows: int}
+     * @return array{headers: array<int, string>, rows: array<int, array<string, string|null>>, total_rows: int, distinct_values: array<string, array<int, string>>}
      */
     private function readXlsx(string $path, ?int $previewLimit): array
     {
@@ -105,15 +113,61 @@ class InventoryImportReader
 
         $headers = $this->normalizeHeaders(array_shift($rawRows));
         $rows = [];
+        $distinct = [];
         foreach ($rawRows as $row) {
             $normalized = array_slice(array_pad($row, count($headers), null), 0, count($headers));
+            $assoc = array_combine($headers, $normalized) ?: [];
             if ($previewLimit === null || count($rows) < $previewLimit) {
-                $rows[] = array_combine($headers, $normalized) ?: [];
+                $rows[] = $assoc;
+            }
+            if ($previewLimit !== 0) {
+                $this->trackDistinct($distinct, $assoc);
             }
         }
         $totalRows = count($rawRows);
 
-        return ['headers' => $headers, 'rows' => $rows, 'total_rows' => $totalRows];
+        return ['headers' => $headers, 'rows' => $rows, 'total_rows' => $totalRows, 'distinct_values' => $this->finalizeDistinct($distinct)];
+    }
+
+    /**
+     * Accumulate up to DISTINCT_CAP unique non-blank values per column; a column
+     * that overflows is marked `false` and dropped from the result.
+     *
+     * @param  array<string, array<string, true>|false>  $distinct
+     * @param  array<string, string|null>  $assocRow
+     */
+    private function trackDistinct(array &$distinct, array $assocRow): void
+    {
+        foreach ($assocRow as $header => $value) {
+            if (($distinct[$header] ?? null) === false) {
+                continue;
+            }
+            $trimmed = trim((string) $value);
+            if ($trimmed === '') {
+                continue;
+            }
+            $distinct[$header] ??= [];
+            $distinct[$header][$trimmed] = true;
+            if (count($distinct[$header]) > self::DISTINCT_CAP) {
+                $distinct[$header] = false;
+            }
+        }
+    }
+
+    /**
+     * @param  array<string, array<string, true>|false>  $distinct
+     * @return array<string, array<int, string>>
+     */
+    private function finalizeDistinct(array $distinct): array
+    {
+        $out = [];
+        foreach ($distinct as $header => $values) {
+            if ($values !== false) {
+                $out[$header] = array_keys($values);
+            }
+        }
+
+        return $out;
     }
 
     private function guardArchive(PharData $archive): void
