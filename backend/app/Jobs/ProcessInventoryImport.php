@@ -52,7 +52,6 @@ class ProcessInventoryImport implements ShouldQueue
         $records = [];
         $errors = [];   // hard problems — these abort the whole batch
         $skipped = [];  // item code already exists — skip the row, import the rest
-        $usernames = [];
         $batchTags = [];   // shop-supplied item codes claimed earlier in this file
         $existingTags = InventoryItem::withTrashed()
             ->where('shop_id', $import->shop_id)
@@ -74,23 +73,9 @@ class ProcessInventoryImport implements ShouldQueue
                 continue;
             }
 
-            // A username that already exists in this shop is allowed on import —
-            // an ID sold earlier can come back and be re-stocked. Only the exact
-            // same username appearing twice in one file is skipped (data error).
-            $username = mb_strtolower(trim((string) ($mapped['username'] ?? '')));
-            if ($username !== '') {
-                if (isset($usernames[$username])) {
-                    $skipped[] = [
-                        'row_number' => $rowNumber,
-                        'message' => "Username \"{$username}\" ซ้ำกับแถว {$usernames[$username]} ในไฟล์ — ข้ามรายการนี้",
-                        'kind' => 'duplicate',
-                        'row_data' => $this->redactRowData($import, $data),
-                    ];
-
-                    continue;
-                }
-                $usernames[$username] = $rowNumber;
-            }
+            // Username is never a reason to skip a row: a sold ID often comes
+            // back and is re-stocked, and the same account can legitimately
+            // appear more than once in a batch.
 
             // Resolve a shop-supplied item-code number now so a clash skips just
             // this row instead of aborting the batch inside the transaction.

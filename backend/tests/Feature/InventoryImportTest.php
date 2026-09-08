@@ -188,7 +188,7 @@ class InventoryImportTest extends TestCase
         Storage::disk('private')->assertMissing($path);
     }
 
-    public function test_a_username_repeated_in_the_file_is_skipped_not_fatal(): void
+    public function test_a_username_repeated_in_the_file_imports_every_row(): void
     {
         Storage::fake('private');
         [$user, $shop] = $this->verifiedMerchant();
@@ -210,14 +210,13 @@ class InventoryImportTest extends TestCase
             app(InventoryImportReader::class),
         );
 
-        // first "same.user" + "other.user" import; the repeat is skipped
-        $this->assertDatabaseCount('inventory_items', 2);
+        // a repeated username no longer blocks anything — all three rows import
+        $this->assertDatabaseCount('inventory_items', 3);
+        $this->assertSame(2, InventoryItem::where('shop_id', $shop->id)->where('username', 'same.user')->count());
         $this->assertDatabaseHas('import_jobs', [
-            'id' => $job->id, 'status' => 'completed', 'imported_rows' => 2, 'skipped_rows' => 1, 'failed_rows' => 0,
+            'id' => $job->id, 'status' => 'completed', 'imported_rows' => 3, 'skipped_rows' => 0, 'failed_rows' => 0,
         ]);
-        $skip = ImportError::where('import_job_id', $job->id)->where('kind', 'duplicate')->firstOrFail();
-        $this->assertSame(3, $skip->row_number);
-        $this->assertStringContainsString('ซ้ำกับแถว 2 ในไฟล์', $skip->message);
+        $this->assertSame(0, ImportError::where('import_job_id', $job->id)->where('kind', 'duplicate')->count());
     }
 
     public function test_a_username_already_in_the_shop_is_imported_again_for_restocking(): void
