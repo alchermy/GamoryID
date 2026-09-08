@@ -220,16 +220,16 @@ class InventoryImportTest extends TestCase
         $this->assertStringContainsString('ซ้ำกับแถว 2 ในไฟล์', $skip->message);
     }
 
-    public function test_a_username_already_in_the_shop_is_skipped_and_the_rest_imports(): void
+    public function test_a_username_already_in_the_shop_is_imported_again_for_restocking(): void
     {
         Storage::fake('private');
         [$user, $shop] = $this->verifiedMerchant();
         InventoryItem::create([
-            'shop_id' => $shop->id, 'tag' => 'HAVE1', 'title' => 'มีอยู่แล้ว',
-            'username' => 'Taken.User', 'cost' => 1, 'list_price' => 100, 'status' => 'available',
+            'shop_id' => $shop->id, 'tag' => 'HAVE1', 'title' => 'ขายไปแล้ว',
+            'username' => 'Taken.User', 'cost' => 1, 'list_price' => 100, 'status' => 'sold',
         ]);
         $path = "imports/{$shop->id}/existing-username.csv";
-        Storage::disk('private')->put($path, "title,list_price,username\nไอดีใหม่,5000,taken.user\nไอดีอีกอัน,6000,fresh.user\n");
+        Storage::disk('private')->put($path, "title,list_price,username\nรับกลับมาขาย,5000,taken.user\nไอดีอีกอัน,6000,fresh.user\n");
         $job = ImportJob::create([
             'shop_id' => $shop->id, 'user_id' => $user->id, 'status' => 'queued',
             'disk' => 'private', 'path' => $path,
@@ -241,14 +241,13 @@ class InventoryImportTest extends TestCase
             app(TagGenerator::class), app(CredentialCipher::class), app(InventoryImportReader::class),
         );
 
-        // "taken.user" already exists -> skipped; "fresh.user" imports
-        $this->assertDatabaseCount('inventory_items', 2);
+        // a username already in the shop no longer blocks the import
+        $this->assertDatabaseCount('inventory_items', 3);
+        $this->assertDatabaseHas('inventory_items', ['title' => 'รับกลับมาขาย', 'username' => 'taken.user']);
         $this->assertDatabaseHas('inventory_items', ['title' => 'ไอดีอีกอัน', 'username' => 'fresh.user']);
-        $this->assertDatabaseMissing('inventory_items', ['title' => 'ไอดีใหม่']);
         $this->assertDatabaseHas('import_jobs', [
-            'id' => $job->id, 'status' => 'completed', 'imported_rows' => 1, 'skipped_rows' => 1, 'failed_rows' => 0,
+            'id' => $job->id, 'status' => 'completed', 'imported_rows' => 2, 'skipped_rows' => 0, 'failed_rows' => 0,
         ]);
-        $this->assertStringContainsString('มีอยู่ในคลังแล้ว', ImportError::where('import_job_id', $job->id)->where('kind', 'duplicate')->firstOrFail()->message);
     }
 
     public function test_a_username_that_only_clashes_with_a_sold_item_still_imports(): void

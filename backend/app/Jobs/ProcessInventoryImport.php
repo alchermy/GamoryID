@@ -51,22 +51,12 @@ class ProcessInventoryImport implements ShouldQueue
             ->all();
         $records = [];
         $errors = [];   // hard problems — these abort the whole batch
-        $skipped = [];  // username / item code already exists — skip the row, import the rest
+        $skipped = [];  // item code already exists — skip the row, import the rest
         $usernames = [];
         $batchTags = [];   // shop-supplied item codes claimed earlier in this file
         $existingTags = InventoryItem::withTrashed()
             ->where('shop_id', $import->shop_id)
             ->pluck('tag')
-            ->flip();
-        // Usernames already live in this shop's inventory (available / reserved).
-        // A username that only clashes with a *sold* item is fine — the account
-        // was handed over and the shop may legitimately be re-stocking it.
-        $existingUsernames = InventoryItem::query()
-            ->where('shop_id', $import->shop_id)
-            ->whereNotNull('username')
-            ->where('status', '!=', InventoryStatus::Sold)
-            ->pluck('username')
-            ->map(fn ($name) => mb_strtolower(trim((string) $name)))
             ->flip();
         $rowNumber = 1;
         foreach ($sheet['rows'] as $data) {
@@ -84,18 +74,15 @@ class ProcessInventoryImport implements ShouldQueue
                 continue;
             }
 
+            // A username that already exists in this shop is allowed on import —
+            // an ID sold earlier can come back and be re-stocked. Only the exact
+            // same username appearing twice in one file is skipped (data error).
             $username = mb_strtolower(trim((string) ($mapped['username'] ?? '')));
             if ($username !== '') {
-                $duplicateOf = null;
                 if (isset($usernames[$username])) {
-                    $duplicateOf = "ซ้ำกับแถว {$usernames[$username]} ในไฟล์";
-                } elseif ($existingUsernames->has($username)) {
-                    $duplicateOf = 'มีอยู่ในคลังแล้ว';
-                }
-                if ($duplicateOf !== null) {
                     $skipped[] = [
                         'row_number' => $rowNumber,
-                        'message' => "Username \"{$username}\" {$duplicateOf} — ข้ามรายการนี้",
+                        'message' => "Username \"{$username}\" ซ้ำกับแถว {$usernames[$username]} ในไฟล์ — ข้ามรายการนี้",
                         'kind' => 'duplicate',
                         'row_data' => $this->redactRowData($import, $data),
                     ];
