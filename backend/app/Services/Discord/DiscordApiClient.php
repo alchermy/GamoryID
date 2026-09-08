@@ -33,8 +33,11 @@ class DiscordApiClient
         return 'https://discord.com/oauth2/authorize?'.http_build_query([
             'client_id' => $applicationId,
             'scope' => 'bot applications.commands',
-            // Manage Channels, View Channels, Send Messages and Embed Links.
-            'permissions' => '19472',
+            // View Channels (1024) + Manage Channels (16) + Send Messages (2048)
+            // + Embed Links (16384) + Manage Messages (8192, to pin the /ร้าน เมนู
+            // panel) = 27664. Keep in sync with the Developer Portal's default
+            // install settings.
+            'permissions' => '27664',
         ]);
     }
 

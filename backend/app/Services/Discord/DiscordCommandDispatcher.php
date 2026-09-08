@@ -500,7 +500,7 @@ class DiscordCommandDispatcher
                     'guild_id' => $guildId,
                     'guild_name' => $guildName,
                     'status' => 'connected',
-                    'bot_permissions' => ['manage_channels', 'view_channels', 'send_messages', 'embed_links'],
+                    'bot_permissions' => ['manage_channels', 'view_channels', 'send_messages', 'embed_links', 'manage_messages'],
                     'installed_at' => now(),
                     'last_verified_at' => now(),
                 ],
