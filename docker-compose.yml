@@ -139,6 +139,27 @@ services:
       - app
     mem_limit: 100m
 
+  # Database GUI — for looking at prod data live. Bound to 127.0.0.1 only:
+  # NEVER expose this to the internet. Reach it with an SSH tunnel:
+  #   ssh -L 8081:localhost:8081 gamoryid
+  # then open http://localhost:8081 and log in with the DB_USERNAME /
+  # DB_PASSWORD from .env (or "root" + DB_ROOT_PASSWORD).
+  # Swap the image for `adminer:4` (≈10MB) if the box gets memory-tight;
+  # `docker compose stop pma` frees the RAM without removing anything.
+  pma:
+    image: phpmyadmin:5.2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 256M
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 128m
+
 volumes:
   db-data:
   storage-data:
