@@ -182,6 +182,26 @@ class DiscordIntegrationTest extends TestCase
         $this->assertDatabaseMissing('discord_installations', ['shop_id' => $shop->id]);
     }
 
+    public function test_disconnect_succeeds_even_when_the_bot_is_already_out_of_the_guild(): void
+    {
+        [$owner, $shop] = $this->owner('disc-gone@example.test', 'Bot Kicked Shop');
+        config()->set('services.discord.test_bypass', false);
+        config()->set('services.discord.application_id', 'application-1');
+        config()->set('services.discord.public_key', str_repeat('a', 64));
+        config()->set('services.discord.bot_token', 'bot-token');
+        DiscordInstallation::create([
+            'shop_id' => $shop->id, 'installed_by' => $owner->id, 'guild_id' => 'guild-gone',
+            'guild_name' => 'Gone Guild', 'status' => 'connected', 'installed_at' => now(),
+        ]);
+        // Discord answers "Unknown Guild" because the bot was kicked already.
+        Http::fake(['https://discord.com/api/v10/users/@me/guilds/guild-gone' => Http::response(['message' => 'Unknown Guild'], 404)]);
+
+        $this->actingAs($owner)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->deleteJson('/api/v1/discord/disconnect')
+            ->assertOk();
+        $this->assertDatabaseMissing('discord_installations', ['shop_id' => $shop->id]);
+    }
+
     public function test_setup_code_registers_thai_application_commands(): void
     {
         [$owner, $shop] = $this->owner('thai-command-owner@example.test', 'Thai Command Shop');

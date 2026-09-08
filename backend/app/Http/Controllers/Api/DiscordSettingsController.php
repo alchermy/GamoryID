@@ -293,7 +293,14 @@ class DiscordSettingsController extends Controller
         $installation = $shop->discordInstallation()->firstOrFail();
         $isDemoInstallation = str_starts_with($installation->guild_id, 'demo-');
         if (! $discord->isTestMode() && ! $isDemoInstallation) {
-            $discord->leaveGuild($installation->guild_id);
+            try {
+                $discord->leaveGuild($installation->guild_id);
+            } catch (Throwable $error) {
+                // The bot may already be out of the server (kicked, or the guild
+                // is gone). Disconnect is about clearing the GamoryID side —
+                // don't let a failed "leave" block that.
+                report($error);
+            }
         }
         $audit->record($request, $shop, 'discord.disconnected', $installation, ['guild_id' => $installation->guild_id]);
         $installation->delete();
