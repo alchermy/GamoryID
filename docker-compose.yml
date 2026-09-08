@@ -139,13 +139,14 @@ services:
       - app
     mem_limit: 100m
 
-  # Database GUI — for looking at prod data live. Bound to 127.0.0.1 only:
-  # NEVER expose this to the internet. Reach it with an SSH tunnel:
-  #   ssh -L 8081:localhost:8081 gamoryid
-  # then open http://localhost:8081 and log in with the DB_USERNAME /
-  # DB_PASSWORD from .env (or "root" + DB_ROOT_PASSWORD).
-  # Swap the image for `adminer:4` (≈10MB) if the box gets memory-tight;
-  # `docker compose stop pma` frees the RAM without removing anything.
+  # Database GUI, auto-signed-in as the app DB user (PMA_USER/PMA_PASSWORD =
+  # phpMyAdmin "config" auth, so there is no phpMyAdmin login form). Two ways
+  # in, both land straight on the database:
+  #   - https://db.gamoryid.com  — via Caddy, gated by HTTP basic auth
+  #   - http://localhost:8081    — after `ssh -L 8081:localhost:8081 gamoryid`
+  #     (127.0.0.1 bind, never public)
+  # Need root / a different user? Use the CLI: `docker compose exec db mariadb
+  # -uroot -p`. `docker compose stop pma` frees the ~45m RAM.
   pma:
     image: phpmyadmin:5.2
     restart: unless-stopped
@@ -154,6 +155,9 @@ services:
     environment:
       PMA_HOST: db
       PMA_PORT: 3306
+      PMA_ABSOLUTE_URI: https://db.gamoryid.com/
+      PMA_USER: ${DB_USERNAME}
+      PMA_PASSWORD: ${DB_PASSWORD}
       UPLOAD_LIMIT: 256M
     depends_on:
       db:

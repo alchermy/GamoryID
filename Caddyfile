@@ -22,6 +22,24 @@ api.gamoryid.com {
 	reverse_proxy app:8000
 }
 
+# phpMyAdmin — private DB console. The public URL is gated by HTTP basic
+# auth (Caddy, bcrypt); phpMyAdmin then auto-connects with the app DB user.
+# Rotate the password with:
+#   docker compose exec web caddy hash-password --plaintext 'new-pass'
+# and replace the hash below. Keep this behind Cloudflare's proxy.
+db.gamoryid.com {
+	encode gzip
+	basic_auth {
+		admin $2a$14$HpA.942JyggyMl/PlP/sc.6E1J/gjKc9MFXnPjbEMXn4cn8aDwsiG
+	}
+	reverse_proxy pma:80
+	header {
+		X-Frame-Options DENY
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+}
+
 # Public storefront (React) — same SPA fallback pattern as the merchant app.
 gamoryid.com, www.gamoryid.com {
 	encode gzip
