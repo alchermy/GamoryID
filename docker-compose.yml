@@ -142,7 +142,7 @@ services:
   # Database GUI, auto-signed-in as the app DB user (PMA_USER/PMA_PASSWORD =
   # phpMyAdmin "config" auth, so there is no phpMyAdmin login form). Two ways
   # in, both land straight on the database:
-  #   - https://db.gamoryid.com  — via Caddy, gated by HTTP basic auth
+  #   - https://console-x7k2.gamoryid.com  — via Caddy, gated by HTTP basic auth
   #   - http://localhost:8081    — after `ssh -L 8081:localhost:8081 gamoryid`
   #     (127.0.0.1 bind, never public)
   # Need root / a different user? Use the CLI: `docker compose exec db mariadb
@@ -155,7 +155,7 @@ services:
     environment:
       PMA_HOST: db
       PMA_PORT: 3306
-      PMA_ABSOLUTE_URI: https://db.gamoryid.com/
+      PMA_ABSOLUTE_URI: https://console-x7k2.gamoryid.com/
       PMA_USER: ${DB_USERNAME}
       PMA_PASSWORD: ${DB_PASSWORD}
       UPLOAD_LIMIT: 256M

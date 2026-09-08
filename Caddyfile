@@ -27,7 +27,7 @@ api.gamoryid.com {
 # Rotate the password with:
 #   docker compose exec web caddy hash-password --plaintext 'new-pass'
 # and replace the hash below. Keep this behind Cloudflare's proxy.
-db.gamoryid.com {
+console-x7k2.gamoryid.com {
 	encode gzip
 	basic_auth {
 		admin $2a$14$HpA.942JyggyMl/PlP/sc.6E1J/gjKc9MFXnPjbEMXn4cn8aDwsiG
