@@ -1,5 +1,5 @@
-# GamoryID production stack — single VPS, single environment (see the
-# deploy runbook for why: budget-constrained 2GB box, dev stays local).
+# GamoryID production stack — single VPS, single environment (see
+# docs/deploy.md for why: budget-constrained 2GB box, dev stays local).
 #
 # Reads /opt/gamoryid/.env — the same file Laravel itself uses. Compose
 # substitutes ${DB_*} below from that file automatically (it auto-loads a

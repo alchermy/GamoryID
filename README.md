@@ -10,6 +10,7 @@ SaaS ภาษาไทยสำหรับจัดการสต็อกส
 - `backend/openapi.yaml` API contract
 - `DESIGN.md` และ `UX-CONTRACT.md` ข้อตกลงด้านภาพและพฤติกรรม
 - `docs/discord-setup.md` คู่มือตั้งค่า Gamory Bot และ queue สำหรับ Production
+- `docs/deploy.md` runbook การ deploy Production (VPS, docker compose, โดเมน, phpMyAdmin)
 
 Frontend ทั้งสองส่วนแยก application entry, routes, domain features, shared UI,
 utilities และ types ออกจากกันแล้ว ดูแนวทางเพิ่มฟีเจอร์ Merchant ได้ที่
