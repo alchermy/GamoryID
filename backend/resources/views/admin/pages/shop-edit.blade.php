@@ -7,7 +7,7 @@
             <label class="field" for="shop-name">ชื่อร้านค้า<input id="shop-name" name="name" value="{{ old('name', $shop->name) }}" required maxlength="120" aria-invalid="{{ $errors->has('name') ? 'true' : 'false' }}">@error('name')<span class="field-error">{{ $message }}</span>@enderror</label>
             <label class="field" for="shop-slug">Slug ร้านค้า<input id="shop-slug" name="slug" value="{{ old('slug', $shop->slug) }}" required maxlength="120" aria-invalid="{{ $errors->has('slug') ? 'true' : 'false' }}">@error('slug')<span class="field-error">{{ $message }}</span>@enderror</label>
             <label class="field" for="shop-status">สถานะ<select id="shop-status" name="status" required>
-                @foreach(['trialing' => 'ทดลองใช้', 'pending_payment' => 'รอชำระเงิน', 'active' => 'ใช้งาน', 'grace_read_only' => 'อ่านอย่างเดียว', 'suspended' => 'ระงับ', 'cancelled' => 'ยกเลิก'] as $value => $label)
+                @foreach(['trialing' => 'ทดลองใช้', 'pending_payment' => 'รอชำระเงิน', 'active' => 'ใช้งาน', 'grace_read_only' => 'อ่านอย่างเดียว', 'suspended' => 'ระงับ'] as $value => $label)
                     <option value="{{ $value }}" @selected(old('status', $shop->status) === $value)>{{ $label }}</option>
                 @endforeach
             </select></label>

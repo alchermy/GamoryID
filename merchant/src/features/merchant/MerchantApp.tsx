@@ -1676,6 +1676,7 @@ export function MerchantApp() {
             loading={managementLoading}
             error={managementError}
             canManage={hasShopPermission("billing.manage")}
+            suspended={accessMode === "suspended"}
             busy={paymentBusy}
             onOpenTopUp={() => setManagementDialog("topUp")}
             onPurchase={(plan, cycle) => {

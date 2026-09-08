@@ -204,7 +204,7 @@ class AdminController extends Controller
             'facebook_url' => ['nullable', 'url', 'max:255'],
             'line_url' => ['nullable', 'url', 'max:255'],
             'phone' => ['nullable', 'string', 'max:32'],
-            'status' => ['required', Rule::in(['trialing', 'pending_payment', 'active', 'grace_read_only', 'suspended', 'cancelled'])],
+            'status' => ['required', Rule::in(['trialing', 'pending_payment', 'active', 'grace_read_only', 'suspended'])],
             'hidden_from_directory' => ['sometimes', 'boolean'],
         ]);
         $data['hidden_from_directory'] = $request->boolean('hidden_from_directory');

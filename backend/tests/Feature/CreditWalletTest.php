@@ -49,6 +49,30 @@ class CreditWalletTest extends TestCase
         $this->assertDatabaseHas('credit_transactions', ['shop_id' => $shop->id, 'credits' => -299, 'balance_after' => 201]);
     }
 
+    public function test_a_suspended_shop_cannot_top_up_or_buy_a_package(): void
+    {
+        [$user, $shop] = $this->owner();
+        $shop->update(['status' => 'suspended', 'credit_balance' => 5000]);
+        $plan = $this->plan(299);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->withHeader('Accept', 'application/json')
+            ->post('/api/v1/credits/top-ups', [
+                'credits' => 300,
+                'slip' => UploadedFile::fake()->create('slip.png', 20, 'image/png'),
+            ])
+            ->assertStatus(423)
+            ->assertJsonPath('code', 'SHOP_SUSPENDED');
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->postJson('/api/v1/subscriptions/purchase', ['plan_id' => $plan->id, 'billing_cycle' => 'monthly', 'auto_renew' => false])
+            ->assertStatus(423)
+            ->assertJsonPath('code', 'SHOP_SUSPENDED');
+
+        $this->assertDatabaseCount('payment_submissions', 0);
+        $this->assertDatabaseCount('credit_transactions', 0);
+    }
+
     public function test_package_purchase_cannot_spend_more_credits_than_available(): void
     {
         [$user, $shop] = $this->owner();

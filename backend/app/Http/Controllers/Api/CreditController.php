@@ -7,12 +7,14 @@ use App\Exceptions\InsufficientCreditsException;
 use App\Http\Controllers\Controller;
 use App\Models\CreditTransaction;
 use App\Models\PaymentSubmission;
+use App\Models\Shop;
 use App\Models\SlipVerification;
 use App\Models\SubscriptionPlan;
 use App\Services\AuditLogger;
 use App\Services\CreditWallet;
 use App\Services\CurrentShop;
 use App\Services\SlipReview;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -20,6 +22,20 @@ use Illuminate\Validation\ValidationException;
 
 class CreditController extends Controller
 {
+    /** A suspended shop can view its balance/plans but can't pay for anything. */
+    private function ensureNotSuspended(Shop $shop): void
+    {
+        if (in_array($shop->status, [
+            SubscriptionStatus::Suspended->value,
+            SubscriptionStatus::Cancelled->value,
+        ], true)) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'ร้านนี้ถูกระงับการใช้งาน กรุณาติดต่อทีมงาน',
+                'code' => 'SHOP_SUSPENDED',
+            ], 423));
+        }
+    }
+
     public function index(Request $request, CurrentShop $currentShop)
     {
         $shop = $currentShop->from($request);
@@ -75,6 +91,7 @@ class CreditController extends Controller
     public function topUp(Request $request, CurrentShop $currentShop, AuditLogger $audit, SlipReview $slipReview)
     {
         $shop = $currentShop->from($request);
+        $this->ensureNotSuspended($shop);
         $data = $request->validate([
             'credits' => ['required', 'integer', 'min:1', 'max:1000000'],
             'slip' => ['required', 'file', 'mimes:jpeg,jpg,png', 'max:5120'],
@@ -130,6 +147,7 @@ class CreditController extends Controller
     public function purchase(Request $request, CurrentShop $currentShop, CreditWallet $wallet, AuditLogger $audit)
     {
         $shop = $currentShop->from($request);
+        $this->ensureNotSuspended($shop);
         $data = $request->validate([
             'plan_id' => ['required', 'integer', 'exists:subscription_plans,id'],
             'billing_cycle' => ['required', 'in:monthly,yearly'],
@@ -157,6 +175,7 @@ class CreditController extends Controller
     public function updateAutoRenew(Request $request, CurrentShop $currentShop, AuditLogger $audit)
     {
         $shop = $currentShop->from($request);
+        $this->ensureNotSuspended($shop);
         $data = $request->validate(['auto_renew' => ['required', 'boolean']]);
         $subscription = $shop->subscriptions()
             ->whereIn('status', [SubscriptionStatus::Trialing->value, SubscriptionStatus::Active->value])

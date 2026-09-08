@@ -22,6 +22,7 @@ export function BillingPanel({
   loading,
   error,
   canManage,
+  suspended = false,
   busy,
   onOpenTopUp,
   onPurchase,
@@ -33,6 +34,7 @@ export function BillingPanel({
   loading: boolean;
   error: string;
   canManage: boolean;
+  suspended?: boolean;
   busy: boolean;
   onOpenTopUp: () => void;
   onPurchase: (plan: Plan, cycle: BillingCycle) => void;
@@ -85,7 +87,7 @@ export function BillingPanel({
               </strong>
               <p>1 เครดิต = 1 บาท · เครดิตใช้เฉพาะค่าแพ็กเกจของร้านนี้</p>
             </div>
-            {canManage && (
+            {canManage && !suspended && (
               <button
                 type="button"
                 className="credit-topup-btn"
@@ -138,7 +140,16 @@ export function BillingPanel({
               </span>
             </div>
           )}
-          {!canManage && (
+          {suspended && (
+            <div className="notice notice-warning" role="alert">
+              <ShieldCheck size={18} />
+              <span>
+                ร้านนี้ถูกระงับการใช้งาน — เติมเครดิตและซื้อแพ็กเกจไม่ได้
+                กรุณาติดต่อทีมงานเพื่อเปิดใช้งานอีกครั้ง
+              </span>
+            </div>
+          )}
+          {!canManage && !suspended && (
             <div className="notice" role="status">
               <ShieldCheck size={18} />
               <span>
@@ -235,7 +246,7 @@ export function BillingPanel({
                   className={`switch ${sub.auto_renew ? "is-on" : ""}`}
                   role="switch"
                   aria-checked={sub.auto_renew}
-                  disabled={!canManage || busy}
+                  disabled={!canManage || busy || suspended}
                   onClick={() => onAutoRenewChange(!sub.auto_renew)}
                 >
                   <span />
@@ -244,7 +255,7 @@ export function BillingPanel({
               </div>
             )}
 
-            {canManage && (
+            {canManage && !suspended && (
               <button
                 type="button"
                 className="button plan-change-btn"
@@ -287,7 +298,7 @@ export function BillingPanel({
                     cycle={cycle}
                     balance={balance}
                     busy={busy}
-                    canManage={canManage}
+                    canManage={canManage && !suspended}
                     isCurrent={currentCode === plan.code}
                     onPurchase={onPurchase}
                   />
