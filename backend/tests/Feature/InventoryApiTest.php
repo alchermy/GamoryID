@@ -377,6 +377,21 @@ class InventoryApiTest extends TestCase
         ])->assertStatus(423)->assertJsonPath('code', 'SHOP_READ_ONLY');
     }
 
+    public function test_a_suspended_shop_can_still_read_but_writes_report_a_suspension(): void
+    {
+        [$user, $shop] = $this->owner('suspended@example.test', 'ร้านถูกระงับ');
+        $this->item($shop, 'SUSP1');
+        $shop->update(['status' => 'suspended']);
+
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->getJson('/api/v1/inventory')->assertOk()->assertJsonCount(1, 'data');
+        $this->actingAs($user)->withHeader('X-Shop-Id', (string) $shop->id)
+            ->postJson('/api/v1/inventory', ['title' => 'Blocked', 'cost' => 0, 'list_price' => 1])
+            ->assertStatus(423)
+            ->assertJsonPath('code', 'SHOP_SUSPENDED')
+            ->assertJsonPath('message', fn ($m) => str_contains($m, 'ติดต่อทีมงาน'));
+    }
+
     public function test_archived_inventory_is_hidden_until_explicitly_filtered(): void
     {
         [$user, $shop] = $this->owner('archive@example.test', 'ร้านเก็บถาวร');

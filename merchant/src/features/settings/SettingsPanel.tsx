@@ -34,10 +34,12 @@ export function SettingsPanel({
   onRemoveBranding,
   onSignOut,
   retry,
+  canWrite = true,
 }: {
   shop: ShopDetails | Shop | null;
   loading: boolean;
   error: string;
+  canWrite?: boolean;
   canUseStorefront: boolean;
   logoUrl: string | null;
   bannerUrl: string | null;
@@ -109,6 +111,7 @@ export function SettingsPanel({
         onSubmit={onSubmit}
         noValidate
       >
+        <fieldset className="bare-fieldset" disabled={!canWrite}>
         <div className="settings-form-body">
           <section
             id="shop-info"
@@ -449,6 +452,7 @@ export function SettingsPanel({
             บันทึกการตั้งค่า
           </button>
         </div>
+        </fieldset>
       </form>
       <div className="settings-signout">
         <button type="button" className="button ghost" onClick={onSignOut}>

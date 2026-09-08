@@ -5,6 +5,7 @@ import {
   BookOpen,
   Box,
   Check,
+  CircleAlert,
   CircleHelp,
   Clock3,
   Download,
@@ -35,6 +36,7 @@ import { buildInventoryCopyText } from "../../inventory-copy";
 import { DEFAULT_COPY_FOOTER, initialInventoryItems } from "../inventory/data";
 import { createIdempotencyKey, money } from "../../shared/lib/format";
 import { writeClipboard } from "../../shared/lib/clipboard";
+import { shopAccessMode, shopAccessNotice } from "../../shared/lib/shop-access";
 import { shrinkImage } from "../../shared/lib/image";
 import { useModalLayer } from "../../shared/hooks/useModalLayer";
 import type {
@@ -228,6 +230,11 @@ export function MerchantApp() {
   const shop = session?.shops.find(
     (candidate) => candidate.id === session.current_shop_id,
   );
+  // A suspended / lapsed shop can still browse, but every write is blocked
+  // server-side. Reflect that in the UI. shopDetails.status is the freshest.
+  const accessMode = shopAccessMode(shopDetails?.status ?? shop?.status);
+  const canWrite = accessMode === "full";
+  const accessNotice = shopAccessNotice(accessMode);
   const hasShopPermission = (permission: string) =>
     !shop ||
     shop.role === "owner" ||
@@ -1354,16 +1361,18 @@ export function MerchantApp() {
         </div>
         <div className="nav-label">พื้นที่ทำงาน</div>
         <nav className="nav">
-          {mainNavigation.map(([key, label, Icon]) => (
-            <button
-              key={key}
-              className={`nav-button ${page === key ? "active" : ""}`}
-              onClick={() => go(key)}
-            >
-              <Icon size={18} />
-              {label}
-            </button>
-          ))}
+          {mainNavigation
+            .filter(([key]) => key !== "imports" || canWrite)
+            .map(([key, label, Icon]) => (
+              <button
+                key={key}
+                className={`nav-button ${page === key ? "active" : ""}`}
+                onClick={() => go(key)}
+              >
+                <Icon size={18} />
+                {label}
+              </button>
+            ))}
         </nav>
         <div className="nav-label">จัดการร้าน</div>
         <nav className="nav">
@@ -1465,6 +1474,24 @@ export function MerchantApp() {
           </button>
         </div>
       </header>
+      {accessNotice && (
+        <div className={`shop-status-banner ${accessMode}`} role="alert">
+          <CircleAlert size={18} aria-hidden="true" />
+          <div>
+            <strong>{accessNotice.title}</strong>
+            <span>{accessNotice.body}</span>
+          </div>
+          {accessMode === "readonly" && (
+            <button
+              type="button"
+              className="button"
+              onClick={() => go("billing")}
+            >
+              ไปหน้าแพ็กเกจ
+            </button>
+          )}
+        </div>
+      )}
       <main
         className={`page ${page === "dashboard" ? "dashboard-page" : ""} ${page === "inventory" ? "inventory-page" : ""} ${page === "inventory" && selected ? "inventory-detail-page" : ""} ${page === "sales" ? "sales-page" : ""} ${saleDetailId ? "sale-detail-page" : ""} ${page === "customers" ? "customers-page" : ""} ${["team", "billing", "transactions", "discord", "settings", "manual", "onboarding", "activity", "analytics", "account"].includes(page) ? "management-page" : ""}`}
       >
@@ -1519,11 +1546,13 @@ export function MerchantApp() {
                 ส่งออก
               </button>
             )}
-            <button className="button" onClick={() => go("imports")}>
-              <FileUp size={17} />
-              นำเข้าข้อมูล
-            </button>
-            {hasShopPermission("inventory.manage") && (
+            {canWrite && (
+              <button className="button" onClick={() => go("imports")}>
+                <FileUp size={17} />
+                นำเข้าข้อมูล
+              </button>
+            )}
+            {hasShopPermission("inventory.manage") && canWrite && (
               <button
                 className="button primary"
                 aria-label="เพิ่มไอดี"
@@ -1572,14 +1601,21 @@ export function MerchantApp() {
             </button>
           </div>
         )}
-        {page === "imports" && (
-          <ImportPanel
-            shopId={shop?.id}
-            onComplete={() => {
-              void Promise.all([refreshInventory(), refreshDashboardData()]);
-            }}
-          />
-        )}
+        {page === "imports" &&
+          (canWrite ? (
+            <ImportPanel
+              shopId={shop?.id}
+              onComplete={() => {
+                void Promise.all([refreshInventory(), refreshDashboardData()]);
+              }}
+            />
+          ) : (
+            <div className="panel locked-panel" role="status">
+              <CircleAlert size={22} aria-hidden="true" />
+              <strong>{accessNotice?.title}</strong>
+              <p>{accessNotice?.body}</p>
+            </div>
+          ))}
         {page === "sales" && saleDetailId && shop ? (
           <SaleDetailPage
             key={saleDetailId}
@@ -1612,7 +1648,7 @@ export function MerchantApp() {
             members={team}
             loading={managementLoading}
             error={managementError}
-            canManage={hasShopPermission("team.manage")}
+            canManage={hasShopPermission("team.manage") && canWrite}
             createStaff={() => setManagementDialog("createStaff")}
             onPermissionsChange={(member, permissions) => {
               setPendingPermissions({ member, permissions });
@@ -1672,7 +1708,7 @@ export function MerchantApp() {
         {page === "discord" && (
           <DiscordSettingsPanel
             shopId={shop?.id}
-            canManage={hasShopPermission("discord.manage")}
+            canManage={hasShopPermission("discord.manage") && canWrite}
             notify={notify}
           />
         )}{" "}
@@ -1681,6 +1717,7 @@ export function MerchantApp() {
             shop={shopDetails ?? shop ?? null}
             loading={managementLoading}
             error={managementError}
+            canWrite={canWrite}
             canUseStorefront={planFeature("storefront")}
             logoUrl={
               shopDetails?.logo_url ? apiAssetUrl(shopDetails.logo_url) : null
@@ -1737,6 +1774,7 @@ export function MerchantApp() {
           <DashboardPanel
             dashboard={dashboard}
             summary={summary}
+            canWrite={canWrite}
             canViewProfit={hasShopPermission("profit.view")}
             canViewAnalytics={canViewAnalytics}
             storefrontViews={storefrontViews}
@@ -1759,16 +1797,17 @@ export function MerchantApp() {
         {page === "inventory" && selected && (
           <InventoryDetailPage
             item={selected}
-            canManage={hasShopPermission("inventory.manage")}
-            canSell={hasShopPermission("inventory.sell")}
+            canManage={hasShopPermission("inventory.manage") && canWrite}
+            canSell={hasShopPermission("inventory.sell") && canWrite}
             canViewAnalytics={canViewAnalytics}
             canReveal={hasShopPermission("credentials.reveal")}
             shopId={shop?.id ?? 0}
             twoFactorEnabled={session?.two_factor_enabled ?? false}
             notify={notify}
             canNote={
-              hasShopPermission("inventory.manage") ||
-              hasShopPermission("inventory.sell")
+              (hasShopPermission("inventory.manage") ||
+                hasShopPermission("inventory.sell")) &&
+              canWrite
             }
             onBack={() => {
               setSelected(null);
@@ -1874,11 +1913,12 @@ export function MerchantApp() {
             query={query}
             status={status}
             setInventoryStatus={setInventoryStatus}
-            canSell={hasShopPermission("inventory.sell")}
-            canManage={hasShopPermission("inventory.manage")}
+            canSell={hasShopPermission("inventory.sell") && canWrite}
+            canManage={hasShopPermission("inventory.manage") && canWrite}
             canNote={
-              hasShopPermission("inventory.manage") ||
-              hasShopPermission("inventory.sell")
+              (hasShopPermission("inventory.manage") ||
+                hasShopPermission("inventory.sell")) &&
+              canWrite
             }
             canViewAnalytics={canViewAnalytics}
             busy={inventoryBusy}

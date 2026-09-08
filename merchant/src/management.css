@@ -453,6 +453,67 @@
   border-color: #f7c77a;
   color: #805200;
 }
+
+.shop-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  border-bottom: 1px solid transparent;
+  font-size: 13px;
+}
+
+.shop-status-banner strong {
+  display: block;
+  font-size: 13px;
+}
+
+.shop-status-banner span {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.shop-status-banner > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-status-banner .button {
+  flex-shrink: 0;
+}
+
+.shop-status-banner.suspended {
+  background: #fdecec;
+  border-color: #f2b8b5;
+  color: #9a2621;
+}
+
+.shop-status-banner.readonly {
+  background: #fff6df;
+  border-color: #f7c77a;
+  color: #805200;
+}
+
+.bare-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.locked-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  padding: 40px 24px;
+  color: var(--muted);
+}
+
+.locked-panel strong {
+  color: var(--text, #1f2430);
+}
 .credit-shortfall {
   color: #a15c00;
   font-size: 12px;

@@ -43,6 +43,7 @@ export function DashboardPanel({
   onOpenImport,
   onOpenAdd,
   onRefresh,
+  canWrite = true,
 }: {
   dashboard: DashboardData | null;
   summary: {
@@ -52,6 +53,7 @@ export function DashboardPanel({
     soldTotal: number;
     value: number | null;
   };
+  canWrite?: boolean;
   canViewProfit: boolean;
   canViewAnalytics: boolean;
   storefrontViews: ViewSeries | null;
@@ -275,7 +277,11 @@ export function DashboardPanel({
                   ? `เหลือเวลาใช้งานแบบเขียนข้อมูล ${daysUntilTrial.toLocaleString("th-TH")} วัน`
                   : "ตรวจสอบแพ็กเกจและการชำระเงินได้จากเมนูจัดการร้าน"}
               </p>
-              <button className="button" onClick={onOpenAdd}>
+              <button
+                className="button"
+                onClick={onOpenAdd}
+                disabled={!canWrite}
+              >
                 <PackagePlus size={16} />
                 เพิ่มไอดีใหม่
               </button>
